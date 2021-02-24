@@ -4,16 +4,24 @@ Require Import String.
 Definition vertex    := nat.
 Definition edge      := nat.
 Definition label     := string.
-Definition property  := string.
 Definition attribute := string.
-Definition pindex    := nat.
+
+Module Property.
+  Inductive t := 
+  | p_int (i : nat)
+  | p_string (s : string)
+  | p_empty
+  .
+  
+  Definition name := string.
+End Property.
 
 Module Relation.
 
 Record t :=
   { (* sch *)
-  scheme : list attribute;
-  data   : list (list (option property));
+    scheme : list attribute;
+    data   : list (list Property.t);
   }.
 
 Record wf (r : Relation.t) :=
@@ -34,14 +42,14 @@ Record t :=
     st       : edge -> vertex * vertex;
 
     (* \mathcal{L}*)
-    vlab     : vertex -> label -> Prop;
+    vlab     : list (vertex * label);
     (* \mathcal{T}*)
-    elab     : edge   -> label;
+    elab     : edge -> label;
     
     (* Pᵥ *)
-    vprop    : pindex -> vertex -> option property; 
+    vprop    : list (Property.name * (vertex -> Property.t)); 
     (* Pₑ *)
-    eprop    : pindex -> edge   -> option property; 
+    eprop    : list (Property.name * (edge   -> Property.t)); 
   }.
 
 End PropertyGraph.
