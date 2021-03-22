@@ -128,6 +128,9 @@ Module Relation.
                           (fun l => negb (list_inb l (data r)))
                           (data r'))))
     else None.
+  
+  (* Definition natural_join r r' : option t := *)
+  (*   None *)
 End Relation.
 
 Module PropertyGraph.
@@ -150,3 +153,21 @@ Module PropertyGraph.
         eprop    : list (Property.name * (edge   -> Property.t)); 
       }.
 End PropertyGraph.
+
+Module Pattern.
+  Inductive t :=
+  .
+End Pattern.
+
+Module VarExpression.
+  Inductive t :=
+  .
+End VarExpression.
+
+Module Query.
+  Inductive t :=
+  | MATCH                (ps : list Pattern.t)
+  | OPTIONAL_MATCH       (p : Pattern.t)
+  | OPTIONAL_MATCH_WHERE (q : t) (p : Pattern.t) (θ : VarExpression.t)
+  .
+End Query.
