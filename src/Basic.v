@@ -154,8 +154,41 @@ Module PropertyGraph.
       }.
 End PropertyGraph.
 
+Definition variable := nat.
+
+Module NodePattern.
+Inductive Property := 
+  .
+
+  Record t := 
+  mk {
+      var    : variable;
+      labels : list label;
+      properties : list (nat * Property)
+     }.
+End NodePattern.
+
+Module EdgePattern.
+  Inductive Property := 
+  .
+
+  Inductive EdgeType :=
+  .
+
+  Record t :=
+  mk {
+      var   : variable;
+      src : variable;
+      trg : variable;
+      type : EdgeType;
+      properties : list (nat * Property)
+     }.
+End EdgePattern.
+
 Module Pattern.
   Inductive t :=
+  | NODE (npat : NodePattern.t)
+  | EDGE (pat : t) (epat : EdgePattern.t) (npat : NodePattern.t)
   .
 End Pattern.
 
@@ -169,5 +202,16 @@ Module Query.
   | MATCH                (ps : list Pattern.t)
   | OPTIONAL_MATCH       (p : Pattern.t)
   | OPTIONAL_MATCH_WHERE (q : t) (p : Pattern.t) (θ : VarExpression.t)
+  | WHERE_expr           (q : t) (θ : VarExpression.t)
+  | WHERE_exprs          (q : t) (v : nat) (ls : list VarExpression.t)
+  | WHERE_NOT            (q : t) (p : Pattern.t)
+  | RETURN               (q : t) (xs : list nat) (ys : list nat)
+  | RETURN_DISTINCT      (q : t) (xs : list nat) (ys : list nat)
+  | UNWIND               (q : t) (xs : list VarExpression.t) (x : nat)
   .
 End Query.
+
+Module Operators.
+  (* Fixpoint selection (r : Relation.t) (θ : VarExpression.t) := 
+  Fixpoint projection (r : Relation.t) (xs : list nat) (ys : list nat) := *) 
+End Operators.
