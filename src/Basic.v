@@ -154,64 +154,83 @@ Module PropertyGraph.
       }.
 End PropertyGraph.
 
-Definition variable := nat.
 
-Module NodePattern.
-Inductive Property := 
-  .
-
-  Record t := 
-  mk {
-      var    : variable;
-      labels : list label;
-      properties : list (nat * Property)
-     }.
-End NodePattern.
-
-Module EdgePattern.
-  Inductive Property := 
-  .
-
-  Inductive EdgeType :=
-  .
-
-  Record t :=
-  mk {
-      var   : variable;
-      src : variable;
-      trg : variable;
-      type : EdgeType;
-      properties : list (nat * Property)
-     }.
-End EdgePattern.
 
 Module Pattern.
-  Inductive t :=
-  | NODE (npat : NodePattern.t)
-  | EDGE (pat : t) (epat : EdgePattern.t) (npat : NodePattern.t)
+  Record VertexPattern :=
+    v {
+        vname : string;
+        vlabels : list label;
+    }.
+  
+  Inductive direction := 
+  | OUT
+  | IN
+  | BOTH
   .
+
+  Record EdgePattern :=
+    e {
+      ename : string;
+      etypes : list Property.t;
+      ed : direction;
+      v1 : VertexPattern;
+      v2 : VertexPattern;
+    }.
+
+  (*Inductive t :=
+  | VertexPattern
+  | EdgePattern
+  .*)
 End Pattern.
 
-Module VarExpression.
+
+(*Module VarExpression.
   Inductive t :=
   .
-End VarExpression.
+End VarExpression.*)
 
 Module Query.
+  Inductive sorting_order :=
+  | ASC
+  | DESC
+  .
+
   Inductive t :=
-  | MATCH                (ps : list Pattern.t)
-  | OPTIONAL_MATCH       (p : Pattern.t)
-  | OPTIONAL_MATCH_WHERE (q : t) (p : Pattern.t) (θ : VarExpression.t)
-  | WHERE_expr           (q : t) (θ : VarExpression.t)
-  | WHERE_exprs          (q : t) (v : nat) (ls : list VarExpression.t)
-  | WHERE_NOT            (q : t) (p : Pattern.t)
-  | RETURN               (q : t) (xs : list nat) (ys : list nat)
-  | RETURN_DISTINCT      (q : t) (xs : list nat) (ys : list nat)
-  | UNWIND               (q : t) (xs : list VarExpression.t) (x : nat)
+  | MATCH (ps : list Pattern.t)
+  | OPTIONAL_MATCH (r : option Relation.t) (p : Pattern.t)
+
+  (*| WHERE_cond (r : Relation.t) (condition : )*)
+  | WHERE (r : Relation.t) (p : Pattern.t)
+  | WHERE_NOT (r : Relation.t) (p : Pattern.t)
+
+  | RETURN (r : Relation.t) (attrs : list attribute)
+  | RETURN_DISTINCT (r : Relation.t) (attrs : list attribute)
+
+  (*| Unwind (xs : ) (x: )*)
+  | ORDER_SKIP_LIMIT (attrs : list (attribute * sorting_order)) (s : nat) (l : nat)
   .
 End Query.
 
-Module Operators.
-  (* Fixpoint selection (r : Relation.t) (θ : VarExpression.t) := 
-  Fixpoint projection (r : Relation.t) (xs : list nat) (ys : list nat) := *) 
-End Operators.
+Module GraphRelationOperation.
+  Inductive t :=
+  | get_vertices (Pattern.VertexPattern)
+
+  | get_edges (v : string) (l1 : list label) (e : string) (ts : Type.t) (w:) (l2: list Label.t)
+  | undirected_get_edges (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t)
+
+  | expand_out (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t)
+  | expand_in (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t)
+  | expand_both (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t)
+
+  | transitive_expand_out (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t) (low: nat) (up: nat)
+  | transitive_expand_in (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t) (low: nat) (up: nat)
+  | transitive_expand_both (r:Relation.t) (v:) (l1: list Label.t) (e:) (t: Type.t) (w:) (l2: list Label.t) (low: nat) (up: nat)
+
+  | unwind (r:Relation) (x:)
+  | sort (attrs:) 
+  | top (s: nat) (l: nat)
+  | sort_and_top (attrs:) (s: nat) (l: nat)
+  | grouping (cs: list) (es: list)
+  .
+End GraphRelationOperation.
