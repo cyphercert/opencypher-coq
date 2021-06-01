@@ -164,9 +164,15 @@ Module Pattern.
   .
 
   Inductive t :=
-  | vertex (name : string) (labels : list label)
-  | edge (name : string) (types : list Property.t) (dir : direction) (p : t) (wname : string) (wlabels : list label)
-  | multiedge (enames : list string) (etypes : list Property.t) (vnames : list string) (vlabels : list label) (low : nat) (up : nat)
+  | vertex     (vname : attribute) (vlabels : list label)
+
+  | edge       (pattern : t) 
+               (ename : attribute) (etype : label) (edirection : direction) 
+               (wname : attribute) (wlabels : list label)
+
+  | multiedge  (pattern : t) 
+               (enames : list attribute) (etype : label) (low : nat) (up : nat) 
+               (vnames : list attribute) (wname : attribute) (vlabels : list label)
   .
 End Pattern.
 
@@ -177,70 +183,152 @@ Module Query.
   .
 
   Inductive t :=
-  | MATCH (ps : list Pattern.t)
-  | OPTIONAL_MATCH (q : option t) (p : Pattern.t)
-  | WHERE (q : t) (p : Pattern.t)
-  | WHERE_NOT (q : t) (p : Pattern.t)
-  | RETURN (q : t) (attrs : list (attribute * string))
-  | RETURN_DISTINCT (q : t) (attrs : list (attribute * string))
-  | ORDER_SKIP_LIMIT (q : t) (attrs : list (attribute * sorting_order)) (s : nat) (l : nat)
+  | MATCH           (patterns : list Pattern.t)
+  | OPTIONAL_MATCH  (query : option t) (pattern : Pattern.t)
+  | WHERE           (query : t) (pattern : Pattern.t)
+  | WHERE_NOT       (query : t) (pattern : Pattern.t)
+  | RETURN          (query : t) (anames : list (attribute * attribute))
+  | RETURN_DISTINCT (query : t) (anames : list (attribute * attribute))
   .
 End Query.
 
 Module RelationOperation. 
   Inductive t :=
-  | relation (r : Relation.t)
-  | select_vertices (attr_name : string) (labels : list label) (vr : t)
-  | select_edges (attr_name : string) (type : Property.t) (er : t)
-  | projection (attrs : list (string * string)) (r : t)
-  | eq_join (r1 : t) (attr1 : string) (r2 : t) (attr2 : string)
-  | natural_join (r1 : t) (r2 : t)
-  | left_outer_join (r1 : t) (r2 : t)
-  | semijoin (r1 : t) (r2 : t)
-  | anti_semijoin (r1 : t) (r2 : t)
-  | all_different (r : t)
+  (*Maybe we need other shema.*)
+  | relation                (*(relation : Relation.t)*)
+  | select_vertices         (aname : attribute) (vlabels : list label) (vrelation : t)
+  | select_edges            (aname : attribute) (etype : label) (erelation : t)
+  | projection              (anames : list (attribute * attribute)) (relation : t)
+  | eq_join                 (relation1 : t) (aname1 : attribute) (relation2 : t) (aname2 : attribute)
+  | natural_join            (relation1 : t) (relation2 : t)
+  | left_outer_join         (relation1 : t) (relation2 : t)
+  | semijoin                (relation1 : t) (relation2 : t)
+  | anti_semijoin           (relation1 : t) (relation2 : t)
+  | transitive_natural_join (relation1 : t) (relation2 : t) (low : nat) (up : nat)
+  | all_different           (relation : t)
   .
 End RelationOperation.
 
-Fixpoint graph_to_vertices_relation (pg : PropertyGraph.t) := .
-Fixpoint graph_to_edges_relation (pg : PropertyGraph.t) := .
+Definition graph_to_vertices_relation (graph : PropertyGraph.t) : RelationOperation.t := RelationOperation.relation.
+Definition graph_to_edges_relation (graph : PropertyGraph.t) : RelationOperation.t := RelationOperation.relation.
+
+Fixpoint compute_pattern (pattern : Pattern.t) (graph : PropertyGraph.t) : RelationOperation.t :=
+  match pattern with
+  | Pattern.vertex vname vlabels => GraphRelationOperation.get_vertices vname vlabels graph
+  | Pattern.edge pattern ename etype edirection wname wlabels => GraphRelationOperation.get_edges pattern ename etype edirection wname wlabels graph
+  | Pattern.multiedge pattern enames etype low up vnames wname vlabels => GraphRelationOperation.transitive_get_edges pattern enames etype low up vnames wname vlabels graph
+  end.
+
+Fixpoint compute_query (query : Query.t) (graph : PropertyGraph.t) : RelationOperation.t :=
+  match query with
+  | MATCH patterns => match patterns with
+                      | [] => (*Empty relation*)
+                      | head :: tail => RelationOperation.natural_join (compute_pattern head graph) (compute_query (MATCH tail) graph)
+                      .
+  | OPTIONAL_MATCH query' pattern => RelationOperation.left_outer_join (compute_query query' graph) (compute_pattern pattern graph)
+  | WHERE query' pattern => match pattern with
+                            | vertex vname vlabels => RelationOperation.select_vertices vname vlabels (compute_query query' graph)
+                            | _ => RelationOperation.semijoin (compute_query query' graph) (compute_pattern pattern graph)
+                            .
+  | WHERE_NOT query' pattern => RelationOperation.anti_semijoin (compute_query query' graph) (compute_pattern pattern graph)
+  | RETURN query' anames => RelationOperation.projection anames (compute_query query' graph)
+  | RETURN_DISTINCT query' anames => all_different (projection anames (compute_query query' graph))
+  end.
 
 Module GraphRelationOperation.
-  Fixpoint get_vertices (attr_name : string) (labels : list label) (g : PropertyGraph.t) :=
-    projection [attr_name, attr_name] (select_vertices attr_name labels (graph_to_vertices_relation g))
+  Definition get_vertices (vname : attribute) (vlabels : list label) 
+                          (graph : PropertyGraph.t) : RelationOperation.t :=
+    RelationOperation.projection [(vname, vname)] (RelationOperation.select_vertices vname vlabels (graph_to_vertices_relation graph)).
   
-  Fixpoint get_edges (name : string) (types : list Property.t) (dir : direction) (p : t) (wname : name) (wlabels : list label) 
-  (g : PropertyGraph.t) :=
-    (**)
+  Fixpoint get_edges (pattern : Pattern.t) 
+                     (ename : attribute) (etype : label) (edirection : Pattern.direction) 
+                     (wname : attribute) (wlabels : list label) 
+                     (graph : PropertyGraph.t) : RelationOperation.t := 
+    match pattern with 
+    | Pattern.vertex vname vlabels => 
+      RelationOperation.natural_join (compute_pattern pattern graph) 
+                                     (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices vname vlabels graph) 
+                                                                                           "id" 
+                                                                                           (RelationOperation.select_edges ename 
+                                                                                                                           etype
+                                                                                                                           (graph_to_edges_relation graph)) 
+                                                                                           "src") 
+                                                                "trg" 
+                                                                (get_vertices wname wlabels graph) 
+                                                                "id")
 
-  Fixpoint transitive_get_edges (enames : list string) (etypes : list Property.t) (vnames : list string) (vlabels : list label) 
-  (low : nat) (up : nat) (g : PropertyGraph.t) :=
-    (**)
+    | Pattern.edge pattern' ename' etype' edirection' wname' wlabels' =>
+      RelationOperation.natural_join (compute_pattern pattern graph) 
+                                     (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices wname' wlabels' graph) 
+                                                                                           "id" 
+                                                                                           (RelationOperation.select_edges ename 
+                                                                                                                           etype
+                                                                                                                           (graph_to_edges_relation graph)) 
+                                                                                           "src") 
+                                                                "trg" 
+                                                                (get_vertices wname wlabels graph) 
+                                                                "id")
 
+    | Pattern.multiedge pattern' enames etype' low up vnames wname' vlabels => 
+      RelationOperation.natural_join (compute_pattern pattern graph) 
+                                     (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices wname' vlabels graph) 
+                                                                                           "id" 
+                                                                                           (RelationOperation.select_edges ename 
+                                                                                                                           etype
+                                                                                                                           (graph_to_edges_relation graph)) 
+                                                                                           "src") 
+                                                                "trg" 
+                                                                (get_vertices wname wlabels graph) 
+                                                                "id")
+    end.
+
+  (*ENAME ???*)
+  Fixpoint transitive_get_edges (pattern : Pattern.t) 
+                                (enames : list attribute) (etype : label) (low : nat) (up : nat) 
+                                (vnames : list attribute) (wname : attribute) (vlabels : list label) 
+                                (graph : PropertyGraph.t) : RelationOperation.t :=
+    match p with 
+    | Pattern.vertex vname vlabels' => 
+      RelationOperation.natural_join (RelationOperation.transitive_natural_join (compute_pattern pattern graph) 
+                                                                                (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices vname vlabels' graph) 
+                                                                                                                                      "id" 
+                                                                                                                                      (RelationOperation.select_edges ename 
+                                                                                                                                                                      etype 
+                                                                                                                                                                      (graph_to_edges_relation graph)) 
+                                                                                                                                      "src") 
+                                                                                                           "trg" 
+                                                                                                           (get_vertices wname vlabels graph) 
+                                                                                                           "id") 
+                                                                                low 
+                                                                                up) 
+                                     (get_vertices wname vlabels graph)
+
+    | Pattern.edge pattern' ename etype' edirection' wname' wlabels =>
+      RelationOperation.natural_join (RelationOperation.transitive_natural_join (compute_pattern pattern graph) 
+                                                                                (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices wname' wlabels graph) 
+                                                                                                                                      "id" 
+                                                                                                                                      (RelationOperation.select_edges ename 
+                                                                                                                                                                      etype 
+                                                                                                                                                                      (graph_to_edges_relation graph)) 
+                                                                                                                                      "src")
+                                                                                                           "trg" 
+                                                                                                           (get_vertices wname vlabels graph) 
+                                                                                                           "id") 
+                                                                                low 
+                                                                                up) 
+                                     (get_vertices wname vlabels graph)
+
+    | Pattern.multiedge pattern' enames' etype' low' up' vnames' wname' vlabels' => 
+      RelationOperation.natural_join (RelationOperation.transitive_natural_join (compute_pattern pattern) 
+                                                                                (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices wname' vlabels' graph) 
+                                                                                                                                      "id" 
+                                                                                                                                      (RelationOperation.select_edges ename etype (graph_to_edges_relation graph)) 
+                                                                                                                                      "src") 
+                                                                                                           "trg" 
+                                                                                                           (get_vertices wname vlabels graph) 
+                                                                                                           "id") 
+                                                                                low 
+                                                                                up) 
+                                     (get_vertices wname vlabels graph)
+    end.
 End GraphRelationOperation.
-
-Fixpoint computePattern (p : Pattern.t) (g : PropertyGraph.t) :=
-  match p with
-  | vertex name labels => get_vertices name labels g
-  | edge name types dir p wname wlabels => get_edges name types dir p wname wlabels g
-  | multiedge enames etypes vnames vlabels low up => transitive_get_edges enames etypes vnames vlabels low up g
-  .
-
-Fixpoint computeQuery (q : Query.t) (g : PropertyGraph.t) :=
-  match q with
-  | MATCH ps => 
-  match ps with
-  | [] => (*Empty relation*)
-  | h :: tl => natural_join (computePattern h g) (computeQuery (MATCH tl) g)
-  .
-  | OPTIONAL_MATCH q p => left_outer_join (computeQuery q g) (computePattern p g)
-  | WHERE q p => 
-  match p with
-  | vertex name labels => select condition (computeQuery q g)
-  | _ => semijoin (computeQuery q g) (computePattern p g) 
-  .
-  | WHERE_NOT q p => anti_semijoin (computeQuery q g) (computePattern p g)
-  | RETURN q attrs => projection attrs (computeQuery q g)
-  | RETURN_DISTINCT q attrs => all_different (projection attrs (computeQuery q g))
-  (*| ORDER_SKIP_LIMIT q attrs s l => order_and_sort attrs s l (computeQuery q g)*)
-  .
