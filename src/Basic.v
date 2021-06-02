@@ -289,19 +289,19 @@ Module GraphRelationOperation.
                                 (graph : PropertyGraph.t) : RelationOperation.t :=
     match p with 
     | Pattern.vertex vname vlabels' => 
-      RelationOperation.natural_join (RelationOperation.transitive_natural_join (compute_pattern pattern graph) 
-                                                                                (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices vname vlabels' graph) 
-                                                                                                                                      "id" 
-                                                                                                                                      (RelationOperation.select_edges ename 
-                                                                                                                                                                      etype 
-                                                                                                                                                                      (graph_to_edges_relation graph)) 
-                                                                                                                                      "src") 
-                                                                                                           "trg" 
-                                                                                                           (get_vertices wname vlabels graph) 
-                                                                                                           "id") 
-                                                                                low 
-                                                                                up) 
-                                     (get_vertices wname vlabels graph)
+      RelationOperation.natural_join
+        (RelationOperation.transitive_natural_join
+           (compute_pattern pattern graph) 
+           (RelationOperation.eq_join
+              (RelationOperation.eq_join
+                 (get_vertices vname vlabels' graph) "id" 
+                 (RelationOperation.select_edges ename etype (graph_to_edges_relation graph)) 
+                 "src") 
+              "trg" 
+              (get_vertices wname vlabels graph)
+              "id") 
+           low up) 
+        (get_vertices wname vlabels graph)
 
     | Pattern.edge pattern' ename etype' edirection' wname' wlabels =>
       RelationOperation.natural_join (RelationOperation.transitive_natural_join (compute_pattern pattern graph) 
