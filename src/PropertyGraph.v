@@ -45,5 +45,26 @@ Module PropertyGraph.
       }.
 End PropertyGraph.
 
-Definition graph_to_vertices_relation (graph : PropertyGraph.t) : RelationOperation.t := 
+Fixpoint get_properties_by_edge (e : edge) (eprops : list (Property.name * (edge -> Property.t))) : 
+  list (Property.name * Property.t) :=
+  match eprops with
+  | [] => []
+  | head :: tail => app [(fst head) * ((snd head) v)] [get_properties_by_edge v tail]
+  end.
+
+Fixpoint get_properties_by_vertex (v : vertex) (vprops : list (Property.name * (vertex -> Property.t))) : 
+  list (Property.name * Property.t) :=
+  match vprops with
+  | [] => []
+  | head :: tail => app [(fst head) * ((snd head) v)] [get_properties_by_vertex v tail]
+  end.
+ 
+Fixpoint get_info_about_vertices (vs : list vertex) (graph : PropertyGraph.t) :=
+  match vs with
+  | [] => []
+  | head :: tail => app [rec ([("id" * head) ; ("vertex" * (mk head (vlab head) (get_properties_by_vertex head graph.(vprops))))])] 
+                        [(get_info_about_vertices tail graph)] 
+  end.
+
+Definition graph_to_vertices_relation (graph : PropertyGraph.t) : list data := 
 Definition graph_to_edges_relation (graph : PropertyGraph.t) : RelationOperation.t := 
