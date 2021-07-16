@@ -1,7 +1,6 @@
 Require Import String.
 From hahn Require Import Hahn.
 
-
 Module Property.
   Inductive t := 
   | p_int (i : nat)
@@ -45,3 +44,6 @@ Module PropertyGraph.
          eprops   : list (Property.name * (edge   -> Property.t)); 
       }.
 End PropertyGraph.
+
+Definition graph_to_vertices_relation (graph : PropertyGraph.t) : RelationOperation.t := 
+Definition graph_to_edges_relation (graph : PropertyGraph.t) : RelationOperation.t := 

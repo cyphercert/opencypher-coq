@@ -310,7 +310,8 @@ Module GraphRelationOperation.
       RelationOperation.natural_join 
       (RelationOperation.transitive_natural_join 
         (compute_pattern pattern graph) 
-        (RelationOperation.eq_join (RelationOperation.eq_join (get_vertices wname' wlabels graph) 
+        (RelationOperation.eq_join 
+          (RelationOperation.eq_join (get_vertices wname' wlabels graph) 
                                                                                                                                       "id" 
                                                                                                                                       (RelationOperation.select_edges ename 
                                                                                                                                                                       etype 
