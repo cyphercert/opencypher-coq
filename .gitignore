@@ -1,6 +1,7 @@
 Makefile.coq
 Makefile.coq.conf
 .Makefile.coq.d
+_CoqProject
 
 *~
 *.vok
