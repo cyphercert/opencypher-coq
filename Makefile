@@ -1,4 +1,4 @@
-COQMODULE    := imm 
+COQMODULE    := OpencypherCoq
 COQTHEORIES  := src/*.v
 
 .PHONY: all theories clean tounicode
