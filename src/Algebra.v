@@ -1,6 +1,15 @@
+(*Fixpoint contain (a : list label) (b : label) : bool :=
+  match a with 
+  | [] => False
+  | h :: tl => match
+Fixpoint in (a b : list label) : bool :=
+  match a with
+  | [] => True
+  | h :: tl => match h*)
+
 Module GRA_operations.
-Definition get_vertices (vname : var) (vlabels : list label) 
-                          (graph : PropertyGraph.t) : RelationOperation.t :=
+  Definition get_vertices (vname : var) (vlabels : list label) 
+                          (graph : PropertyGraph.t) :=
 
   Fixpoint get_edges (pattern : Pattern.t) 
                      (ename : var) (etype : list label) (edirection : direction) 
@@ -26,7 +35,3 @@ Definition get_vertices (vname : var) (vlabels : list label)
 
     end.
 End GRA_operations.
-
-Module RA_operations.
-
-End RA_operations.

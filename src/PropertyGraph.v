@@ -45,26 +45,23 @@ Module PropertyGraph.
       }.
 End PropertyGraph.
 
-Fixpoint get_properties_by_edge (e : edge) (eprops : list (Property.name * (edge -> Property.t))) : 
-  list (Property.name * Property.t) :=
-  match eprops with
-  | [] => []
-  | head :: tail => app [(fst head) * ((snd head) v)] [get_properties_by_edge v tail]
-  end.
-
-Fixpoint get_properties_by_vertex (v : vertex) (vprops : list (Property.name * (vertex -> Property.t))) : 
+Fixpoint get_vertex_properties (v : vertex) (vprops : list (Property.name * (vertex -> Property.t))) : 
   list (Property.name * Property.t) :=
   match vprops with
   | [] => []
-  | head :: tail => app [(fst head) * ((snd head) v)] [get_properties_by_vertex v tail]
+  | head :: tail => app [(fst head) * ((snd head) v)] [get_vertex_properties v tail]
   end.
- 
-Fixpoint get_info_about_vertices (vs : list vertex) (graph : PropertyGraph.t) :=
-  match vs with
-  | [] => []
-  | head :: tail => app [rec ([("id" * head) ; ("vertex" * (mk head (vlab head) (get_properties_by_vertex head graph.(vprops))))])] 
-                        [(get_info_about_vertices tail graph)] 
-  end.
+(*If we can use "v" in map:
+fun get_vertex_properties (p : Property.name * (vertex -> Property.t)) : Property.name * Property.t := (fst p) * ((snd p) v).*)
+fun get_vertex_info (v : PropertyGraph.vertex) : data := drec [("id", v) ; ("vertex", mk v (vlab v) (get_vertex_properties v))].
+(*Here we use "get_vertex_info" as Variable "f" for mapping.*)
+Definition graph_to_vertices_relation (graph : PropertyGraph.t) : data := dcol (map graph.(vertices)).
 
-Definition graph_to_vertices_relation (graph : PropertyGraph.t) : list data := 
-Definition graph_to_edges_relation (graph : PropertyGraph.t) : RelationOperation.t := 
+Fixpoint get_edge_properties (e : edge) (eprops : list (Property.name * (edge -> Property.t))) : 
+  list (Property.name * Property.t) :=
+  match eprops with
+  | [] => []
+  | head :: tail => app [(fst head) * ((snd head) e)] [get_edge_properties e tail]
+  end.
+fun get_edge_info (e : PropertyGraph.edge) : data := drec [("id", e) ; ("edge", mk e (elab e) (get_edge_properties e))].
+Definition graph_to_edges_relation (graph : PropertyGraph.t) : data := dcol (map graph.(edges)).
