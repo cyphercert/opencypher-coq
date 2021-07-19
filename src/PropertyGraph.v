@@ -1,5 +1,6 @@
 From Coq Require Import String.
 From Coq Require Import List.
+From Coq Require Import Nat.
 Import ListNotations.
 
 From hahn Require Import Hahn.
@@ -53,20 +54,20 @@ Example sample_graph : t :=
   {| vertices := [1; 2; 3; 4; 5; 6]
   ;  edges    := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12]
   ;  st       := fun e => match e with
-                        | 1  => (2, 1)
-                        | 2  => (1, 3)
-                        | 3  => (3, 2)
-                        | 4  => (2, 4)
-                        | 5  => (5, 2)
-                        | 6  => (2, 5)
-                        | 7  => (3, 4)
-                        | 8  => (4, 3)
-                        | 9  => (4, 5)
-                        | 10 => (5, 4)
-                        | 11 => (6, 3)
-                        | 12 => (5, 6)
-                        | _  => (0, 0)
-                        end
+                          | 1  => (2, 1)
+                          | 2  => (1, 3)
+                          | 3  => (3, 2)
+                          | 4  => (2, 4)
+                          | 5  => (5, 2)
+                          | 6  => (2, 5)
+                          | 7  => (3, 4)
+                          | 8  => (4, 3)
+                          | 9  => (4, 5)
+                          | 10 => (5, 4)
+                          | 11 => (6, 3)
+                          | 12 => (5, 6)
+                          | _  => (0, 0)
+                          end
   ; vlab      := fun v => match v with
                           | 1 => ["USER"]
                           | 2 => ["USER"]
@@ -75,34 +76,57 @@ Example sample_graph : t :=
                           | 5 => ["USER"; "GUEST"]
                           | 6 => ["USER"; "GUEST"]
                           | _ => []
-                       end
+                          end
   ; elab      := fun e => match e with
-                       | 1  => "FRIEND_OF"
-                       | 2  => "KNOWS"
-                       | 3  => "KNOWS"
-                       | 4  => "KNOWS"
-                       | 5  => "FRIEND_OF"
-                       | 6  => "FRIEND_OF"
-                       | 7  => "FRIEND_OF"
-                       | 8  => "FRIEND_OF"
-                       | 9  => "KNOWS"
-                       | 10 => "KNOWS"
-                       | 11 => "KNOWS"
-                       | 12 => "FRIEND_OF"
-                       | _  => ""
-                       end
+                          | 1  => "FRIEND_OF"
+                          | 2  => "KNOWS"
+                          | 3  => "KNOWS"
+                          | 4  => "KNOWS"
+                          | 5  => "FRIEND_OF"
+                          | 6  => "FRIEND_OF"
+                          | 7  => "FRIEND_OF"
+                          | 8  => "FRIEND_OF"
+                          | 9  => "KNOWS"
+                          | 10 => "KNOWS"
+                          | 11 => "KNOWS"
+                          | 12 => "FRIEND_OF"
+                          | _  => ""
+                          end
   ; vprops    := [ ("name", fun v => Property.p_string match v with
-                                                    | 1 => "Dave"
-                                                    | 2 => "Ron"
-                                                    | 3 => "Renna"
-                                                    | 4 => "Shradha"
-                                                    | 5 => "David"
-                                                    | 6 => "Rohan"
-                                                    | _ => ""
-                                                    end)
-
+                                                       | 1 => "Dave"
+                                                       | 2 => "Ron"
+                                                       | 3 => "Renna"
+                                                       | 4 => "Shradha"
+                                                       | 5 => "David"
+                                                       | 6 => "Rohan"
+                                                       | _ => ""
+                                                       end)
+                 ; ("age", fun v => Property.p_int match v with
+                                                   | 1 => 42
+                                                   | 2 => 32
+                                                   | 3 => 39
+                                                   | 4 => 29
+                                                   | 5 => 23
+                                                   | 6 => 52
+                                                   | _ => 0
+                                                   end)
                  ]
-  ; eprops := nil
+  ; eprops    := [ ("since", fun e => if Nat.eqb 5 e then Property.p_empty
+                                      else Property.p_string match e with
+                                                             | 1  => "2012"
+                                                             | 2  => "2018"
+                                                             | 3  => "2000"
+                                                             | 4  => "2011"
+                                                             | 6  => "2001"
+                                                             | 7  => "2015"
+                                                             | 8  => "2015"
+                                                             | 9  => "2009"
+                                                             | 10 => "2006"
+                                                             | 11 => "2007"
+                                                             | 12 => "2012"
+                                                             | _  => ""
+                                                             end)
+                 ]
   |}.
 End PropertyGraph.
 

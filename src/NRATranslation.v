@@ -1,3 +1,12 @@
+From OpencypherCoq Require Import Cypher.
+From OpencypherCoq Require Import ForeignGraphRuntime.
+
+From Qcert Require Import NRAEnv.Lang.NRAEnv.
+From Qcert Require Import Data.Model.Data.
+
+Fixpoint lsakdjflsd (p : Pattern.t) : nraenv :=
+  NRAEnvConst dunit.
+
 (* Fixpoint compute_pattern (pattern : Pattern.t) (graph : PropertyGraph.t) := *)
 (*   match pattern with *)
 (*   | Pattern.vertex vname vlabels => GRA_operations.get_vertices vname vlabels graph *)
