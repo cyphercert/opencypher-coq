@@ -37,6 +37,59 @@ Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
               (const_coll (map (fun l => drec (("label", dstring l) :: nil)) vlabels))
               (dot "labels" (dot "vertex" NRAEnvID)))))
           (NRAEnvGetConstant "vertices"))
+  | Pattern.edge pattern ename etype edirection wname wlabels =>
+    match pattern with 
+    | Pattern.vertex vname vlabels =>
+        NRAEnvJoin 
+          (match edirection with
+          | Pattern.OUT => dot "src" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
+          | Pattern.IN => dot "trg" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
+          | Pattern.BOTH => 
+            match (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)) with
+            | dbool true =>  dot "trg" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
+            | dbool false => dot "src" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)) 
+          (pattern_to_nraenv pattern)
+          (NRAEnvJoin 
+            (match edirection with
+            | Pattern.OUT => dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
+            | Pattern.IN => dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
+            | Pattern.BOTH => NRAEnvBinOp OpOr (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID))
+              dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID))
+            (map_rename_rec "edge" ename
+              (NRAEnvSelect
+                (NRAEnvBinop OpEqual
+                  (const_coll nil)
+                  ((NRAEnvBinop OpBagDiff
+                    (dot "type" (dot "edge" NRAEnvID))
+                    (const_coll (drec (("type", dstring etype) :: nil)) etype))))
+                (NRAEnvGetConstant "edges")))
+            (pattern_to_nraenv (Pattern.vertex wname wlabels))) 
+    | Pattern.edge pattern' ename' etype' edirection' wname' wlabels => 
+        NRAEnvJoin 
+          (match edirection with
+          | Pattern.OUT => dot "src" (dot ename NRAenvID) =? dot "id" (dot wname' NRAenvID)
+          | Pattern.IN => dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname' NRAenvID)
+          | Pattern.BOTH => 
+            match (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)) with
+            | dbool true =>  dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname' NRAenvID)
+            | dbool false => dot "src" (dot ename NRAenvID) =? dot "id" (dot wname' NRAenvID)) 
+          (pattern_to_nraenv pattern)
+          (NRAEnvJoin 
+            (match edirection with
+            | Pattern.OUT => dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
+            | Pattern.IN => dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
+            | Pattern.BOTH => NRAEnvBinOp OpOr (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID))
+              dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID))
+            (map_rename_rec "edge" ename
+              (NRAEnvSelect
+                (NRAEnvBinop OpEqual
+                  (const_coll nil)
+                  ((NRAEnvBinop OpBagDiff
+                    (dot "type" (dot "edge" NRAEnvID))
+                    (const_coll (drec (("type", dstring etype) :: nil)) etype))))
+                (NRAEnvGetConstant "edges")))
+            (pattern_to_nraenv (Pattern.vertex wname wlabels)))
+      | (*In case when we have multiedge, we use behavior from edge case.*)
   | _ => NRAEnvConst dunit
   end.
 
