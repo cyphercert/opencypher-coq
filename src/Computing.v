@@ -20,10 +20,7 @@ Fixpoint compute_clause (clause : Clause.t) (graph : PropertyGraph.t) :=
   end.
 
 Fixpoint compute_query (query : Query.t) (graph : PropertyGraph.t) :=
-  match query.clauses with
-  | [] => NRAEnvConst dunit
-  | head :: tail => match tail with 
-    | [] => compute_clause head graph
-    | head' :: tail' => NRAEnvJoin (compute_clause head graph) (compute_query tail graph)
-    end
+  match query.(clauses) with
+  | [] => NRAEnvConst dcol (drec )
+  | head :: tail => NRAEnvNaturalJoin (compute_clause head graph) (compute_query tail graph)
   end.
