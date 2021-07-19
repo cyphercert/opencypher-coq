@@ -39,7 +39,7 @@ Program Instance foreign_graph_operators : foreign_operators :=
 Next Obligation.
   constructor.
   red.
-  constructor.  constructor; red. destruct x, y.
+  destruct x, y.
 Defined.
 Next Obligation.
   constructor; intros [].
@@ -63,7 +63,7 @@ Next Obligation.
   destruct op.
 Defined.
 
-Definition foreign_graph_runtime : foreign_runtime :=
+Program Instance foreign_graph_runtime : foreign_runtime :=
   {| foreign_runtime_data := foreign_graph_data;
      foreign_runtime_operators := foreign_graph_operators
   |}.

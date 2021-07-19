@@ -1,7 +1,6 @@
 Require Import String.
 
 Definition label := string.
-Definition var := nat.
 
 Module Pattern.
 Inductive direction := 
@@ -11,20 +10,20 @@ Inductive direction :=
 .
 
 Inductive t :=
-| vertex     (vname : var) (vlabels : list label)
+| vertex     (vname : string) (vlabels : list label)
 
 | edge       (pattern : t) 
-             (ename : var) (etype : list label) (edirection : direction) 
-             (wname : var) (wlabels : list label)
+             (ename : string) (etype : list label) (edirection : direction)
+             (wname : string) (wlabels : list label)
 
 | multiedge  (pattern : t) 
-             (enames : list var) (etype : label) (low : nat) (up : option nat) 
-             (vnames : list var) (wname : var) (vlabels : list label)
+             (enames : list string) (etype : label) (low : nat) (up : option nat)
+             (vnames : list string) (wname : string) (vlabels : list label)
 .
 End Pattern.
 
 Module ProjectionExpr.
-Inductive proj := AS (from : var) (to : var).
+Inductive proj := AS (from : string) (to : string).
 
 Definition t := list proj.
 End ProjectionExpr.

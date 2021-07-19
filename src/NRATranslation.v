@@ -1,11 +1,44 @@
+From Coq Require Import String.
+From Coq Require Import List.
+
 From OpencypherCoq Require Import Cypher.
 From OpencypherCoq Require Import ForeignGraphRuntime.
 
 From Qcert Require Import NRAEnv.Lang.NRAEnv.
 From Qcert Require Import Data.Model.Data.
+From Qcert Require Import Operators.UnaryOperators.
+From Qcert Require Import Operators.BinaryOperators.
 
-Fixpoint lsakdjflsd (p : Pattern.t) : nraenv :=
-  NRAEnvConst dunit.
+Definition dot (s : string) : nraenv -> nraenv := NRAEnvUnop (OpDot s).
+
+(* Definition all (bs : nraenv) : nraenv := *)
+
+Open Scope string_scope.
+
+Definition const_coll : list data -> nraenv :=
+  fold_right (fun x => NRAEnvBinop OpBagUnion (NRAEnvConst x)) (NRAEnvConst (dcoll nil)).
+
+(* Definition const_nat (n : nat) : nraenv := *)
+(*   NRAEnvConst (dnat (BinInt.Z.of_nat n)). *)
+
+Definition map_rename_rec (s1 s2:string) (e:nraenv) : nraenv :=
+  NRAEnvMap ((NRAEnvBinop OpRecConcat)
+                ((NRAEnvUnop (OpRec s2)) ((NRAEnvUnop (OpDot s1)) NRAEnvID))
+                ((NRAEnvUnop (OpRecRemove s1)) NRAEnvID)) e.
+
+Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
+  match p with
+  | Pattern.vertex vname vlabels =>
+      map_rename_rec "vertex" vname
+        (NRAEnvSelect
+          (NRAEnvBinop OpEqual
+            (const_coll nil)
+            ((NRAEnvBinop OpBagDiff
+              (const_coll (map (fun l => drec (("label", dstring l) :: nil)) vlabels))
+              (dot "labels" (dot "vertex" NRAEnvID)))))
+          (NRAEnvGetConstant "vertices"))
+  | _ => NRAEnvConst dunit
+  end.
 
 (* Fixpoint compute_pattern (pattern : Pattern.t) (graph : PropertyGraph.t) := *)
 (*   match pattern with *)
