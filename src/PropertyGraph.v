@@ -1,4 +1,7 @@
-Require Import String.
+From Coq Require Import String.
+From Coq Require Import List.
+Import ListNotations.
+
 From hahn Require Import Hahn.
 
 Module Property.
@@ -43,25 +46,63 @@ Module PropertyGraph.
          vprops   : list (Property.name * (vertex -> Property.t)); 
          eprops   : list (Property.name * (edge   -> Property.t)); 
       }.
+
+Open Scope string_scope.
+
+Example sample_graph : t :=
+  {| vertices := [1; 2; 3; 4; 5; 6]
+  ;  edges    := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12]
+  ;  st       := fun e => match e with
+                        | 1  => (2, 1)
+                        | 2  => (1, 3)
+                        | 3  => (3, 2)
+                        | 4  => (2, 4)
+                        | 5  => (5, 2)
+                        | 6  => (2, 5)
+                        | 7  => (3, 4)
+                        | 8  => (4, 3)
+                        | 9  => (4, 5)
+                        | 10 => (5, 4)
+                        | 11 => (6, 3)
+                        | 12 => (5, 6)
+                        | _  => (0, 0)
+                        end
+  ; vlab      := fun v => match v with
+                          | 1 => ["USER"]
+                          | 2 => ["USER"]
+                          | 3 => ["USER"; "HOST"]
+                          | 4 => ["USER"; "HOST"]
+                          | 5 => ["USER"; "GUEST"]
+                          | 6 => ["USER"; "GUEST"]
+                          | _ => []
+                       end
+  ; elab      := fun e => match e with
+                       | 1  => "FRIEND_OF"
+                       | 2  => "KNOWS"
+                       | 3  => "KNOWS"
+                       | 4  => "KNOWS"
+                       | 5  => "FRIEND_OF"
+                       | 6  => "FRIEND_OF"
+                       | 7  => "FRIEND_OF"
+                       | 8  => "FRIEND_OF"
+                       | 9  => "KNOWS"
+                       | 10 => "KNOWS"
+                       | 11 => "KNOWS"
+                       | 12 => "FRIEND_OF"
+                       | _  => ""
+                       end
+  ; vprops    := [ ("name", fun v => Property.p_string match v with
+                                                    | 1 => "Dave"
+                                                    | 2 => "Ron"
+                                                    | 3 => "Renna"
+                                                    | 4 => "Shradha"
+                                                    | 5 => "David"
+                                                    | 6 => "Rohan"
+                                                    | _ => ""
+                                                    end)
+
+                 ]
+  ; eprops := nil
+  |}.
 End PropertyGraph.
 
-Fixpoint get_vertex_properties (v : vertex) (vprops : list (Property.name * (vertex -> Property.t))) : 
-  list (Property.name * Property.t) :=
-  match vprops with
-  | [] => []
-  | head :: tail => app [(fst head) * ((snd head) v)] [get_vertex_properties v tail]
-  end.
-(*If we can use "v" in map:
-fun get_vertex_properties (p : Property.name * (vertex -> Property.t)) : Property.name * Property.t := (fst p) * ((snd p) v).*)
-fun get_vertex_info (v : PropertyGraph.vertex) : data := drec [("id", v) ; ("vertex", mk v (vlab v) (get_vertex_properties v))].
-(*Here we use "get_vertex_info" as Variable "f" for mapping.*)
-Definition graph_to_vertices_relation (graph : PropertyGraph.t) : data := dcol (map graph.(vertices)).
-
-Fixpoint get_edge_properties (e : edge) (eprops : list (Property.name * (edge -> Property.t))) : 
-  list (Property.name * Property.t) :=
-  match eprops with
-  | [] => []
-  | head :: tail => app [(fst head) * ((snd head) e)] [get_edge_properties e tail]
-  end.
-fun get_edge_info (e : PropertyGraph.edge) : data := drec [("id", e) ; ("edge", mk e (elab e) (get_edge_properties e))].
-Definition graph_to_edges_relation (graph : PropertyGraph.t) : data := dcol (map graph.(edges)).
