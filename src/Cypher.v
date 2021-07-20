@@ -1,4 +1,6 @@
-Require Import String.
+From Coq Require Import String.
+From Coq Require Import List.
+Import ListNotations.
 
 Definition label := string.
 
@@ -20,6 +22,19 @@ Inductive t :=
              (enames : list string) (etype : label) (low : nat) (up : option nat)
              (vnames : list string) (wname : string) (vlabels : list label)
 .
+
+Notation "'{(' v ';' ls ')}'" := (vertex v ls).
+Notation "'{(' v ')}'" := (vertex v nil).
+Notation "p '-[' e ';' els ']-{(' w ';' wls ')}'" := (edge p e els BOTH w wls)
+                                       (at level 74, left associativity).
+Notation "p '-[' e ';' els ']->{(' w ';' wls ')}'" := (edge p e els OUT w wls)
+                                       (at level 74, left associativity).
+Notation "p '<-[' e ';' els ']-{(' w ';' wls ')}'" := (edge p e els IN w wls)
+                                       (at level 74, left associativity).
+
+Open Scope string_scope.
+Definition pattern1 : t :=
+  {("p" ; ["USER"])}.
 End Pattern.
 
 Module ProjectionExpr.
