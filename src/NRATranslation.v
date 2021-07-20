@@ -26,35 +26,6 @@ Definition map_rename_rec (s1 s2:string) (e:nraenv) : nraenv :=
                 ((NRAEnvUnop (OpRec s2)) ((NRAEnvUnop (OpDot s1)) NRAEnvID))
                 ((NRAEnvUnop (OpRecRemove s1)) NRAEnvID)) e.
 
-(* Fixpoint edge_pattern_to_nraenv (pattern : Pattern.t, ename : string, edirection : Pattern.direction, vname : string, wname : string, wlabels : list label) : nraenv :=
-  NRAEnvJoin
-    (match edirection with
-    | Pattern.OUT => dot "src" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-    | Pattern.IN => dot "trg" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-    | Pattern.BOTH => 
-      match (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)) with
-      | dbool true =>  dot "trg" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-      | dbool false => dot "src" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-      end
-    end) 
-    (pattern_to_nraenv pattern)
-    (NRAEnvJoin 
-      (match edirection with
-      | Pattern.OUT => dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
-      | Pattern.IN => dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
-      | Pattern.BOTH => NRAEnvBinOp OpOr (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID))
-        dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
-      end)
-      (map_rename_rec "edge" ename
-        (NRAEnvSelect
-          (NRAEnvBinop OpEqual
-            (const_coll nil)
-            ((NRAEnvBinop OpBagDiff
-              (dot "type" (dot "edge" NRAEnvID))
-              (const_coll (drec (("type", dstring etype) :: nil)) etype))))
-          (NRAEnvGetConstant "edges")))
-      (pattern_to_nraenv (Pattern.vertex wname wlabels))).
- *)
  Definition get_vname (pattern : Pattern.t) : string := 
    match pattern with
    | Pattern.vertex vname _ => vname
@@ -62,50 +33,45 @@ Definition map_rename_rec (s1 s2:string) (e:nraenv) : nraenv :=
    | Pattern.multiedge _ _ _ _ _ _ wname _ => wname
    end.
 
-Notation "==" := N().
-   
+Notation "x '==' y" := (NRAEnvBinop OpEqual x y) (at level 70, no associativity). 
 
-Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
-  match p with
-  | Pattern.vertex vname vlabels =>
-      map_rename_rec "vertex" vname
+Definition vertex_to_nraenv (vname : string) (vlabels : list label) := 
+  map_rename_rec "vertex" vname
         (NRAEnvSelect
           (NRAEnvBinop OpEqual
             (const_coll nil)
             ((NRAEnvBinop OpBagDiff
               (const_coll (map (fun l => drec (("label", dstring l) :: nil)) vlabels))
               (dot "labels" (dot "vertex" NRAEnvID)))))
-          (NRAEnvGetConstant "vertices"))
+          (NRAEnvGetConstant "vertices")).
+
+Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
+  match p with
+  | Pattern.vertex vname vlabels =>
+      vertex_to_nraenv vname vlabels
   (*No repeated edge semantics.*)
   | Pattern.edge pattern ename etype edirection wname wlabels =>
-      let vname := get_vname pattern.
+      let vname := get_vname pattern in
       NRAEnvJoin 
         (match edirection with
-        | Pattern.OUT => dot "src" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-        | Pattern.IN => dot "trg" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-        | Pattern.BOTH =>
-          match (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)) with
-          | dbool true =>  dot "trg" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-          | dbool false => dot "src" (dot ename NRAenvID) =? dot "id" (dot vname NRAenvID)
-          end
+        | Pattern.OUT => dot "src" (dot ename NRAEnvID) == dot "id" (dot vname NRAEnvID)
+        | Pattern.IN => dot "trg" (dot ename NRAEnvID) == dot "id" (dot vname NRAEnvID)
+        | Pattern.BOTH => NRAEnvConst dunit
         end)
         (pattern_to_nraenv pattern)
         (NRAEnvJoin 
           (match edirection with
-          | Pattern.OUT => dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
-          | Pattern.IN => dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
-          | Pattern.BOTH => NRAEnvBinOp OpOr (dot "src" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID))
-            dot "trg" (dot ename NRAenvID) =? dot "id" (dot wname NRAenvID)
+          | Pattern.OUT => dot "trg" (dot ename NRAEnvID) == dot "id" (dot wname NRAEnvID)
+          | Pattern.IN => dot "src" (dot ename NRAEnvID) == dot "id" (dot wname NRAEnvID)
+          | Pattern.BOTH => NRAEnvBinop OpOr (dot "src" (dot ename NRAEnvID) == dot "id" (dot wname NRAEnvID))
+            (dot "trg" (dot ename NRAEnvID) == dot "id" (dot wname NRAEnvID))
           end)
           (map_rename_rec "edge" ename
             (NRAEnvSelect
-              (NRAEnvBinop OpEqual
-                (const_coll nil)
-                ((NRAEnvBinop OpBagDiff
-                  (dot "type" (dot "edge" NRAEnvID))
-                  (const_coll (drec (("type", dstring etype) :: nil)) etype))))
+              (NRAEnvBinop 
+                OpContains (const_coll (map dstring etype)) (dot "type" (dot "edge" NRAEnvID)))
               (NRAEnvGetConstant "edges")))
-          (pattern_to_nraenv (Pattern.vertex wname wlabels)))
+          (vertex_to_nraenv wname wlabels))
   | _ => NRAEnvConst dunit
   end.
 
