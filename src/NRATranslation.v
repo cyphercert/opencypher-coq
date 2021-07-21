@@ -37,13 +37,13 @@ Notation "x '==' y" := (NRAEnvBinop OpEqual x y) (at level 70, no associativity)
 
 Definition vertex_to_nraenv (vname : string) (vlabels : list label) : nraenv := 
   map_rename_rec "vertex" vname
-        (NRAEnvSelect
-          (NRAEnvBinop OpEqual
-            (const_coll nil)
-            ((NRAEnvBinop OpBagDiff
-              (const_coll (map (fun l => drec (("label", dstring l) :: nil)) vlabels))
-              (dot "labels" (dot "vertex" NRAEnvID)))))
-          (NRAEnvGetConstant "vertices")).
+    (NRAEnvSelect
+      (NRAEnvBinop OpEqual
+        (const_coll nil)
+        ((NRAEnvBinop OpBagDiff
+          (const_coll (map (fun l => drec (("label", dstring l) :: nil)) vlabels))
+          (dot "labels" (dot "vertex" NRAEnvID)))))
+      (NRAEnvGetConstant "vertices")).
 
 Definition expand (vname : string) (src : nraenv) (ename : string) (etype : list label) 
   (wname : string) (trg : nraenv) : nraenv :=
@@ -76,17 +76,17 @@ Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
   | _ => NRAEnvConst dunit
   end.
 
-Fixpoint clause_to_nraenv (clause : Clause.t) : nraenv :=
-  match clause with
-  | MATCH patterns => match patterns with
-    | [] => NRAEnvConst dcoll (dunit)
-    | head :: tail => NRAEnvNaturalJoin (pattern_to_nraenv head) (clause_to_nraenv (MATCH tail))
-    end
-  | WITH pexpr => 
-  end.
+(* Fixpoint clause_to_nraenv (clause : Clause.t) : nraenv := *)
+(*   match clause with *)
+(*   | MATCH patterns => match patterns with *)
+(*     | [] => NRAEnvConst dcoll (dunit) *)
+(*     | head :: tail => NRAEnvNaturalJoin (pattern_to_nraenv head) (clause_to_nraenv (MATCH tail)) *)
+(*     end *)
+(*   | WITH pexpr => (*Where is relation?*) *)
+(*   end. *)
 
-Fixpoint query_to_nraenv (query : Query.t) : nraenv :=
-  match query.(clauses) with
-  | [] => NRAEnvConst dcoll (dunit)
-  | head :: tail => NRAEnvNaturalJoin (clause_to_nraenv head) (query_to_nraenv tail)
-  end.
+(* Fixpoint query_to_nraenv (query : Query.t) : nraenv := *)
+(*   match query.(clauses) with *)
+(*   | [] => NRAEnvConst dcoll (dunit) *)
+(*   | head :: tail => NRAEnvNaturalJoin (clause_to_nraenv head) (query_to_nraenv tail) *)
+(*   end. *)
