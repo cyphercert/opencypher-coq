@@ -16,7 +16,7 @@ Definition dot (s : string) : nraenv -> nraenv := NRAEnvUnop (OpDot s).
 Open Scope string_scope.
 
 Definition const_coll : list data -> nraenv :=
-  fold_right (fun x => NRAEnvBinop OpBagUnion (NRAEnvConst x)) (NRAEnvConst (dcoll nil)).
+  fold_right (fun x => NRAEnvBinop OpBagUnion (NRAEnvUnop OpBag (NRAEnvConst x))) (NRAEnvConst (dcoll nil)).
 
 (* Definition const_nat (n : nat) : nraenv := *)
 (*   NRAEnvConst (dnat (BinInt.Z.of_nat n)). *)

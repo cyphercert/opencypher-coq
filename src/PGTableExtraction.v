@@ -3,6 +3,7 @@ From Coq Require Import String.
 Import ListNotations.
 
 From Qcert Require Import Data.Model.Data.
+From Qcert Require Import DataNorm.
 
 From OpencypherCoq Require Import PropertyGraph.
 From OpencypherCoq Require Import ForeignGraphRuntime.
@@ -29,7 +30,8 @@ Definition pg_extract_vtable (pg : PropertyGraph.t) : data :=
            ; ("labels", dcoll (map (fun l => drec [("label", dstring l)]) (pg.(PropertyGraph.vlab) v)))
            ; ("properties", make_props v pg.(PropertyGraph.vprops))
            ]
-  in dcoll (map (fun v => drec [("vertex", extract_vertex v)]) pg.(PropertyGraph.vertices)).
+  in normalize_data nil
+       (dcoll (map (fun v => drec [("vertex", extract_vertex v)]) pg.(PropertyGraph.vertices))).
 
 Definition pg_extract_etable (pg : PropertyGraph.t) : data :=
   let extract_edge (e : PropertyGraph.edge) :=
@@ -39,4 +41,5 @@ Definition pg_extract_etable (pg : PropertyGraph.t) : data :=
            ; ("type", dstring (pg.(PropertyGraph.elab) e))
            ; ("properties", make_props e pg.(PropertyGraph.eprops))
            ]
-  in dcoll (map (fun v => drec [("edge", extract_edge v)]) pg.(PropertyGraph.edges)).
+  in normalize_data nil
+       (dcoll (map (fun v => drec [("edge", extract_edge v)]) pg.(PropertyGraph.edges))).
