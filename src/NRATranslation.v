@@ -58,20 +58,40 @@ Definition expand (vname : string) (src : nraenv) (ename : string) (etype : list
           (NRAEnvGetConstant "edges")))
       (trg)).
 
+(* Maybe this will work for no repeated edge semantics. *)
+Definition unique_expand (vname : string) (src : nraenv) (ename : string) (etype : list label) 
+  (wname : string) (trg : nraenv) (enames : list string) : nraenv :=
+  let rel := expand vname src ename etype wname trg in 
+  NRAEnvSelect
+    ((NRAEnvProject enames rel) == (NRAEnvUnop OpDistinct (NRAEnvProject enames rel)))
+    (rel).
+
+Fixpoint get_enames (p : Pattern.t) : list string :=
+  match p with 
+  | Pattern.vertex _ _=> nil
+  | Pattern.edge pattern ename _ _ _ _ => (ename :: get_enames (pattern))
+  | Pattern.multiedge pattern enames _ _ _ _ _ _ => 
+    (app enames (get_enames (pattern)))
+  end.
+
 Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
   match p with
   | Pattern.vertex vname vlabels =>
       vertex_to_nraenv vname vlabels
-  (*No repeated edge semantics.*)
+  (* No repeated edge semantics. *)
   | Pattern.edge pattern ename etype edirection wname wlabels =>
       let vname := get_vname pattern in
       match edirection with 
       | Pattern.OUT => expand vname (pattern_to_nraenv pattern) ename etype wname (vertex_to_nraenv wname wlabels)
+        (*unique_expand vname (pattern_to_nraenv pattern) ename etype wname (vertex_to_nraenv wname wlabels) (ename :: (get_enames pattern))*)
       | Pattern.IN => expand wname (vertex_to_nraenv wname wlabels) ename etype vname (pattern_to_nraenv pattern)
+        (*unique_expand wname (vertex_to_nraenv wname wlabels) ename etype vname (pattern_to_nraenv pattern) (ename :: (get_enames pattern))*)
       | Pattern.BOTH =>
        (NRAEnvBinop OpBagUnion
          (expand vname (pattern_to_nraenv pattern) ename etype wname (vertex_to_nraenv wname wlabels))
+         (*(unique_expand vname (pattern_to_nraenv pattern) ename etype wname (vertex_to_nraenv wname wlabels) (ename :: (get_enames pattern)))*)
          (expand wname (vertex_to_nraenv wname wlabels) ename etype vname (pattern_to_nraenv pattern)))
+         (*(unique_expand wname (vertex_to_nraenv wname wlabels) ename etype vname (pattern_to_nraenv pattern) (ename :: (get_enames pattern))))*)
       end
   | _ => NRAEnvConst dunit
   end.
