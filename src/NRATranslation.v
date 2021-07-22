@@ -47,16 +47,17 @@ Definition vertex_to_nraenv (vname : string) (vlabels : list label) : nraenv :=
 
 Definition expand (vname : string) (src : nraenv) (ename : string) (etype : list label) 
   (wname : string) (trg : nraenv) : nraenv :=
-  NRAEnvJoin
-    (dot "src" (dot ename NRAEnvID) == dot "id" (dot vname NRAEnvID))
-    (src)
-    (NRAEnvJoin (dot "trg" (dot ename NRAEnvID) == dot "id" (dot wname NRAEnvID))
-      (map_rename_rec "edge" ename
-        (NRAEnvSelect
-          (NRAEnvBinop 
-            OpContains (const_coll (map dstring etype)) (dot "type" (dot "edge" NRAEnvID)))
-          (NRAEnvGetConstant "edges")))
-      (trg)).
+  NRAEnvSelect (dot "src" (dot ename NRAEnvID) == dot "id" (dot vname NRAEnvID))
+    (NRAEnvNaturalJoin 
+      src
+      (NRAEnvSelect (dot "trg" (dot ename NRAEnvID) == dot "id" (dot wname NRAEnvID))
+        (NRAEnvNaturalJoin
+          (map_rename_rec "edge" ename
+            (NRAEnvSelect
+              (NRAEnvBinop 
+                OpContains (const_coll (map dstring etype)) (dot "type" (dot "edge" NRAEnvID)))
+              (NRAEnvGetConstant "edges")))
+          trg))).
 
 (* Maybe this will work for no repeated edge semantics. *)
 Definition unique_expand (vname : string) (src : nraenv) (ename : string) (etype : list label) 
