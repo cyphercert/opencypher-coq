@@ -11,7 +11,7 @@ Module Pattern.
   .
 
   Inductive t :=
-  | pvertex    (vname : string) (vlabels : list string)
+  | pvertex    (vvar : string) (vlabels : list string)
 
   | pedge      (p : t)
                (evar : string) (etypes : list string) (edir : direction)
@@ -22,15 +22,6 @@ Module Pattern.
                (low : nat) (up : option nat)
                (wname : string) (wlabels : list string)
   .
-
-  (* Open Scope string_scope. *)
-  (* Open Scope pat_scope. *)
-
-  (* Definition pattern1 : t := *)
-  (* (|"v"#"HOST"|)-["e"#"KNOWS"|"FRIEND_OF"]->(|"w"#"GUEST"|). *)
-
-  (* Close Scope pat_scope. *)
-  (* Close Scope string_scope. *)
 
 End Pattern.
 
