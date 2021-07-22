@@ -34,7 +34,7 @@ Notation "p '<-[' e ';' els ']-{(' w ';' wls ')}'" := (edge p e els IN w wls)
 
 Open Scope string_scope.
 Definition pattern1 : t :=
-  {("p" ; ["USER"])}.
+  {("v" ; ["HOST"])}-["e" ; ["KNOWS"; "FRIEND_OF"]]->{("w" ; ["GUEST"])}.
 End Pattern.
 
 Module ProjectionExpr.
