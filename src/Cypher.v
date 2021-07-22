@@ -2,40 +2,67 @@ From Coq Require Import String.
 From Coq Require Import List.
 Import ListNotations.
 
-Definition label := string.
-
 Module Pattern.
-Inductive direction := 
-| OUT
-| IN
-| BOTH
-.
 
-Inductive t :=
-| vertex     (vname : string) (vlabels : list label)
+  Inductive direction :=
+  | OUT
+  | IN
+  | BOTH
+  .
 
-| edge       (pattern : t) 
-             (ename : string) (etype : list label) (edirection : direction)
-             (wname : string) (wlabels : list label)
+  Inductive t :=
+  | pvertex    (vname : string) (vlabels : list string)
 
-| multiedge  (pattern : t) 
-             (enames : list string) (etype : label) (low : nat) (up : option nat)
-             (vnames : list string) (wname : string) (vlabels : list label)
-.
+  | pedge      (p : t)
+               (evar : string) (etypes : list string) (edir : direction)
+               (wname : string) (wlabels : list string)
 
-Notation "'{(' v ';' ls ')}'" := (vertex v ls).
-Notation "'{(' v ')}'" := (vertex v nil).
-Notation "p '-[' e ';' els ']-{(' w ';' wls ')}'" := (edge p e els BOTH w wls)
-                                       (at level 74, left associativity).
-Notation "p '-[' e ';' els ']->{(' w ';' wls ')}'" := (edge p e els OUT w wls)
-                                       (at level 74, left associativity).
-Notation "p '<-[' e ';' els ']-{(' w ';' wls ')}'" := (edge p e els IN w wls)
-                                       (at level 74, left associativity).
+  | pmultiedge (p : t)
+               (evar : string) (etypes : list string) (edir : direction)
+               (low : nat) (up : option nat)
+               (wname : string) (wlabels : list string)
+  .
 
-Open Scope string_scope.
-Definition pattern1 : t :=
-  {("v" ; ["HOST"])}-["e" ; ["KNOWS"; "FRIEND_OF"]]->{("w" ; ["GUEST"])}.
+  (* Open Scope string_scope. *)
+  (* Open Scope pat_scope. *)
+
+  (* Definition pattern1 : t := *)
+  (* (|"v"#"HOST"|)-["e"#"KNOWS"|"FRIEND_OF"]->(|"w"#"GUEST"|). *)
+
+  (* Close Scope pat_scope. *)
+  (* Close Scope string_scope. *)
+
 End Pattern.
+
+Module PatternNotations.
+  Import Pattern.
+
+  Declare Scope pat_scope.
+  Delimit Scope pat_scope with pat.
+
+  Notation "(| v # l1 , .. , ln |)" :=
+  (pvertex v (cons l1 .. (cons ln nil) ..)) (at level 0) : pat_scope.
+  Notation "(| v |)" := (pvertex v nil) (at level 0) : pat_scope.
+
+  Notation "p -[ e # l1 | .. | ln ]- (| v |)" :=
+  (pedge p e (cons l1 .. (cons ln nil) ..) BOTH v nil) (at level 40) : pat_scope.
+  Notation "p -[ e # l1 | .. | ln ]-> (| v |)" :=
+  (pedge p e (cons l1 .. (cons ln nil) ..) OUT v nil) (at level 40) : pat_scope.
+  Notation "p <-[ e # l1 | .. | ln ]- (| v |)" :=
+  (pedge p e (cons l1 .. (cons ln nil) ..) IN v nil) (at level 40) : pat_scope.
+  Notation "p -[ e # l1 | .. | ln ]- (| v # vl1 , .. , vln |)" :=
+  (pedge p e (cons l1 .. (cons ln nil) ..) BOTH
+          v (cons vl1 .. (cons vln nil) ..)) (at level 40) : pat_scope.
+  Notation "p -[ e # l1 | .. | ln ]-> (| v # vl1 , .. , vln |)" :=
+  (pedge p e (cons l1 .. (cons ln nil) ..) OUT
+          v (cons vl1 .. (cons vln nil) ..)) (at level 40) : pat_scope.
+  Notation "p <-[ e # l1 | .. | ln ]- (| v # vl1 , .. , vln |)" :=
+  (pedge p e (cons l1 .. (cons ln nil) ..) IN
+          v (cons vl1 .. (cons vln nil) ..)) (at level 40) : pat_scope.
+
+End PatternNotations.
+
+(* TODO: refactor VVVVV this VVVVV *)
 
 Module ProjectionExpr.
 Inductive proj := AS (from : string) (to : string).
