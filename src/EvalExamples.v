@@ -25,7 +25,6 @@ Local Open Scope Z_scope.
 Local Open Scope nraenv_scope.
 
 Module DataExamples.
-
   Definition property_graph1 : PropertyGraph.t :=
     {| vertices := [1; 2; 3; 4; 5; 6]
     ;  edges    := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12]
@@ -106,16 +105,20 @@ Module DataExamples.
                   ]
     |}.
 
-  Definition pattern1 : Pattern.t :=
-  (|"v"#"USER"|).
+  Definition vertex_pattern1 : Pattern.t :=
+    (|"v"|).
 
-  Definition pattern2 : Pattern.t :=
-  (|"v"#"USER","HOST"|).
+  Definition vertex_pattern2 : Pattern.t :=
+    (|"v"#"USER","HOST"|).
 
-  Definition pattern3 : Pattern.t :=
-  (|"v"#"HOST"|)-["e"#"KNOWS"]->(|"w"#"GUEST"|).
+  Definition edge_pattern1 : Pattern.t :=
+    (|"v"#"HOST"|)-["e"#"KNOWS"]->(|"w"#"GUEST"|).
 
+  Definition edge_pattern2 := 
+    (|"v"|)-["e"#"KNOWS"]-(|"w"#"GUEST"|).
 
+  Definition complex_pattern := 
+    (|"v1"|)-["e1"#"KNOWS"]->(|"v2"#"HOST"|)<-["e2"#"KNOWS"|"FRIEND_OF"]-(|"v3"#"GUEST","USER"|).
 End DataExamples.
 Import DataExamples.
 
@@ -130,72 +133,9 @@ Definition eval_pattern (p : Pattern.t) (pg : PropertyGraph.t) : option data :=
 Definition evals_to_sem (p : Pattern.t) (pg : PropertyGraph.t) : data -> Prop :=
   nraenv_sem nil (mk_const_env pg) (pattern_to_nraenv p) (drec nil) dunit.
 
-Compute (pattern_to_nraenv pattern3).
 
-Compute (nraenv_eval_top nil (
-(* ------------------------ *)
-
-NRAEnvConst (dstring "kek") elem% const_coll [dstring "kek"]
-
-(* NRAEnvBinop OpBagUnion *)
-(*                                  (NRAEnvUnop UnaryOperators.OpBag *)
-(*                                     (NRAEnvConst (dstring "KNOWS"))) *)
-(*                                  (NRAEnvConst (dcoll [])) *)
-(*                            NRAEnvMap *)
-(*                            (NRAEnvUnop (UnaryOperators.OpDot "type") *)
-(*                            (NRAEnvUnop (UnaryOperators.OpDot "edge") NRAEnvID)) *)
-(*                            (NRAEnvGetConstant "edges") *)
-
-(* (NRAEnvSelect *)
-(*                         (NRAEnvUnop (UnaryOperators.OpDot "type") *)
-(*                            (NRAEnvUnop (UnaryOperators.OpDot "edge") NRAEnvID) *)
-(*                          elem% NRAEnvBinop OpBagUnion *)
-(*                                  (NRAEnvUnop UnaryOperators.OpBag *)
-(*                                     (NRAEnvConst (dstring "KNOWS"))) *)
-(*                                  (NRAEnvConst (dcoll []))) (NRAEnvGetConstant "edges")) *)
-
-
-
-(* ------------------------ *)
-             ) (mk_const_env property_graph1)).
-
-Compute (eval_pattern pattern3 property_graph1).
-
-
-(* Lemma sem : evals_to_sem Pattern.pattern1 PropertyGraph.property_graph1 dunit. *)
-
-(* Lemma evals : (eval_pattern Pattern.pattern1 PropertyGraph.property_graph1) = Some dunit. *)
-
-(* From Mtac2 Require Import Mtac2. *)
-(* Notation "[rl: ]" := rlnil. *)
-(* Notation "[rl: x ; .. ; y ]" := (rlcons x (.. (rlcons y rlnil) ..)). *)
-(* Notation RedAll := ([rl:RedBeta;RedDeltaC;RedDeltaX;RedDelta;RedZeta;RedMatch;RedFix]). *)
-(* Import M. *)
-(* Import M.notations. *)
-(* From Mtac2 Require Tactics. *)
-(* Import T. *)
-
-(* Mtac Do ( *)
-(*   let t := eval_pattern Pattern.pattern1 PropertyGraph.property_graph1 in *)
-(*   let t := reduce (RedOneStep RedAll) t in *)
-(*   print_term t *)
-(* ). *)
-
-(* Goal (eval_pattern Pattern.pattern1 PropertyGraph.property_graph1) = Some dunit. *)
-(*   vm_compute. *)
-
-(* Proof. *)
-(*   red. *)
-(*   vm_compute. *)
-
-(* Proof. *)
-(*   unfold eval_pattern. *)
-(*   vm_compute (pg_extract_vtable _). *)
-(*   vm_compute (pattern_to_nraenv _). *)
-(*   assert (pattern_to_nraenv Pattern.pattern1 = NRAEnvID). *)
-(*   cbv. *)
-(*   (* Definition kek := pattern_to_nraenv Pattern.pattern1. *) *)
-(*   remember (pattern_to_nraenv Pattern.pattern1) as expr. *)
-(*   . *)
-(*   vm_compute in Heqexpr. *)
-(*   . *)
+(* Compute (eval_pattern vertex_pattern1 property_graph1).
+Compute (eval_pattern vertex_pattern2 property_graph1).
+Compute (eval_pattern edge_pattern1 property_graph1).
+Compute (eval_pattern edge_pattern2 property_graph1).
+Compute (eval_pattern complex_pattern property_graph1). *)
