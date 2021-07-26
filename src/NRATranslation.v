@@ -31,11 +31,11 @@ Definition map_rename_rec (s1 s2:string) (e:nraenv) : nraenv :=
                 ((NRAEnvUnop (OpRec s2)) ((NRAEnvUnop (OpDot s1)) NRAEnvID))
                 ((NRAEnvUnop (OpRecRemove s1)) NRAEnvID)) e.
 
-Definition get_last_vname (p : Pattern.t) : string :=
+Definition get_last_vvar (p : Pattern.t) : string :=
   match p with
-  | pvertex name _ => name
-  | pedge _ _ _ _ name _ => name
-  | pmultiedge _ _ _ _ _ _ name _ => name
+  | pvertex vvar _ => vvar
+  | pedge _ _ _ _ vvar _ => vvar
+  | pmultiedge _ _ _ _ _ _ vvar _ => vvar
   end.
 
 Module NRAEnvNotations.
@@ -49,8 +49,8 @@ Module NRAEnvNotations.
 End NRAEnvNotations.
 Import NRAEnvNotations.
 
-Definition vertex_to_nraenv (vname : string) (vlabels : list string) : nraenv :=
-  map_rename_rec "vertex" vname
+Definition vertex_to_nraenv (vvar : string) (vlabels : list string) : nraenv :=
+  map_rename_rec "vertex" vvar
     (NRAEnvSelect
       (NRAEnvBinop OpEqual
         (const_coll nil)
@@ -64,23 +64,23 @@ Definition vertex_to_nraenv (vname : string) (vlabels : list string) : nraenv :=
 (*                               (wvar : string) (wlabels : list string) := *)
 (*   NRAEnvNaturalJoin . *)
 
-Definition expand (vname : string) (src : nraenv) (ename : string) (etype : list string)
-  (wname : string) (trg : nraenv) : nraenv :=
-  NRAEnvSelect (NRAEnvID.%ename.%"src" =% NRAEnvID.%vname.%"id")
+Definition expand (vvar : string) (src : nraenv) (evar : string) (etypes : list string)
+  (wvar : string) (trg : nraenv) : nraenv :=
+  NRAEnvSelect (NRAEnvID.%evar.%"src" =% NRAEnvID.%vvar.%"id")
     (NRAEnvNaturalJoin
       src
-      (NRAEnvSelect (NRAEnvID.%ename.%"trg" =% NRAEnvID.%wname.%"id")
+      (NRAEnvSelect (NRAEnvID.%evar.%"trg" =% NRAEnvID.%wvar.%"id")
         (NRAEnvNaturalJoin
-          (map_rename_rec "edge" ename
+          (map_rename_rec "edge" evar
             (NRAEnvSelect
-              (NRAEnvID.%"edge".%"type" elem% const_coll (map dstring etype))
+              (NRAEnvID.%"edge".%"type" elem% const_coll (map dstring etypes))
               (NRAEnvGetConstant "edges")))
           trg))).
 
 (* Maybe this will work for no repeated edge semantics. *)
-(* Definition unique_expand (vname : string) (src : nraenv) (ename : string) (etype : list string) *)
-(*   (wname : string) (trg : nraenv) (enames : list string) : nraenv := *)
-(*   let rel := expand vname src ename etype wname trg in  *)
+(* Definition unique_expand (vvar : string) (src : nraenv) (evar : string) (etypes : list string) *)
+(*   (wvar : string) (trg : nraenv) (enames : list string) : nraenv := *)
+(*   let rel := expand vvar src evar etypes wvar trg in  *)
 (*   NRAEnvSelect *)
 (*     ((NRAEnvProject enames rel) =% (NRAEnvUnop OpDistinct (NRAEnvProject enames rel))) *)
 (*     rel. *)
@@ -88,7 +88,7 @@ Definition expand (vname : string) (src : nraenv) (ename : string) (etype : list
 (* Fixpoint get_enames (p : Pattern.t) : list string := *)
 (*   match p with  *)
 (*   | Pattern.vertex _ _=> nil *)
-(*   | Pattern.edge p ename _ _ _ _ => (ename :: get_enames (pattern)) *)
+(*   | Pattern.edge p evar _ _ _ _ => (evar :: get_enames (pattern)) *)
 (*   | Pattern.multiedge p enames _ _ _ _ _ _ => *)
 (*     (app enames (get_enames (pattern))) *)
 (*   end. *)
@@ -97,21 +97,21 @@ Fixpoint pattern_to_nraenv (p : Pattern.t) : nraenv :=
   match p with
   | pvertex vvar vlabels => vertex_to_nraenv vvar vlabels
   (* No repeated edge semantics. *)
-  | pedge p evar etypes edir wname wlabels =>
-      let vname := get_last_vname p in
+  | pedge p evar etypes edir wvar wlabels =>
+      let vvar := get_last_vvar p in
       match edir with
-      | Pattern.OUT => expand vname (pattern_to_nraenv p) evar etypes wname (vertex_to_nraenv wname wlabels)
-        (*unique_expand vname (pattern_to_nraenv pattern) evar etypes wname (vertex_to_nraenv wname wlabels) (evar :: (get_evars pattern))*)
-      | Pattern.IN => expand wname (vertex_to_nraenv wname wlabels) evar etypes vname (pattern_to_nraenv p)
-        (*unique_expand wname (vertex_to_nraenv wname wlabels) evar etypes vname (pattern_to_nraenv pattern) (evar :: (get_evars pattern))*)
+      | Pattern.OUT => expand vvar (pattern_to_nraenv p) evar etypes wvar (vertex_to_nraenv wvar wlabels)
+        (*unique_expand vvar (pattern_to_nraenv pattern) evar etypes wvar (vertex_to_nraenv wvar wlabels) (evar :: (get_evars pattern))*)
+      | Pattern.IN => expand wvar (vertex_to_nraenv wvar wlabels) evar etypes vvar (pattern_to_nraenv p)
+        (*unique_expand wvar (vertex_to_nraenv wvar wlabels) evar etypes vvar (pattern_to_nraenv pattern) (evar :: (get_evars pattern))*)
       | Pattern.BOTH =>
         (NRAEnvBinop OpBagUnion
-          (expand vname (pattern_to_nraenv p) evar etypes wname (vertex_to_nraenv wname wlabels))
-          (*(unique_expand vname (pattern_to_nraenv pattern) evar etypes wname (vertex_to_nraenv wname wlabels) (evar :: (get_evars pattern)))*)
-          (expand wname (vertex_to_nraenv wname wlabels) evar etypes vname (pattern_to_nraenv p)))
-          (*(unique_expand wname (vertex_to_nraenv wname wlabels) evar etypes vname (pattern_to_nraenv pattern) (evar :: (get_evars pattern))))*)
+          (expand vvar (pattern_to_nraenv p) evar etypes wvar (vertex_to_nraenv wvar wlabels))
+          (*(unique_expand vvar (pattern_to_nraenv pattern) evar etypes wvar (vertex_to_nraenv wvar wlabels) (evar :: (get_evars pattern)))*)
+          (expand wvar (vertex_to_nraenv wvar wlabels) evar etypes vvar (pattern_to_nraenv p)))
+          (*(unique_expand wvar (vertex_to_nraenv wvar wlabels) evar etypes vvar (pattern_to_nraenv pattern) (evar :: (get_evars pattern))))*)
       end
-  | _ => NRAEnvConst dunit
+  | pmultiedge p evar etypes edir low up wvar wlabels => NRAEnvConst dunit
   end.
 
 Close Scope nraenv_scope.

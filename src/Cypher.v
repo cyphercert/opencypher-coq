@@ -15,12 +15,12 @@ Module Pattern.
 
   | pedge      (p : t)
                (evar : string) (etypes : list string) (edir : direction)
-               (wname : string) (wlabels : list string)
+               (wvar : string) (wlabels : list string)
 
   | pmultiedge (p : t)
                (evar : string) (etypes : list string) (edir : direction)
                (low : nat) (up : option nat)
-               (wname : string) (wlabels : list string)
+               (wvar : string) (wlabels : list string)
   .
 
 End Pattern.
