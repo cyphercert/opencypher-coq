@@ -1,17 +1,84 @@
-From Coq Require Import BinNums.
-From Coq Require Import BinInt.
-From Coq Require Import List.
+Require Import BinNums.
+Require Import BinInt.
+Require Import List.
 
-From OpencypherCoq Require Import Cypher.
-From RelationAlgebra Require Import syntax matrix bmx ordinal.
-Import ListNotations.
+(* Require Import Cypher. *)
+(* From RelationAlgebra Require Import syntax matrix bmx ordinal. *)
+(* Import ListNotations. *)
 
-From RelationAlgebra Require Import kleene boolean sups matrix.
-From OpencypherCoq Require Import PropertyGraph.
-Import PropertyGraph.
+(* From RelationAlgebra Require Import kleene boolean sups matrix. *)
+(* From OpencypherCoq Require Import PropertyGraph. *)
+(* Import PropertyGraph. *)
 
-Definition get_labels_matrices (n : nat) (vlab : vertex -> list label) : list (label * (ord n -> ord n -> boolean)) := .
-Definition get_types_matrices (n : nat) (elab : edge -> label) (st : edge -> vertex * vertex) : list (label * (ord n -> ord n -> boolean)) := .
+(* TODO: find a standard function of boolean (in)equality on nat *)
+Definition nat_eq (x y : nat) := true.
+Definition nat_neq (x y : nat) := false.
+
+(* TODO: remove *)
+Definition vertex := Z.
+Definition label := Z.
+Definition ord (n : nat) := nat.
+
+Definition label_neq (x y : label) := false.
+
+Fixpoint list_unique (l : list label) :=
+  match l with
+  | nil => nil
+  | cons h l =>
+    h :: filter (fun x => label_neq x h)
+      (list_unique l)
+  end.
+
+(* TODO: use definition from RelationAlgebra *)
+Definition eq_ord {n} (x y : ord n) := true.
+
+Definition list_in (lbl : label) (lbls : list label) : bool := 
+  false.
+
+Definition get_labels_matrices
+           (n : nat) 
+           (n2v : nat -> vertex)
+           (vlab : vertex -> list label)
+  : list (label * (ord n -> ord n -> bool)) :=
+  let labels :=
+      list_unique
+        (concat
+           (map (fun i => vlab (n2v i)) (seq 0 n) ))
+  in
+  map
+    (fun lbl =>
+       let mtx (x y : ord n) :=
+           if eq_ord x y
+           then
+             (* TODO: List.In in boolean form *)
+             list_in lbl (vlab (n2v x))
+           else false
+       in
+       (lbl, mtx)
+    )
+    labels
+.
+
+Definition get_types_matrices
+           (n : nat)
+           (edges : list edge)
+           (elab : edge -> label)
+           (st : edge -> vertex * vertex)
+  : list (label * (ord n -> ord n -> boolean)) :=
+  let labels :=
+      list_unique
+        (concat
+           (map (fun edge => elab edge) edges ))
+  in
+  map
+    (fun lbl =>
+       let mtx (x y : ord n) :=
+
+       in
+       (lbl, mtx)
+    )
+    labels
+.
 
 Definition labels := get_labels_matrices 
 
