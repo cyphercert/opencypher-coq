@@ -34,8 +34,8 @@ Module Property.
 End Property.
 
 Module PropertyGraph.
-  Definition vertex    := Z.
-  Definition edge      := Z.
+  Definition vertex    := nat.
+  Definition edge      := nat.
   Definition label     := string.
 
   Record t :=

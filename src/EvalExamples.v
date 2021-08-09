@@ -21,7 +21,7 @@ Import NRAEnvNotations.
 Local Open Scope pat_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
-Local Open Scope Z_scope.
+Local Open Scope nat_scope.
 Local Open Scope nraenv_scope.
 
 Module DataExamples.
@@ -86,8 +86,7 @@ Module DataExamples.
                                                     | _ => 0
                                                     end)
                   ]
-    ; eprops    := [ ("since", fun e => if 5 =? e then p_empty
-                                        else p_string match e with
+    ; eprops    := [ ("since", fun e => p_string match e with
                                                               | 1  => "2012"
                                                               | 2  => "2018"
                                                               | 3  => "2000"

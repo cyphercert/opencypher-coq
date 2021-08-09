@@ -1,6 +1,10 @@
 From Coq Require Import List.
 From Coq Require Import String.
 Import ListNotations.
+Require Import BinPos PeanoNat.
+Import Pos.
+From Coq Require Import BinNums.
+
 
 From Qcert Require Import Data.Model.Data.
 From Qcert Require Import DataNorm.
@@ -11,6 +15,9 @@ From OpencypherCoq Require Import ForeignGraphRuntime.
 Import PropertyGraph.
 Open Scope list_scope.
 Open Scope string_scope.
+
+Definition nat_to_z (n : nat) : Z := 
+  Zpos (Pos.of_nat n).
 
 Definition property_to_data (p : Property.t) : data :=
   match p with
@@ -27,7 +34,7 @@ Definition make_props {A} (a : A) (props : list (Property.name * (A -> Property.
 
 Definition pg_extract_vtable (pg : PropertyGraph.t) : data :=
   let extract_vertex (v : PropertyGraph.vertex) :=
-      drec [ ("id", dnat v)
+      drec [ ("id", dnat (nat_to_z v))
            ; ("labels", dcoll (map (fun l => drec [("label", dstring l)]) (pg.(PropertyGraph.vlab) v)))
            ; ("properties", make_props v pg.(PropertyGraph.vprops))
            ]
@@ -37,9 +44,9 @@ Definition pg_extract_vtable (pg : PropertyGraph.t) : data :=
 Definition pg_extract_etable (pg : PropertyGraph.t) : data :=
   let extract_edge (e : edge) :=
     let (src, trg) := pg.(st) e in
-      drec [ ("id", dnat e)
-           ; ("src", dnat src)
-           ; ("trg", dnat trg)
+      drec [ ("id", dnat (nat_to_z e))
+           ; ("src", dnat (nat_to_z src))
+           ; ("trg", dnat (nat_to_z trg))
            ; ("type", dstring (pg.(elab) e))
            ; ("properties", make_props e pg.(eprops))
            ]
