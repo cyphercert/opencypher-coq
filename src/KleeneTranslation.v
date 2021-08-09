@@ -86,6 +86,18 @@ Fixpoint k_edges (n : positive) (etypes : list label) (tr : bool) (k : nat) :=
   | S k' => e_dot (get_types n etypes tr) (k_edges n etypes tr k')
   end.
 
+Fixpoint sum (n : positive) (els : list (expr n n)) :=
+  match els with 
+  | [] => e_zer n n
+  | h :: tl => e_pls h (sum n tl)
+  end.
+  
+Fixpoint get_seq (low : nat) (up : nat) :=
+  match (eqb low nat) with
+  | true => [low]
+  | false => [low] ++ get_seq (low + 1) (up)
+  end.
+
 Fixpoint pattern_to_matrix (n : positive) (p : Pattern.t) :=
   match p with 
   | pvertex vvar vlabels => match vlabels with
@@ -99,7 +111,19 @@ Fixpoint pattern_to_matrix (n : positive) (p : Pattern.t) :=
       | BOTH => e_pls (get_types n etypes true) (get_types n etypes false)
     end in e_dot (e_dot (pattern_to_matrix n p) e) (pattern_to_matrix n (pvertex wvar wlabels))
   | pmultiedge p evar etypes edir low up wvar wlabels =>
-    let e := 
+    let e := match up with 
+      | None =>  match edir with
+        | IN => e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true)
+        | OUT =>  e_dot (k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false)
+        | BOTH => e_pls (e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true))
+          ((k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false))
+        end
+      | Some up' => match edir with
+      | IN => sum n (map (fun k => k_edges n etypes true k) (get_seq low up'))
+      | OUT =>  sum n (map (fun k => k_edges n etypes false k) (get_seq low up'))
+      | BOTH => e_pls (sup n (map (fun k => k_edges n etypes true k) (get_seq low up')))
+        (sum n (map (fun k => k_edges n etypes false k) (get_seq low up')))
+      end
     in e_dot (e_dot (pattern_to_matrix n p) e) (pattern_to_matrix n (pvertex wvar wlabels))
   end.
 
