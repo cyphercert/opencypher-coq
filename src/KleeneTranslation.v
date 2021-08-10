@@ -74,10 +74,10 @@ Definition get_all_matrices (n : nat) (g : PropertyGraph.t) :=
 Fixpoint get_types (n : positive) (etypes : list label) (tr : bool) :=
   match etypes with
   | [] => e_zer n n
-  | h :: tl => e_pls (get_types n tl tr) (match tr with 
-    | true => e_cnv (e_var h)
-    | false => e_var h
-    end)
+  | h :: tl => e_pls (get_types n tl tr)
+                     (if tr
+                      then e_cnv (e_var h)
+                      else e_var h)
   end.
 
 Fixpoint k_edges (n : positive) (etypes : list label) (tr : bool) (k : nat) :=
@@ -86,45 +86,64 @@ Fixpoint k_edges (n : positive) (etypes : list label) (tr : bool) (k : nat) :=
   | S k' => e_dot (get_types n etypes tr) (k_edges n etypes tr k')
   end.
 
-Fixpoint sum (n : positive) (els : list (expr n n)) :=
-  match els with 
-  | [] => e_zer n n
-  | h :: tl => e_pls h (sum n tl)
-  end.
-  
-Fixpoint get_seq (low : nat) (up : nat) :=
-  match (eqb low nat) with
-  | true => [low]
-  | false => [low] ++ get_seq (low + 1) (up)
-  end.
+(* TODO: Learn from functional programming basic operations on lists:
+         - map
+         - foldl (fold_left), foldr (fold_right)
+         - filter
+*)
 
-Fixpoint pattern_to_matrix (n : positive) (p : Pattern.t) :=
+(* TODO: move to a file w/ basic definitions *)
+Fixpoint sum
+         {A : Set}
+         (s t : A -> positive)
+         {m n : positive}
+         (els : list (expr s t m n))
+         : expr s t m n :=
+  List.fold_left (fun m h => e_pls h m) els (e_zer m n).
+  (* match els with  *)
+  (* | []      => e_zer m n *)
+  (* | h :: tl => e_pls h (sum s t tl) *)
+  (* end. *)
+
+Fixpoint pattern_to_matrix
+         (n : positive)
+         (p : Pattern.t) :
+  expr (fun _ : string => n) (fun _ : string => n) n n :=
   match p with 
-  | pvertex vvar vlabels => match vlabels with
-    | [] => e_one n
-    | h :: tl => e_dot (e_var h) (pattern_to_matrix n (pvertex vvar tl))
-    end
-  | pedge p evar etypes edir wvar wlabels => 
-    let e := match edir with 
-      | IN => get_types n etypes true
-      | OUT => get_types n etypes false
-      | BOTH => e_pls (get_types n etypes true) (get_types n etypes false)
-    end in e_dot (e_dot (pattern_to_matrix n p) e) (pattern_to_matrix n (pvertex wvar wlabels))
-  | pmultiedge p evar etypes edir low up wvar wlabels =>
-    let e := match up with 
-      | None =>  match edir with
-        | IN => e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true)
-        | OUT =>  e_dot (k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false)
-        | BOTH => e_pls (e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true))
-          ((k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false))
-        end
-      | Some up' => match edir with
-      | IN => sum n (map (fun k => k_edges n etypes true k) (get_seq low up'))
-      | OUT =>  sum n (map (fun k => k_edges n etypes false k) (get_seq low up'))
-      | BOTH => e_pls (sup n (map (fun k => k_edges n etypes true k) (get_seq low up')))
-        (sum n (map (fun k => k_edges n etypes false k) (get_seq low up')))
-      end
-    in e_dot (e_dot (pattern_to_matrix n p) e) (pattern_to_matrix n (pvertex wvar wlabels))
+  | pvertex vvar vlabels =>
+    List.fold_left (fun (m : expr (fun _ => n) (fun _  => n) n n) vlabel =>
+                      e_dot (e_var vlabel) m)
+                   vlabels
+                   (e_one n)
+    (* match vlabels with *)
+    (* | []      => e_one n *)
+    (* | h :: tl => *)
+    (*   e_dot (e_var h) *)
+    (*         (pattern_to_matrix n (pvertex vvar tl)) *)
+    (* end *)
+  (* | pedge p evar etypes edir wvar wlabels => *)
+  (*   let e := match edir with *)
+  (*     | IN => get_types n etypes true *)
+  (*     | OUT => get_types n etypes false *)
+  (*     | BOTH => e_pls (get_types n etypes true) (get_types n etypes false) *)
+  (*   end in e_dot (e_dot (pattern_to_matrix n p) e) (pattern_to_matrix n (pvertex wvar wlabels)) *)
+  | _ => e_one n
+  (* | pmultiedge p evar etypes edir low up wvar wlabels => *)
+  (*   let e := match up with  *)
+  (*     | None =>  match edir with *)
+  (*       | IN => e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true) *)
+  (*       | OUT =>  e_dot (k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false) *)
+  (*       | BOTH => e_pls (e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true)) *)
+  (*         ((k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false)) *)
+  (*       end *)
+  (*     | Some up' => match edir with *)
+  (*     | IN => sum n (map (fun k => k_edges n etypes true k) (List.seq low (up' - low))) *)
+  (*     | OUT =>  sum n (map (fun k => k_edges n etypes false k) (List.seq low (up' - low))) *)
+  (*     | BOTH => e_pls (sup n (map (fun k => k_edges n etypes true k) (List.seq low (up' - low)))) *)
+  (*       (sum n (map (fun k => k_edges n etypes false k) (get_seq low up'))) *)
+  (*     end *)
+  (*   in *)
+  (*     e_dot (e_dot (pattern_to_matrix n p) e) (pattern_to_matrix n (pvertex wvar wlabels)) *)
   end.
 
 
