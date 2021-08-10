@@ -1,9 +1,9 @@
-From Coq Require Import String.
-From Coq Require Import List.
-From Coq Require Import BinNums.
+Require Import String.
+Require Import List.
+Require Import BinNums.
 Import ListNotations.
 
-From hahn Require Import Hahn.
+(* From hahn Require Import Hahn. *)
 
 Module Property.
   Inductive t := 
