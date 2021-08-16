@@ -1,8 +1,8 @@
-Import String.
-Import List.
-Import BinNums.
-Import BinInt.
-Import ListNotations.
+Require Import String.
+Require Import List.
+Require Import BinNums.
+Require Import BinInt.
+Require Import ListNotations.
 
 Require Import ForeignGraphRuntime.
 Require Import Cypher.
