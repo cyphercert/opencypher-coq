@@ -2,8 +2,8 @@ Require Import String.
 Require Import List.
 Import ListNotations.
 
-From OpencypherCoq Require Import Cypher.
-From OpencypherCoq Require Import ForeignGraphRuntime.
+Require Import Cypher.
+Require Import ForeignGraphRuntime.
 
 From Qcert Require Import NRAEnv.Lang.NRAEnv.
 From Qcert Require Import Data.Model.Data.

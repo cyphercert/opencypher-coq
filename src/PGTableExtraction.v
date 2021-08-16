@@ -1,16 +1,16 @@
-From Coq Require Import List.
-From Coq Require Import String.
+Require Import List.
+Require Import String.
 Import ListNotations.
 Require Import BinPos PeanoNat.
 Import Pos.
-From Coq Require Import BinNums.
+Require Import BinNums.
 
 
 From Qcert Require Import Data.Model.Data.
 From Qcert Require Import DataNorm.
 
-From OpencypherCoq Require Import PropertyGraph.
-From OpencypherCoq Require Import ForeignGraphRuntime.
+Require Import PropertyGraph.
+Require Import ForeignGraphRuntime.
 
 Import PropertyGraph.
 Open Scope list_scope.
