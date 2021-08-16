@@ -1,5 +1,5 @@
-From Coq Require Import String.
-From Coq Require Import List.
+Require Import String.
+Require Import List.
 Import ListNotations.
 
 Module Pattern.

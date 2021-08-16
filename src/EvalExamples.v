@@ -1,14 +1,14 @@
-From Coq Require Import String.
-From Coq Require Import List.
-From Coq Require Import BinNums.
-From Coq Require Import BinInt.
+Import String.
+Import List.
+Import BinNums.
+Import BinInt.
 Import ListNotations.
 
-From OpencypherCoq Require Import ForeignGraphRuntime.
-From OpencypherCoq Require Import Cypher.
-From OpencypherCoq Require Import PropertyGraph.
-From OpencypherCoq Require Import PGTableExtraction.
-From OpencypherCoq Require Import NRATranslation.
+Require Import ForeignGraphRuntime.
+Require Import Cypher.
+Require Import PropertyGraph.
+Require Import PGTableExtraction.
+Require Import NRATranslation.
 
 From Qcert Require Import Data.Model.Data.
 From Qcert Require Import Lang.NRAEnv.
