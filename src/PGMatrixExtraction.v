@@ -17,7 +17,7 @@ Inductive Label :=
 | elabel (l : label)
 .
 
-Definition get_labels_matrices (n : nat) (vlab : vertex -> list label) : 
+Definition pg_extract_lmatrices (n : nat) (vlab : vertex -> list label) : 
   list (Label * (ord n -> ord n -> bool)) :=
   let labels := list_unique (List.concat (map (fun i => vlab i) (List.seq 0 n))) in
   map (fun lbl => let mtx (x y : ord n) := 
@@ -28,7 +28,7 @@ Definition ord_to_nat (n : nat) (o : ord n) : nat :=
   | Ord k _ => k
   end.
 
-Definition get_types_matrices (n : nat) (edges : list edge) (elab : edge -> label) 
+Definition pg_extract_tmatrices (n : nat) (edges : list edge) (elab : edge -> label)
   (st : edge -> vertex * vertex) : list (Label * (ord n -> ord n -> bool)) :=
   let labels := list_unique (map (fun edge => elab edge) edges) in
   map (fun lbl => 
@@ -41,6 +41,6 @@ Definition get_types_matrices (n : nat) (edges : list edge) (elab : edge -> labe
             (Nat.eqb (snd (st edge)) (ord_to_nat n y))) 
           (String.eqb (elab edge) lbl)) edges) in (elabel lbl, mtx)) labels.
 
-Definition get_all_matrices (g : PropertyGraph.t) := 
+(* Definition pg_extract_matrices (g : PropertyGraph.t) := 
   let n := List.length g.(vertices) in
-  (get_labels_matrices n g.(vlab)) ++ (get_types_matrices n g.(edges) g.(elab) g.(st)).
+  (get_labels_matrices n g.(vlab)) ++ (get_types_matrices n g.(edges) g.(elab) g.(st)). *)

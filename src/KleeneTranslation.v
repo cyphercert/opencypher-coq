@@ -15,46 +15,47 @@ Require Import Cypher.
 Require Import PropertyGraph.
 Import PropertyGraph.
 Import Pattern.
+Require Import PGMatrixExtraction.
 
-Definition label_neq (a b : label) : bool := negb (String.eqb a b).
-  
-Fixpoint get_types (n : positive) (etypes : list label) (tr : bool) :=
-  match etypes with
-  | [] => e_zer n n
-  | h :: tl => e_pls (get_types n tl tr) (if tr then e_cnv (e_var h) else e_var h)
-  end.
+Definition types_to_expr (n : positive) (etypes : list label) (tr : bool) :
+expr (fun _ : Label => n) (fun _ : Label => n) n n :=
+  List.fold_right 
+    (fun x (y : expr (fun _ => n) (fun _  => n) n n) => 
+      e_pls (if tr then e_cnv (e_var (elabel x)) else e_var (elabel x)) y)
+    (e_zer n n)
+    etypes.
+
+Definition labels_to_expr (n : positive) (vlabels : list label) : 
+expr (fun _ : Label => n) (fun _ : Label => n) n n :=
+  List.fold_right 
+    (fun x (y : expr (fun _ => n)  (fun _  => n) n n) => e_dot (e_var (vlabel x)) y)
+    (e_one n)
+    vlabels.
 
 Fixpoint k_edges (n : positive) (etypes : list label) (tr : bool) (k : nat) :=
   match k with 
   | O => e_one n
-  | S k' => e_dot (get_types n etypes tr) (k_edges n etypes tr k')
+  | S k' => e_dot (types_to_expr n etypes tr) (k_edges n etypes tr k')
   end.
 
-Definition pvertex_to_matrix (n : positive) (vvar : string) (vlabels : list string): 
-expr (fun _ : string => n) (fun _ : string => n) n n :=
-  List.fold_left 
-    (fun (m : expr (fun _ => n) (fun _  => n) n n) vlabel => e_dot (e_var vlabel) m)
-    vlabels 
-    (e_one n).
-
 Fixpoint pattern_to_matrix (n : positive) (p : Pattern.t) :
-  expr (fun _ : string => n) (fun _ : string => n) n n :=
+expr (fun _ : Label => n) (fun _ : Label => n) n n :=
   match p with 
-  | pvertex vvar vlabels => pvertex_to_matrix n vvar vlabels    
+  | pvertex vvar vlabels => labels_to_expr n vlabels    
   | pedge p evar etypes edir wvar wlabels =>
     let e := match edir with 
-      | IN => get_types n etypes true
-      | OUT => get_types n etypes false
-      | BOTH => e_pls (get_types n etypes true) (get_types n etypes false)
-      end in e_dot (e_dot (pattern_to_matrix n p) e) (pvertex_to_matrix n wvar wlabels) 
+      | IN => types_to_expr n etypes true
+      | OUT => types_to_expr n etypes false
+      | BOTH => e_pls (types_to_expr n etypes true) (types_to_expr n etypes false)
+      end in e_dot (e_dot (pattern_to_matrix n p) e) (labels_to_expr n wlabels) 
  | pmultiedge p evar etypes edir low up wvar wlabels =>
    let e := match up with 
      | None =>  match edir with
-      | IN => e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true))
-      | OUT =>  e_dot (k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false))
+      | IN => e_dot (k_edges n etypes true (low - 1)) (e_itr (types_to_expr n etypes true))
+      | OUT =>  e_dot (k_edges n etypes false (low - 1)) (e_itr (types_to_expr n etypes false))
       | BOTH => e_pls 
-        (e_dot (k_edges n etypes true (low - 1)) (e_itr (get_types n etypes true)))
-        (e_dot (k_edges n etypes false (low - 1)) (e_itr (get_types n etypes false)))
+        (e_dot (k_edges n etypes true (low - 1)) (e_itr (types_to_expr n etypes true)))
+        (e_dot (k_edges n etypes false (low - 1)) (e_itr (types_to_expr n etypes false)))
       end
      | Some up' => match edir with
       | IN => List.fold_right 
@@ -73,8 +74,29 @@ Fixpoint pattern_to_matrix (n : positive) (p : Pattern.t) :
         (List.fold_right 
           (fun x y => e_pls x y) 
           (e_one n) 
-          (map (fun k => k_edges n etypes false k) (List.seq low up')))
+          (map (fun k => k_edges n etypes false k) (List.seq low (up' - low))))
       end
    end
-   in e_dot (e_dot (pattern_to_matrix n p) e) (pvertex_to_matrix n wvar wlabels)
+   in e_dot (e_dot (pattern_to_matrix n p) e) (labels_to_expr n wlabels)
+  end.
+
+Definition f (l : Label) (g : PropertyGraph.t) :=
+  match l with 
+  | vlabel v => let ms := pg_extract_lmatrices (List.length g.(vertices)) g.(vlab) in
+    List.fold_right
+      (fun x y => match fst x with
+                  | vlabel v => snd x
+                  | _ => y
+                  end)
+      (fun _ _ => false)
+      ms
+  | elabel e => 
+    let ms := pg_extract_tmatrices (List.length g.(vertices)) g.(edges) g.(elab) g.(st) in
+    List.fold_right
+      (fun x y => match fst x with
+                  | elabel e => snd x
+                  | _ => y
+                  end)
+      (fun _ _ => false)
+      ms
   end.
