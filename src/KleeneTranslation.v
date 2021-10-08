@@ -80,7 +80,9 @@ expr (fun _ : Label => n) (fun _ : Label => n) n n :=
    in e_dot (e_dot (pattern_to_matrix n p) e) (labels_to_expr n wlabels)
   end.
 
-Definition f (l : Label) (g : PropertyGraph.t) :=
+(* http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.syntax.html#s.e.f *)
+(* Use as a variable f. *)
+Definition e_var2matrix (g : PropertyGraph.t) (l : Label) :=
   match l with 
   | vlabel v => let ms := pg_extract_lmatrices (List.length g.(vertices)) g.(vlab) in
     List.fold_right

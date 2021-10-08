@@ -11,6 +11,9 @@ Require Import BinInt.
 Require Import Notations.
 Require Import Ltac.
 Require Import Logic.
+Require Import Basics.
+
+Set Implicit Arguments.
 
 Inductive Label :=
 | vlabel (l : label)
@@ -21,7 +24,7 @@ Definition pg_extract_lmatrices (n : nat) (vlab : vertex -> list label) :
   list (Label * (ord n -> ord n -> bool)) :=
   let labels := list_unique (List.concat (map (fun i => vlab i) (List.seq 0 n))) in
   map (fun lbl => let mtx (x y : ord n) := 
-    if eqb_ord x y then list_inb lbl (vlab x) else false in (vlabel lbl, mtx)) labels.
+    if eqb_ord x y then Utils.list_inb lbl (vlab x) else false in (vlabel lbl, mtx)) labels.
 
 Definition ord_to_nat (n : nat) (o : ord n) : nat :=
   match o with 
@@ -32,7 +35,7 @@ Definition pg_extract_tmatrices (n : nat) (edges : list edge) (elab : edge -> la
   (st : edge -> vertex * vertex) : list (Label * (ord n -> ord n -> bool)) :=
   let labels := list_unique (map (fun edge => elab edge) edges) in
   map (fun lbl => 
-    let mtx (x y : ord n) := list_inb_b 
+    let mtx (x y : ord n) := Utils.list_inb_b 
       true 
       (map (fun edge => 
         andb 
