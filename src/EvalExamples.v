@@ -9,6 +9,8 @@ Require Import Cypher.
 Require Import PropertyGraph.
 Require Import PGTableExtraction.
 Require Import NRATranslation.
+Require Import KleeneTranslation.
+Require Import PGMatrixExtraction.
 
 From Qcert Require Import Data.Model.Data.
 From Qcert Require Import Lang.NRAEnv.
@@ -18,6 +20,11 @@ Import PropertyGraph.
 Import Property.
 Import PatternNotations.
 Import NRAEnvNotations.
+
+From RelationAlgebra Require Import syntax matrix bmx ordinal.
+
+Set Implicit Arguments.
+
 Local Open Scope pat_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
@@ -131,8 +138,13 @@ Definition eval_pattern (p : Pattern.t) (pg : PropertyGraph.t) : option data :=
 
 Definition evals_to_sem (p : Pattern.t) (pg : PropertyGraph.t) : data -> Prop :=
   nraenv_sem nil (mk_const_env pg) (pattern_to_nraenv p) (drec nil) dunit.
-
-
+  
+(* Definition eval_in_kleene (n : positive) := eval (*A:*) Label 
+                                                 (*s, t:*) (fun _ : Label => n) (fun _ : Label => n) 
+                                                 (*X, f': ?*)
+                                                 (*f:*) (e_var2matrix property_graph1) 
+                                                 (*x:*) (pattern_to_matrix vertex_pattern1).
+ *)
 (* Compute (eval_pattern vertex_pattern1 property_graph1).
 Compute (eval_pattern vertex_pattern2 property_graph1).
 Compute (eval_pattern edge_pattern1 property_graph1).
