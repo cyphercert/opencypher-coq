@@ -3,26 +3,31 @@ Require Import List.
 Import ListNotations.
 
 Module Pattern.
-
   Inductive direction :=
   | OUT
   | IN
   | BOTH
   .
+  
+  Record vertex := {
+      var    : string;
+      labels : list string;
+    }.
+  
+  (* TODO: fix names *)
+  Record edge := {
+      evar   : string;
+      etypes : list string;
+      edir   : direction;
+      w      : vertex; (* TODO: at least this one *)
+      low    : nat;
+      up     : option nat;
+    }.
 
-  Inductive t :=
-  | pvertex    (vvar : string) (vlabels : list string)
-
-  | pedge      (p : t)
-               (evar : string) (etypes : list string) (edir : direction)
-               (wvar : string) (wlabels : list string)
-
-  | pmultiedge (p : t)
-               (evar : string) (etypes : list string) (edir : direction)
-               (low : nat) (up : option nat)
-               (wvar : string) (wlabels : list string)
-  .
-
+  Record t := {
+      start : vertex;
+      edges : list edge;
+    }.
 End Pattern.
 
 Module PatternNotations.
