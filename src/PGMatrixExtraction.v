@@ -13,18 +13,19 @@ Require Import Ltac.
 Require Import Logic.
 Require Import Basics.
 
-Set Implicit Arguments.
 
-Inductive Label :=
-| vlabel (l : label)
-| elabel (l : label)
-.
 
-Definition pg_extract_lmatrices (n : nat) (vlab : vertex -> list label) : 
-  list (Label * (ord n -> ord n -> bool)) :=
-  let labels := list_unique (List.concat (map (fun i => vlab i) (List.seq 0 n))) in
-  map (fun lbl => let mtx (x y : ord n) := 
-    if eqb_ord x y then Utils.list_inb lbl (vlab x) else false in (vlabel lbl, mtx)) labels.
+Fixpoint list_of_label_to_elabel (l : list label) : list Label :=
+  match l with
+  | nil => nil
+  | a :: m => elabel a :: list_of_label_to_elabel m
+  end.
+
+Definition pg_extract_lmatrices (n : nat) (vlab : vertex -> list label) (lbl : Label) : 
+    ord n -> ord n -> bool := 
+  fun (x y : ord n) => 
+      if eqb_ord x y then Utils.list_inb lbl (list_of_label_to_elabel (vlab x)) 
+                     else false.
 
 Definition ord_to_nat (n : nat) (o : ord n) : nat :=
   match o with 
@@ -32,17 +33,13 @@ Definition ord_to_nat (n : nat) (o : ord n) : nat :=
   end.
 
 Definition pg_extract_tmatrices (n : nat) (edges : list edge) (elab : edge -> label)
-  (st : edge -> vertex * vertex) : list (Label * (ord n -> ord n -> bool)) :=
-  let labels := list_unique (map (fun edge => elab edge) edges) in
-  map (fun lbl => 
-    let mtx (x y : ord n) := Utils.list_inb_b 
-      true 
-      (map (fun edge => 
-        andb 
-          (andb 
-            (Nat.eqb (fst (st edge)) (ord_to_nat n x)) 
-            (Nat.eqb (snd (st edge)) (ord_to_nat n y))) 
-          (String.eqb (elab edge) lbl)) edges) in (elabel lbl, mtx)) labels.
+  (st : edge -> vertex * vertex) (lbl : Label) : ord n -> ord n -> bool := 
+  fun (x y : ord n) => Utils.list_inb_b true (map 
+      (fun edge => andb (andb 
+                  (Nat.eqb (fst (st edge)) (ord_to_nat n x)) 
+                  (Nat.eqb (snd (st edge)) (ord_to_nat n y))) 
+                  (Label_eqb (elabel (elab edge)) lbl)) edges).
+
 
 (* Definition pg_extract_matrices (g : PropertyGraph.t) := 
   let n := List.length g.(vertices) in

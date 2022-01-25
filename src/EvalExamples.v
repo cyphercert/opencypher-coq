@@ -4,32 +4,24 @@ Require Import BinNums.
 Require Import BinInt.
 Import ListNotations.
 
-Require Import ForeignGraphRuntime.
 Require Import Cypher.
 Require Import PropertyGraph.
 Require Import PGTableExtraction.
-Require Import NRATranslation.
 Require Import KleeneTranslation.
 Require Import PGMatrixExtraction.
 
-From Qcert Require Import Data.Model.Data.
-From Qcert Require Import Lang.NRAEnv.
-From Qcert Require Import BinaryOperators.
 
 Import PropertyGraph.
 Import Property.
-Import PatternNotations.
-Import NRAEnvNotations.
 
 From RelationAlgebra Require Import syntax matrix bmx ordinal.
 
 Set Implicit Arguments.
 
-Local Open Scope pat_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 Local Open Scope nat_scope.
-Local Open Scope nraenv_scope.
+(*Local Open Scope nraenv_scope.*)
 
 Module DataExamples.
   Definition property_graph1 : PropertyGraph.t :=
@@ -74,47 +66,22 @@ Module DataExamples.
                             | 12 => "FRIEND_OF"
                             | _  => ""
                             end
-    ; vprops    := [ ("name", fun v => p_string match v with
-                                                        | 1 => "Dave"
-                                                        | 2 => "Ron"
-                                                        | 3 => "Renna"
-                                                        | 4 => "Shradha"
-                                                        | 5 => "David"
-                                                        | 6 => "Rohan"
-                                                        | _ => ""
-                                                        end)
-                  ; ("age", fun v => p_int match v with
-                                                    | 1 => 42
-                                                    | 2 => 32
-                                                    | 3 => 39
-                                                    | 4 => 29
-                                                    | 5 => 23
-                                                    | 6 => 52
-                                                    | _ => 0
-                                                    end)
-                  ]
-    ; eprops    := [ ("since", fun e => p_string match e with
-                                                              | 1  => "2012"
-                                                              | 2  => "2018"
-                                                              | 3  => "2000"
-                                                              | 4  => "2011"
-                                                              | 6  => "2001"
-                                                              | 7  => "2015"
-
-                                                              | 8  => "2015"
-                                                              | 9  => "2009"
-                                                              | 10 => "2006"
-                                                              | 11 => "2007"
-                                                              | 12 => "2012"
-                                                              | _  => ""
-                                                              end)
-                  ]
+    ; vprops    := nil
+    ; eprops    := nil
     |}.
 
-  Definition vertex_pattern1 : Pattern.t :=
-    (|"v"|).
+  Definition vertex_pattern1 : Pattern.pvertex :=
+    {| vlabels := ["USER"];
+       vprops  := nil |}.
 
-  Definition vertex_pattern2 : Pattern.t :=
+  Definition edge_pattern1 : Pattern.pedge := 
+    {| elabels := nil;
+       eprops  := nil;
+       edir    := BOTH;
+       enum    := 0;
+       evertex := vertex_pattern1 |}.
+
+ (* Definition vertex_pattern2 : Pattern.t :=
     (|"v"#"USER","HOST"|).
 
   Definition edge_pattern1 : Pattern.t :=
@@ -124,22 +91,22 @@ Module DataExamples.
     (|"v"|)-["e"#"KNOWS"]-(|"w"#"GUEST"|).
 
   Definition complex_pattern := 
-    (|"v1"|)-["e1"#"KNOWS"]->(|"v2"#"HOST"|)<-["e2"#"KNOWS"|"FRIEND_OF"]-(|"v3"#"GUEST","USER"|).
+    (|"v1"|)-["e1"#"KNOWS"]->(|"v2"#"HOST"|)<-["e2"#"KNOWS"|"FRIEND_OF"]-(|"v3"#"GUEST","USER"|)*).
 End DataExamples.
 Import DataExamples.
 
-Definition mk_const_env (pg : PropertyGraph.t) : bindings :=
+(*Definition mk_const_env (pg : PropertyGraph.t) : bindings :=
   [ ("vertices", pg_extract_vtable pg)
   ; ("edges", pg_extract_etable pg)
-  ].
+  ]. *)
 
-Definition eval_pattern (p : Pattern.t) (pg : PropertyGraph.t) : option data :=
+(*Definition eval_pattern (p : Pattern.t) (pg : PropertyGraph.t) : option data :=
   nraenv_eval_top nil (pattern_to_nraenv p) (mk_const_env pg).
 
 Definition evals_to_sem (p : Pattern.t) (pg : PropertyGraph.t) : data -> Prop :=
   nraenv_sem nil (mk_const_env pg) (pattern_to_nraenv p) (drec nil) dunit.
-  
-(* Definition eval_in_kleene (n : positive) := eval (*A:*) Label 
+
+Definition eval_in_kleene (n : positive) := eval (*A:*) Label 
                                                  (*s, t:*) (fun _ : Label => n) (fun _ : Label => n) 
                                                  (*X, f': ?*)
                                                  (*f:*) (e_var2matrix property_graph1) 
