@@ -2,6 +2,9 @@ Require Import String.
 Require Import List.
 Import ListNotations.
 
+Require Import PropertyGraph.
+Import Property.
+
 Module Pattern.
 
   Inductive direction :=
@@ -10,48 +13,25 @@ Module Pattern.
   | BOTH
   .
 
-  Inductive t :=
-  | pvertex    (vvar : string) (vlabels : list string)
+  Record pvertex := {
+      vlabels : list string;
+      vprops  : list (string * Property.t);
+    }.
+  
+  Record pedge := {
+      elabels : list string;
+      eprops  : list (string * Property.t);
+      edir    : direction;
+      enum    : nat;
+      evertex : pvertex;
+    }.
 
-  | pedge      (p : t)
-               (evar : string) (etypes : list string) (edir : direction)
-               (wvar : string) (wlabels : list string)
-
-  | pmultiedge (p : t)
-               (evar : string) (etypes : list string) (edir : direction)
-               (low : nat) (up : option nat)
-               (wvar : string) (wlabels : list string)
-  .
+  Record t := {
+      start : pvertex;
+      ledges : list pedge;
+    }.
 
 End Pattern.
-
-Module PatternNotations.
-  Import Pattern.
-
-  Declare Scope pat_scope.
-  Delimit Scope pat_scope with pat.
-
-  Notation "(| v # l1 , .. , ln |)" :=
-  (pvertex v (cons l1 .. (cons ln nil) ..)) (at level 0) : pat_scope.
-  Notation "(| v |)" := (pvertex v nil) (at level 0) : pat_scope.
-
-  Notation "p -[ e # l1 | .. | ln ]- (| v |)" :=
-  (pedge p e (cons l1 .. (cons ln nil) ..) BOTH v nil) (at level 40) : pat_scope.
-  Notation "p -[ e # l1 | .. | ln ]-> (| v |)" :=
-  (pedge p e (cons l1 .. (cons ln nil) ..) OUT v nil) (at level 40) : pat_scope.
-  Notation "p <-[ e # l1 | .. | ln ]- (| v |)" :=
-  (pedge p e (cons l1 .. (cons ln nil) ..) IN v nil) (at level 40) : pat_scope.
-  Notation "p -[ e # l1 | .. | ln ]- (| v # vl1 , .. , vln |)" :=
-  (pedge p e (cons l1 .. (cons ln nil) ..) BOTH
-          v (cons vl1 .. (cons vln nil) ..)) (at level 40) : pat_scope.
-  Notation "p -[ e # l1 | .. | ln ]-> (| v # vl1 , .. , vln |)" :=
-  (pedge p e (cons l1 .. (cons ln nil) ..) OUT
-          v (cons vl1 .. (cons vln nil) ..)) (at level 40) : pat_scope.
-  Notation "p <-[ e # l1 | .. | ln ]- (| v # vl1 , .. , vln |)" :=
-  (pedge p e (cons l1 .. (cons ln nil) ..) IN
-          v (cons vl1 .. (cons vln nil) ..)) (at level 40) : pat_scope.
-
-End PatternNotations.
 
 (* TODO: refactor VVVVV this VVVVV *)
 
