@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
-opam install coq coq-relation-algebra coq-hahn
+opam repo add coq-released https://coq.inria.fr/opam/released
+opam install coq-relation-algebra coq-hahn
