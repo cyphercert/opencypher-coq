@@ -17,7 +17,7 @@ Module Pattern.
       vlabels : list string;
       vprops  : list (string * Property.t);
     }.
-  
+
   Record pedge := {
       elabels : list string;
       eprops  : list (string * Property.t);
@@ -25,6 +25,7 @@ Module Pattern.
       enum    : nat;
       evertex : pvertex;
     }.
+  
 
   Record t := {
       start : pvertex;
@@ -62,7 +63,6 @@ Missing features:
 - EXPRESSIONS IN PROJECTION
 - DISTINCT
 - OPTIONAL MATCH
-
 - UNWIND
 - ORDER BY / SKIP / LIMIT
 *)

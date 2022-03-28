@@ -6,15 +6,11 @@ Import ListNotations.
 
 Require Import Cypher.
 Require Import PropertyGraph.
-Require Import PGTableExtraction.
 Require Import KleeneTranslation.
 Require Import PGMatrixExtraction.
 
-
-Import PropertyGraph.
-Import Property.
-
 From RelationAlgebra Require Import syntax matrix bmx ordinal.
+
 
 Set Implicit Arguments.
 
@@ -25,9 +21,9 @@ Local Open Scope nat_scope.
 
 Module DataExamples.
   Definition property_graph1 : PropertyGraph.t :=
-    {| vertices := [1; 2; 3; 4; 5; 6]
-    ;  edges    := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12]
-    ;  st       := fun e => match e with
+    {| PropertyGraph.vertices := [1; 2; 3; 4; 5; 6]
+    ;  PropertyGraph.edges    := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12]
+    ;  PropertyGraph.st       := fun e => match e with
                             | 1  => (2, 1)
                             | 2  => (1, 3)
                             | 3  => (3, 2)
@@ -42,7 +38,7 @@ Module DataExamples.
                             | 12 => (5, 6)
                             | _  => (0, 0)
                             end
-    ; vlab      := fun v => match v with
+    ; PropertyGraph.vlab      := fun v => match v with
                             | 1 => ["USER"]
                             | 2 => ["USER"]
                             | 3 => ["USER"; "HOST"]
@@ -51,7 +47,7 @@ Module DataExamples.
                             | 6 => ["USER"; "GUEST"]
                             | _ => []
                             end
-    ; elab      := fun e => match e with
+    ; PropertyGraph.elab      := fun e => match e with
                             | 1  => "FRIEND_OF"
                             | 2  => "KNOWS"
                             | 3  => "KNOWS"
@@ -66,21 +62,45 @@ Module DataExamples.
                             | 12 => "FRIEND_OF"
                             | _  => ""
                             end
-    ; vprops    := nil
-    ; eprops    := nil
+    ; PropertyGraph.vprops    := nil
+    ; PropertyGraph.eprops    := nil
     |}.
 
   Definition vertex_pattern1 : Pattern.pvertex :=
-    {| vlabels := ["USER"];
-       vprops  := nil |}.
+    {| Pattern.vlabels := ["USER"];
+       Pattern.vprops  := nil |}.
 
   Definition edge_pattern1 : Pattern.pedge := 
-    {| elabels := nil;
-       eprops  := nil;
-       edir    := BOTH;
-       enum    := 0;
-       evertex := vertex_pattern1 |}.
+    {| Pattern.elabels := nil;
+       Pattern.eprops  := nil;
+       Pattern.edir    := Pattern.BOTH;
+       Pattern.enum    := 0;
+       Pattern.evertex := vertex_pattern1 |}.
 
+  Definition pattern1 : Pattern.t :=
+    {| Pattern.start := vertex_pattern1;
+       Pattern.ledges := [edge_pattern1] |}.
+
+  Definition pos : positive := 19.
+
+  Definition matrix_pattern := pattern_to_matrix pos pattern1.
+
+  Definition f_eval := e_var2matrix property_graph1.
+
+  Search mx_ops.
+  Search monoid.mor.
+  Print monoid.one.
+ (* Definition mmonoid : monoid.ops := (ord 19, _, _, _, _, _, _, _, _ ). *)
+  Print mx_one.
+  Print mx.
+  Search mx.
+  Search lattice.car.
+
+  Search monoid.ob.
+  Print monoid.one.
+  Print monoid.ofbool.
+  Print mx_one.
+  Definition evaluted := eval f_eval matrix_pattern.
  (* Definition vertex_pattern2 : Pattern.t :=
     (|"v"#"USER","HOST"|).
 
@@ -91,7 +111,7 @@ Module DataExamples.
     (|"v"|)-["e"#"KNOWS"]-(|"w"#"GUEST"|).
 
   Definition complex_pattern := 
-    (|"v1"|)-["e1"#"KNOWS"]->(|"v2"#"HOST"|)<-["e2"#"KNOWS"|"FRIEND_OF"]-(|"v3"#"GUEST","USER"|)*).
+    (|"v1"|)-["e1"#"KNOWS"]->(|"v2"#"HOST"|)<-["e2"#"KNOWS"|"FRIEND_OF"]-(|"v3"#"GUEST","USER"|)*)
 End DataExamples.
 Import DataExamples.
 

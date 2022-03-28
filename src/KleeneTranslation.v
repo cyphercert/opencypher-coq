@@ -58,8 +58,9 @@ expr (fun _ : Label => n) (fun _ : Label => n) n n :=
 
 (* http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.syntax.html#s.e.f *)
 (* Use as a variable f. *)
-Definition e_var2matrix (g : PropertyGraph.t) (l : Label) :=
-  match l with 
+Definition e_var2matrix (g : PropertyGraph.t) :=
+  fun (l : Label) =>
+   match l with
   | vlabel v => pg_extract_lmatrices (List.length g.(vertices)) g.(vlab) l
   | elabel e => pg_extract_tmatrices (List.length g.(vertices)) g.(edges) g.(elab) g.(st) l 
   end.
