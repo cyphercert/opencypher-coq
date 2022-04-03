@@ -61,11 +61,8 @@ expr (fun _ : Label => n) (fun _ : Label => n) n n :=
 Definition e_var2matrix (g : PropertyGraph.t) :=
   fun (l : Label) =>
    match l with
-  | vlabel v => pg_extract_lmatrices (List.length g.(vertices)) g.(vlab) l
+  | vlabel v => pg_extract_lmatrices  (List.length g.(vertices))g.(vlab) l
   | elabel e => pg_extract_tmatrices (List.length g.(vertices)) g.(edges) g.(elab) g.(st) l 
   end.
 
-
-
-
-
+Definition f (g : PropertyGraph.t): forall (l : Label), bmx (List.length g.(vertices)) (List.length g.(vertices)).

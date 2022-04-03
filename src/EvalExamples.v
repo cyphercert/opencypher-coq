@@ -10,7 +10,7 @@ Require Import KleeneTranslation.
 Require Import PGMatrixExtraction.
 
 From RelationAlgebra Require Import syntax matrix bmx ordinal.
-
+From RelationAlgebra Require Import monoid boolean prop sups bmx.
 
 Set Implicit Arguments.
 
@@ -100,6 +100,18 @@ Module DataExamples.
   Print monoid.one.
   Print monoid.ofbool.
   Print mx_one.
+  Context {s: Utils.Label -> ord(Datatypes.length(PropertyGraph.vertices property_graph1))}.
+  Context {t: Utils.Label -> ord(Datatypes.length(PropertyGraph.vertices property_graph1))}.
+  Record example := mk {
+  n: nat;
+  u: ord n;
+  M: ord n -> positive -> ord n;
+  v: ord n -> bool;
+  vars: list positive
+  }.
+  Variables A: example.
+  Definition step: bmx (n A) (n A) := fun i j => sup (fun a => (eqb_ord (M A i a) j)) (vars A).
+  Type f_eval.
   Definition evaluted := eval f_eval matrix_pattern.
  (* Definition vertex_pattern2 : Pattern.t :=
     (|"v"#"USER","HOST"|).
