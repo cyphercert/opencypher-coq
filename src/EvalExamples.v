@@ -1,18 +1,21 @@
 Require Import String.
+
 Require Import List.
 Require Import BinNums.
 Require Import BinInt.
 Import ListNotations.
 
+
 Require Import Cypher.
-Require Import PropertyGraph.
+Import PropertyGraph.
 Require Import KleeneTranslation.
 Require Import PGMatrixExtraction.
+Require Import Utils.
+Require Import Lia.
 
 From RelationAlgebra Require Import syntax matrix bmx ordinal.
 From RelationAlgebra Require Import monoid boolean prop sups bmx.
 
-Set Implicit Arguments.
 
 Local Open Scope string_scope.
 Local Open Scope list_scope.
@@ -20,7 +23,7 @@ Local Open Scope nat_scope.
 (*Local Open Scope nraenv_scope.*)
 
 Module DataExamples.
-  Definition property_graph1 : PropertyGraph.t :=
+Definition property_graph1 : PropertyGraph.t :=
     {| PropertyGraph.vertices := [1; 2; 3; 4; 5; 6]
     ;  PropertyGraph.edges    := [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12]
     ;  PropertyGraph.st       := fun e => match e with
@@ -40,7 +43,7 @@ Module DataExamples.
                             end
     ; PropertyGraph.vlab      := fun v => match v with
                             | 1 => ["USER"]
-                            | 2 => ["USER"]
+                            | 2 => ["HOST"]
                             | 3 => ["USER"; "HOST"]
                             | 4 => ["USER"; "HOST"]
                             | 5 => ["USER"; "GUEST"]
@@ -81,71 +84,84 @@ Module DataExamples.
     {| Pattern.start := vertex_pattern1;
        Pattern.ledges := [edge_pattern1] |}.
 
-  Definition pos : positive := 19.
+  Definition length : positive := Pos.of_nat (Datatypes.length(PropertyGraph.vertices property_graph1)).
+  Definition length_nat : nat := Datatypes.length(PropertyGraph.vertices property_graph1).
+  Definition matrix_pattern := pattern_to_matrix length pattern1.
+  Definition f_eval := e_var2matrix_real property_graph1.
+  Definition evaluated := @eval Label (fun _ => length) (fun _ => length) bmx
+                                      (fun _ => length_nat) f_eval length length matrix_pattern.
 
-  Definition matrix_pattern := pattern_to_matrix pos pattern1.
 
-  Definition f_eval := e_var2matrix property_graph1.
+  Lemma lt1 : (1 < length_nat)%ltb.
+  Proof.
+    unfold length_nat. simpl. lia.
+  Qed.
 
-  Search mx_ops.
-  Search monoid.mor.
-  Print monoid.one.
- (* Definition mmonoid : monoid.ops := (ord 19, _, _, _, _, _, _, _, _ ). *)
-  Print mx_one.
-  Print mx.
-  Search mx.
-  Search lattice.car.
+  Lemma lt2 : (2 < length_nat)%ltb.
+  Proof.
+    unfold length_nat. simpl. lia.
+  Qed.
 
-  Search monoid.ob.
-  Print monoid.one.
-  Print monoid.ofbool.
-  Print mx_one.
-  Context {s: Utils.Label -> ord(Datatypes.length(PropertyGraph.vertices property_graph1))}.
-  Context {t: Utils.Label -> ord(Datatypes.length(PropertyGraph.vertices property_graph1))}.
-  Record example := mk {
-  n: nat;
-  u: ord n;
-  M: ord n -> positive -> ord n;
-  v: ord n -> bool;
-  vars: list positive
-  }.
-  Variables A: example.
-  Definition step: bmx (n A) (n A) := fun i j => sup (fun a => (eqb_ord (M A i a) j)) (vars A).
-  Type f_eval.
-  Definition evaluted := eval f_eval matrix_pattern.
- (* Definition vertex_pattern2 : Pattern.t :=
-    (|"v"#"USER","HOST"|).
+  Definition num {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 1 lt1.
+  Definition num2 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 2 lt2.
 
-  Definition edge_pattern1 : Pattern.t :=
-    (|"v"#"HOST"|)-["e"#"KNOWS"]->(|"w"#"GUEST"|).
+ (*Let pattern1_test1 {num : ord DataExamples.length_nat} : DataExamples.evaluated (@Ord DataExamples.length_nat 1 lt1) (@Ord DataExamples.length_nat 1 lt1)  = true.
+  Proof. unfold evaluated. simpl. Qed.*)
+  Compute evaluated num num.
+  Compute evaluated num2 num2.
 
-  Definition edge_pattern2 := 
-    (|"v"|)-["e"#"KNOWS"]-(|"w"#"GUEST"|).
+  Definition vertex_pattern2 : Pattern.pvertex :=
+    {| Pattern.vlabels := ["HOST"];
+       Pattern.vprops  := nil |}.
 
-  Definition complex_pattern := 
-    (|"v1"|)-["e1"#"KNOWS"]->(|"v2"#"HOST"|)<-["e2"#"KNOWS"|"FRIEND_OF"]-(|"v3"#"GUEST","USER"|)*)
+  Definition edge_pattern2 : Pattern.pedge :=
+    {| Pattern.elabels := ["FRIEND_OF"];
+       Pattern.eprops  := nil;
+       Pattern.edir    := Pattern.BOTH;
+       Pattern.enum    := 1;
+       Pattern.evertex := vertex_pattern1 |}.
+
+  Definition pattern2 : Pattern.t :=
+    {| Pattern.start := vertex_pattern2;
+       Pattern.ledges := [edge_pattern2] |}.
+
+  Definition matrix_pattern2 := pattern_to_matrix length pattern2.
+  Definition evaluated2 := @eval Label (fun _ => length) (fun _ => length) bmx
+                                      (fun _ => length_nat) f_eval length length matrix_pattern2.
+  Lemma lt4 : (4 < length_nat)%ltb.
+  Proof.
+    unfold length_nat. simpl. lia.
+  Qed.
+
+  Definition num4 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 4 lt4.
+
+  Lemma lt5 : (5 < length_nat)%ltb.
+  Proof.
+    unfold length_nat. simpl. lia.
+  Qed.
+
+  Definition num5 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 5 lt5.
+  Compute evaluated2 num num.
+  Compute evaluated2 num2 num.
+  Compute evaluated2 num2 num4.
+  Compute evaluated2 num2 num5.
+
+
+  Definition edge_pattern3 : Pattern.pedge :=
+    {| Pattern.elabels := ["KNOWS"];
+       Pattern.eprops  := nil;
+       Pattern.edir    := Pattern.BOTH;
+       Pattern.enum    := 2;
+       Pattern.evertex := vertex_pattern2 |}.
+
+  Definition pattern3 : Pattern.t :=
+    {| Pattern.start := vertex_pattern1;
+       Pattern.ledges := [edge_pattern3; edge_pattern2] |}.
+
+  Definition matrix_pattern3 := pattern_to_matrix length pattern3.
+  Definition evaluated3 := @eval Label (fun _ => length) (fun _ => length) bmx
+                                       (fun _ => length_nat) f_eval length length matrix_pattern3.
+  Compute evaluated3 num num5.
+
+
 End DataExamples.
-Import DataExamples.
-
-(*Definition mk_const_env (pg : PropertyGraph.t) : bindings :=
-  [ ("vertices", pg_extract_vtable pg)
-  ; ("edges", pg_extract_etable pg)
-  ]. *)
-
-(*Definition eval_pattern (p : Pattern.t) (pg : PropertyGraph.t) : option data :=
-  nraenv_eval_top nil (pattern_to_nraenv p) (mk_const_env pg).
-
-Definition evals_to_sem (p : Pattern.t) (pg : PropertyGraph.t) : data -> Prop :=
-  nraenv_sem nil (mk_const_env pg) (pattern_to_nraenv p) (drec nil) dunit.
-
-Definition eval_in_kleene (n : positive) := eval (*A:*) Label 
-                                                 (*s, t:*) (fun _ : Label => n) (fun _ : Label => n) 
-                                                 (*X, f': ?*)
-                                                 (*f:*) (e_var2matrix property_graph1) 
-                                                 (*x:*) (pattern_to_matrix vertex_pattern1).
- *)
-(* Compute (eval_pattern vertex_pattern1 property_graph1).
-Compute (eval_pattern vertex_pattern2 property_graph1).
-Compute (eval_pattern edge_pattern1 property_graph1).
-Compute (eval_pattern edge_pattern2 property_graph1).
-Compute (eval_pattern complex_pattern property_graph1). *)

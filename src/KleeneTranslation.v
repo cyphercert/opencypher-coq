@@ -1,15 +1,16 @@
+From RelationAlgebra Require Import syntax matrix bmx ordinal.
+From RelationAlgebra Require Import monoid boolean prop sups bmx.
 Require Import BinNums.
 Require Import BinInt.
 Require Import List.
 Require Import String.
-Require Import Bool.
 Import ListNotations.
 
 Require Import Notations.
 Require Import Ltac.
 Require Import Logic.
 (* From RelationAlgebra Require Import kleene boolean sups matrix.*)
-From RelationAlgebra Require Import syntax matrix bmx ordinal.
+
 
 Require Import Cypher.
 Require Import PropertyGraph.
@@ -50,19 +51,29 @@ expr (fun _ : Label => n) (fun _ : Label => n) n n :=
       | BOTH => e_pls (k_edges n pedge.(elabels) true pedge.(enum)) (k_edges n pedge.(elabels) false pedge.(enum))
       end in e_dot (e_dot e (labels_to_expr n pedge.(evertex).(vlabels)))
                             (edge_pattern_to_matrix n l)
-end.
+  end.
 
 Definition pattern_to_matrix (n : positive) (p : Pattern.t) :
 expr (fun _ : Label => n) (fun _ : Label => n) n n :=
   e_dot (labels_to_expr n p.(start).(vlabels)) (edge_pattern_to_matrix n p.(ledges)).
 
 (* http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.syntax.html#s.e.f *)
-(* Use as a variable f. *)
+(* Use as a variable f. * *)
+Print pg_extract_lmatrices.
 Definition e_var2matrix (g : PropertyGraph.t) :=
   fun (l : Label) =>
    match l with
-  | vlabel v => pg_extract_lmatrices  (List.length g.(vertices))g.(vlab) l
+  | vlabel v => pg_extract_lmatrices (List.length g.(vertices)) g.(vlab) l
   | elabel e => pg_extract_tmatrices (List.length g.(vertices)) g.(edges) g.(elab) g.(st) l 
   end.
 
-Definition f (g : PropertyGraph.t): forall (l : Label), bmx (List.length g.(vertices)) (List.length g.(vertices)).
+Program Definition e_var2matrix_real (g : PropertyGraph.t):
+  forall (l : Label),
+    bmx (List.length g.(vertices)) (List.length g.(vertices)) :=
+  fun l =>
+   match l with
+  | vlabel v => pg_extract_lmatrices  (List.length g.(vertices)) g.(vlab) l
+  | elabel e => pg_extract_tmatrices (List.length g.(vertices)) g.(edges) g.(elab) g.(st) l
+   end.
+
+Print e_var2matrix_real.
