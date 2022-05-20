@@ -1,11 +1,11 @@
 Require Import String.
-From hahn Require Import Hahn.
+(*From hahn Require Import Hahn.*)
 Require Import List.
 Import ListNotations.
 
 Set Implicit Arguments.
 
-Section Aux.
+(*Section Aux.
 Variable T : eqType.
 
 Fixpoint list_eqb (l l' : list T) : bool :=
@@ -40,4 +40,4 @@ Fixpoint list_inb {T : eqType} x (l : list T) : bool :=
   | [] => false
   | a::l => eq_op x a || list_inb x l
   end.
-End Aux.
+End Aux.*)
