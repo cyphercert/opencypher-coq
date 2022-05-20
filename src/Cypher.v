@@ -6,7 +6,6 @@ Require Import PropertyGraph.
 Import Property.
 
 Module Pattern.
-
   Inductive direction :=
   | OUT
   | IN
@@ -31,6 +30,7 @@ Module Pattern.
       start : pvertex;
       ledges : list pedge;
     }.
+
 
 End Pattern.
 
