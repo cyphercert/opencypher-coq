@@ -5,6 +5,8 @@ Import ListNotations.
 
 (* From hahn Require Import Hahn. *)
 
+(** Типы, которые поодерживаются для хранения в графовой базе данных*)
+
 Module Property.
   Inductive t := 
   | p_int (i : Z)
