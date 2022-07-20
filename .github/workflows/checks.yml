@@ -46,7 +46,7 @@ jobs:
         # See https://github.com/coq-community/docker-coq-action#readme
         # for details on docker-coq-action's syntax and provided features.
         with:
-          opam_file: 'coq-demo.opam'
+          opam_file: 'coq.opam'
           coq_version: ${{ matrix.coq_version }}
           ocaml_version: ${{ matrix.ocaml_version }}
           export: 'OPAMWITHTEST'
