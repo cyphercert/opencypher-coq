@@ -1,0 +1,62 @@
+---
+fullname: Huffman
+shortname: huffman
+organization: coq-community
+community: true
+action: true
+coqdoc: true
+coqdoc_index: 'docs/latest/coqdoc/toc.html'
+
+synopsis: Coq proof of the correctness of the Huffman coding algorithm
+
+description: |-
+  This projects contains a Coq proof of the correctness of the Huffman coding algorithm,
+  as described in David A. Huffman's paper A Method for the Construction of Minimum-Redundancy
+  Codes, Proc. IRE, pp. 1098-1101, September 1952.
+publications:
+- pub_url: https://hal.archives-ouvertes.fr/hal-02149909
+  pub_title: Formalising Huffman's algorithm
+- pub_url: http://compression.ru/download/articles/huff/huffman_1952_minimum-redundancy-codes.pdf
+  pub_title: A Method for the Construction of Minimum-Redundancy Codes
+  pub_doi: 10.1109/JRPROC.1952.273898
+
+authors:
+- name: Laurent Théry
+  initial: true
+
+maintainers:
+- name: Karl Palmskog
+  nickname: palmskog
+
+opam-file-maintainer: palmskog@gmail.com
+
+opam-file-version: dev
+
+license:
+  fullname: GNU Lesser General Public License v2.1 or later
+  identifier: LGPL-2.1-or-later
+
+supported_coq_versions:
+  text: 8.12 or later
+  opam: '{(>= "8.12" & < "8.17~") | (= "dev")}'
+
+tested_coq_opam_versions:
+- version: 'dev'
+- version: '8.16'
+- version: '8.15'
+- version: '8.14'
+- version: '8.13'
+- version: '8.12'
+
+ci_cron_schedule: '10 1 * * 0'
+
+namespace: Huffman
+
+keywords:
+- name: data compression
+- name: code
+- name: huffman tree
+
+categories:
+- name: Computer Science/Decision Procedures and Certified Algorithms/Correctness proofs of algorithms
+- name: Miscellaneous/Extracted Programs/Combinatorics
