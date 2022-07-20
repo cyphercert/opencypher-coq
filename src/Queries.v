@@ -4,7 +4,9 @@ Import ListNotations.
 
 Require Import Cypher.
 Require Import PropertyGraph.
+Import PropertyGraph.
 Require Import Maps.
+Require Import Utils.
 
 Import Property.
 
@@ -17,8 +19,8 @@ Inductive gobj : Type :=
 Inductive qexp : Type :=
   | QValue (p : Property.t)
   | QVariable (x : string)
-  | QEdgeKey (e : PropertyGraph.edge) (k : Property.name)
-  | Q.
+  (*| QEdgeKey (e : PropertyGraph.edge) (k : Property.name)
+  | Q*).
 
 Inductive bqexp : Type :=
   | BQTrue
@@ -37,77 +39,77 @@ Inductive bqexp : Type :=
 
 Definition store := total_map (option Property.t).
 
-Fixpoint qexpeval (st : store) (g : PropertyGraph.t) (a : qexp) : option Property.t :=
+Definition qexpeval (st : store) (g : PropertyGraph.t) (a : qexp) : option Property.t :=
   match a with
-  | QValue p => p
+  | QValue p => Some p
   | QVariable x => st x
-  | QEdgeKey e k => g.(vprops) k e
+  (*| QEdgeKey e k => g.(vprops) k e *)
   end.
 
-Fixpoint bqexpeval (st : store) (g : PropertyGraph.t) (a : qexp) : option  :=
+Fixpoint bqexpeval (st : store) (g : PropertyGraph.t) (a : bqexp) : option bool  :=
   match a with
-  | BQTrue => true
-  | BQFalse => false
+  | BQTrue => Some true
+  | BQFalse => Some false
   | BQUnknown => None
-  | BQOr a1 a2 => match bqexpeval a1 with
+  | BQOr a1 a2 => match bqexpeval st g a1 with
                   | None => None
-                  | true => true
-                  | false => match bqexpeval a2 with
+                  | Some true => Some true
+                  | Some false => match bqexpeval st g a2 with
                              | None => None
-                             | true => true
-                             | false => false
+                             | Some true => Some true
+                             | Some false => Some false
                              end
                   end
-  | BQAnd a1 a2 => match bqexpeval a1 with
+  | BQAnd a1 a2 => match bqexpeval st g a1 with
                    | None => None
-                   | false => false
-                   | true => match bqexpeval a2 with
+                   | Some false => Some false
+                   | Some true => match bqexpeval st g a2 with
                              | None => None
-                             | true => true
-                             | false => false
+                             | Some true => Some true
+                             | Some false => Some false
                              end
                    end
-  | BQXor a1 a2 => match bqexpeval a1 with
+  | BQXor a1 a2 => match bqexpeval st g a1 with
                    | None => None
-                   | true => match bqexpeval a2 with
+                   | Some true => match bqexpeval st g a2 with
                              | None => None
-                             | true => false
-                             | false => true
+                             | Some true => Some false
+                             | Some false => Some true
                              end
-                   | false => match bqexpeval a2 with
+                   | Some false => match bqexpeval st g a2 with
                               | None => None
-                              | true => true
-                              | false => false
+                              | Some true => Some true
+                              | Some false => Some false
                              end
                   end
-  | BQNot a => match bqexpeval a with
+  | BQNot a => match bqexpeval st g a with
               | None => None
-              | true => false
-              | false => true
+              | Some true => Some false
+              | Some false => Some true
               end
-  | BQIsUnknown a => match bqexpeval a1 with
-                     | None => true
-                     | _ => false
+  | BQIsUnknown a => match bqexpeval st g a with
+                     | None => Some true
+                     | _ => Some false
                      end
-  | BQIsNotUknown a => match bqexpeval a1 with
-                       | None => false
-                       | _ => true
+  | BQIsNotUknown a => match bqexpeval st g a with
+                       | None => Some false
+                       | _ => Some true
                        end
-  | BQIsTrue a => match bqexpeval a1 with
-                       | true => true
-                       | _ => false
+  | BQIsTrue a => match bqexpeval st g a with
+                       | Some true => Some true
+                       | _ => Some false
                        end
-  | BQIsNotTrue a => match bqexpeval a1 with
-                       | true => false
-                       | _ => true
+  | BQIsNotTrue a => match bqexpeval st g a with
+                       | Some true => Some false
+                       | _ => Some true
                        end
-  | BQIsFalse a => match bqexpeval a1 with
-                       | false => true
-                       | _ => false
+  | BQIsFalse a => match bqexpeval st g a with
+                       | Some false => Some true
+                       | _ => Some false
                        end
-  | BQIsNotFalse a => match bqexpeval a1 with
-                       | false => false
-                       | _ => true
+  | BQIsNotFalse a => match bqexpeval st g a with
+                       | Some false => Some false
+                       | _ => Some true
                        end
 
   end.
@@ -116,10 +118,6 @@ End QueryExpression.
 
 Module Query.
 
-Record binding_table :=
-  mk { names   : list string;
-       records : list (names -> Property.t);
-     }.
 
 Inductive query : Type :=
   | ReturnAll
@@ -127,22 +125,22 @@ Inductive query : Type :=
   | ReturnDistinct
   | IntersectAll (q1 q2 : query)
   | UnionAll (q1 q2 : query)
-  | BQAnd (a1 a2 : bqexp)
-  | BQXor (a1 a2 : bqexp)
-  | BQNot (a: bqexp)
-  | BQIsUnknown (e : bqexp)
-  | BQIsNotUknown (e : bqexp)
-  | BQIsTrue (e : bqexp)
-  | BQIsNotTrue (e : bqexp)
-  | BQIsFalse (e : bqexp)
-  | BQIsNotFalse (e : bqexp).
+  | BQAnd (a1 a2 : QueryExpression.bqexp)
+  | BQXor (a1 a2 : QueryExpression.bqexp)
+  | BQNot (a: QueryExpression.bqexp)
+  | BQIsUnknown (e : QueryExpression.bqexp)
+  | BQIsNotUknown (e : QueryExpression.bqexp)
+  | BQIsTrue (e : QueryExpression.bqexp)
+  | BQIsNotTrue (e : QueryExpression.bqexp)
+  | BQIsFalse (e : QueryExpression.bqexp)
+  | BQIsNotFalse (e : QueryExpression.bqexp).
 
-Fixpoint query_eval (q : query) (g : PropertyGraph.t) (t : binding_table) : binding_table :=
+(*Fixpoint query_eval (q : query) (g : PropertyGraph.t) (t : binding_table) : binding_table :=
   match q with
   | ReturnAll => t
   | UnionAll q1 q2 =>
   | IntersectAll q1 q2 => binding_table
   | QEdgeKey e k => g.(vprops) k e
-  end.
+  end.*)
 
 End Query.
