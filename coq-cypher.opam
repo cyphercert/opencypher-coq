@@ -5,10 +5,6 @@ opam-version: "2.0"
 maintainer: "palmskog@gmail.com"
 version: "dev"
 
-homepage: "https://github.com//cypher"
-dev-repo: "git+https://github.com//cypher.git"
-bug-reports: "https://github.com//cypher/issues"
-doc: "https://.github.io/cypher/"
 license: "LGPL-2.1-or-later"
 
 synopsis: ""
