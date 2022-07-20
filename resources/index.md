@@ -13,7 +13,7 @@ header-includes:
 ---
 
 <div style="text-align:left"><img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" height="25" style="border:0px">
-<a href="https://github.com/coq-community/huffman">View the project on GitHub</a>
+<a href="https://github.com/coq-community/cypher">View the project on GitHub</a>
 <img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" height="25" style="border:0px"></div>
 
 ## About
@@ -28,7 +28,7 @@ This is an open source project, licensed under the GNU Lesser General Public Lic
 
 ## Get the code
 
-The current stable release of Huffman can be [downloaded from GitHub](https://github.com/coq-community/huffman/releases).
+The current stable release of Huffman can be [downloaded from GitHub](https://github.com/coq-community/cypher/releases).
 
 ## Documentation
 
@@ -41,7 +41,7 @@ Related publications, if any, are listed below.
 
 ## Help and contact
 
-- Report issues on [GitHub](https://github.com/coq-community/huffman/issues)
+- Report issues on [GitHub](https://github.com/coq-community/cypher/issues)
 - Chat with us on [Zulip](https://coq.zulipchat.com/#narrow/stream/237663-coq-community-devs.20.26.20users)
 - Discuss with us on Coq's [Discourse](https://coq.discourse.group) forum
 

@@ -1,6 +1,6 @@
 ---
 fullname: Huffman
-shortname: huffman
+shortname: cypher
 organization: coq-community
 community: true
 action: true
@@ -39,14 +39,17 @@ license:
 supported_coq_versions:
   text: 8.12 or later
   opam: '{(>= "8.12" & < "8.17~") | (= "dev")}'
+  
+dependencies:
+- opam:
+    name: coq-relation-algebra
+    version: '{(>= "1.7" & < "1.7~") | (= "dev")}'
+  description: |-
+    [relation algebra](http://perso.ens-lyon.fr/damien.pous/ra) 1.7.0 or later (`ssreflect` suffices)
 
 tested_coq_opam_versions:
 - version: 'dev'
-- version: '8.16'
 - version: '8.15'
-- version: '8.14'
-- version: '8.13'
-- version: '8.12'
 
 ci_cron_schedule: '10 1 * * 0'
 
