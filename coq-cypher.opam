@@ -5,17 +5,15 @@ opam-version: "2.0"
 maintainer: "palmskog@gmail.com"
 version: "dev"
 
-homepage: "https://github.com/coq-community/cypher"
-dev-repo: "git+https://github.com/coq-community/cypher.git"
-bug-reports: "https://github.com/coq-community/cypher/issues"
-doc: "https://coq-community.github.io/cypher/"
+homepage: "https://github.com//cypher"
+dev-repo: "git+https://github.com//cypher.git"
+bug-reports: "https://github.com//cypher/issues"
+doc: "https://.github.io/cypher/"
 license: "LGPL-2.1-or-later"
 
-synopsis: "Coq proof of the correctness of the Huffman coding algorithm"
+synopsis: ""
 description: """
-This projects contains a Coq proof of the correctness of the Huffman coding algorithm,
-as described in David A. Huffman's paper A Method for the Construction of Minimum-Redundancy
-Codes, Proc. IRE, pp. 1098-1101, September 1952."""
+"""
 
 build: [make "-j%{jobs}%"]
 install: [make "install"]
@@ -25,13 +23,7 @@ depends: [
 ]
 
 tags: [
-  "category:Computer Science/Decision Procedures and Certified Algorithms/Correctness proofs of algorithms"
-  "category:Miscellaneous/Extracted Programs/Combinatorics"
-  "keyword:data compression"
-  "keyword:code"
-  "keyword:huffman tree"
-  "logpath:Huffman"
+  "logpath:"
 ]
 authors: [
-  "Laurent Théry"
 ]

@@ -1,7 +1,7 @@
 ---
 # This file was generated from `meta.yml`, please do not edit manually.
 # Follow the instructions on https://github.com/coq-community/templates to regenerate.
-title: Huffman
+title: 
 lang: en
 header-includes:
   - |
@@ -13,22 +13,20 @@ header-includes:
 ---
 
 <div style="text-align:left"><img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" height="25" style="border:0px">
-<a href="https://github.com/coq-community/cypher">View the project on GitHub</a>
+<a href="https://github.com//cypher">View the project on GitHub</a>
 <img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" height="25" style="border:0px"></div>
 
 ## About
 
-Welcome to the Huffman project website! This project is part of [coq-community](https://github.com/coq-community/manifesto).
+Welcome to the  project website!
 
-This projects contains a Coq proof of the correctness of the Huffman coding algorithm,
-as described in David A. Huffman's paper A Method for the Construction of Minimum-Redundancy
-Codes, Proc. IRE, pp. 1098-1101, September 1952.
+
 
 This is an open source project, licensed under the GNU Lesser General Public License v2.1 or later.
 
 ## Get the code
 
-The current stable release of Huffman can be [downloaded from GitHub](https://github.com/coq-community/cypher/releases).
+The current stable release of  can be [downloaded from GitHub](https://github.com//cypher/releases).
 
 ## Documentation
 
@@ -36,16 +34,11 @@ The coqdoc presentation of the source files can be browsed [here](docs/latest/co
 
 Related publications, if any, are listed below.
 
-- [Formalising Huffman's algorithm](https://hal.archives-ouvertes.fr/hal-02149909) 
-- [A Method for the Construction of Minimum-Redundancy Codes](http://compression.ru/download/articles/huff/huffman_1952_minimum-redundancy-codes.pdf) doi:[10.1109/JRPROC.1952.273898](https://doi.org/10.1109/JRPROC.1952.273898)
 
 ## Help and contact
 
-- Report issues on [GitHub](https://github.com/coq-community/cypher/issues)
-- Chat with us on [Zulip](https://coq.zulipchat.com/#narrow/stream/237663-coq-community-devs.20.26.20users)
-- Discuss with us on Coq's [Discourse](https://coq.discourse.group) forum
+- Report issues on [GitHub](https://github.com//cypher/issues)
 
 ## Authors and contributors
 
-- Laurent Théry
 
