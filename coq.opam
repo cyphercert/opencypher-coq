@@ -1,0 +1,16 @@
+opam-version: "2.0"
+version: "dev"
+
+
+build: [
+  ["sh" "-c" "coq_makefile -f _CoqProject -o Makefile"]
+  [make "-j%{jobs}%"]
+]
+install: [make "install"]
+
+run-test: [make "test"]
+
+depends: [
+  "ocaml" {>= "4.05.0"}
+  "coq" {(>= "8.6") | (= "dev")}
+]
