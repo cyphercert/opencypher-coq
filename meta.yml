@@ -1,5 +1,5 @@
 ---
-shortname: cypher
+shortname: huffman
 action: true
 coqdoc: true
 coqdoc_index: 'docs/latest/coqdoc/toc.html'
