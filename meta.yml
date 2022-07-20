@@ -43,7 +43,7 @@ supported_coq_versions:
 dependencies:
 - opam:
     name: coq-relation-algebra
-    version: '{(>= "1.7.7" & < "1.7~") | (= "dev")}'
+    version: '{(>= "1.7.7") | (= "dev")}'
   description: |-
     [relation algebra](http://perso.ens-lyon.fr/damien.pous/ra) 1.7.0 or later (`ssreflect` suffices)
 
