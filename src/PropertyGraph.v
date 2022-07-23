@@ -5,7 +5,7 @@ Import ListNotations.
 
 (* From hahn Require Import Hahn. *)
 
-(** Типы, которые поодерживаются для хранения в графовой базе данных*)
+(** Типы, которые поддерживаются для хранения в графовой базе данных*)
 
 Module Property.
   Inductive t := 
