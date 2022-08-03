@@ -1,0 +1,24 @@
+# This file was generated from `meta.yml`, please do not edit manually.
+# Follow the instructions on https://github.com/coq-community/templates to regenerate.
+
+opam-version: "2.0"
+maintainer: "palmskog@gmail.com"
+version: "dev"
+
+license: "LGPL-2.1-or-later"
+
+synopsis: ""
+description: """
+"""
+
+build: [make "-j%{jobs}%"]
+depends: [
+  "coq" {(>= "8.12" & < "8.17~") | (= "dev")}
+  "coq-relation-algebra" {(>= "1.7.7") | (= "dev")}
+]
+
+tags: [
+  "logpath:"
+]
+authors: [
+]
