@@ -20,7 +20,8 @@ From RelationAlgebra Require Import monoid boolean prop sups bmx.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 Local Open Scope nat_scope.
-(*Local Open Scope nraenv_scope.*)
+
+(** Tests for database model **)
 
 Module DataExamples.
 Definition property_graph1 : PropertyGraph.t :=

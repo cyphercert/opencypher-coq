@@ -37,20 +37,42 @@
 <span class="id" title="keyword">Import</span> <a class="idref" href="OpencypherCoq.PropertyGraph.html#Property"><span class="id" title="module">Property</span></a>.<br/>
 
 <br/>
+</div>
+
+<div class="doc">
+Query pattern definition 
+</div>
+<div class="code">
 <span class="id" title="keyword">Module</span> <a id="Pattern" class="idref" href="#Pattern"><span class="id" title="module">Pattern</span></a>.<br/>
+</div>
+
+<div class="doc">
+Pattern direction 
+</div>
+<div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Inductive</span> <a id="Pattern.direction" class="idref" href="#Pattern.direction"><span class="id" title="inductive">direction</span></a> :=<br/>
 &nbsp;&nbsp;| <a id="Pattern.OUT" class="idref" href="#Pattern.OUT"><span class="id" title="constructor">OUT</span></a><br/>
 &nbsp;&nbsp;| <a id="Pattern.IN" class="idref" href="#Pattern.IN"><span class="id" title="constructor">IN</span></a><br/>
 &nbsp;&nbsp;| <a id="Pattern.BOTH" class="idref" href="#Pattern.BOTH"><span class="id" title="constructor">BOTH</span></a><br/>
 &nbsp;&nbsp;.<br/>
+</div>
 
-<br/>
+<div class="doc">
+Vertex pattern condition 
+</div>
+<div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Record</span> <a id="Pattern.pvertex" class="idref" href="#Pattern.pvertex"><span class="id" title="record">pvertex</span></a> := {<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="Pattern.vlabels" class="idref" href="#Pattern.vlabels"><span class="id" title="projection">vlabels</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="Pattern.vprops" class="idref" href="#Pattern.vprops"><span class="id" title="projection">vprops</span></a>  : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">*</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#Property.t"><span class="id" title="inductive">Property.t</span></a>);<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;}.<br/>
 
 <br/>
+</div>
+
+<div class="doc">
+Edge pattern. It ia a pair where the first item is edge condition  (contained in elabels, eprops, edir, enum ) and the second item is pattern of  following vertex (contained in evertex ) 
+</div>
+<div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Record</span> <a id="Pattern.pedge" class="idref" href="#Pattern.pedge"><span class="id" title="record">pedge</span></a> := {<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="Pattern.elabels" class="idref" href="#Pattern.elabels"><span class="id" title="projection">elabels</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="Pattern.eprops" class="idref" href="#Pattern.eprops"><span class="id" title="projection">eprops</span></a>  : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Strings.String.html#string"><span class="id" title="inductive">string</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">*</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#Property.t"><span class="id" title="inductive">Property.t</span></a>);<br/>

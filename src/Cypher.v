@@ -5,18 +5,23 @@ Import ListNotations.
 Require Import PropertyGraph.
 Import Property.
 
+(** Query pattern definition **)
 Module Pattern.
+(** Pattern direction **)
   Inductive direction :=
   | OUT
   | IN
   | BOTH
   .
-
+(** Vertex pattern condition **)
   Record pvertex := {
       vlabels : list string;
       vprops  : list (string * Property.t);
     }.
 
+(** Edge pattern. It ia a pair where the first item is edge condition *)
+(** (contained in elabels, eprops, edir, enum ) and the second item is pattern of *)
+(** following vertex (contained in evertex ) **)
   Record pedge := {
       elabels : list string;
       eprops  : list (string * Property.t);
@@ -25,7 +30,8 @@ Module Pattern.
       evertex : pvertex;
     }.
   
-
+(** Query pattern. Field start is pattern of the first vertex, ledges is a list *)
+(** of consequеntive pattern edges**)
   Record t := {
       start : pvertex;
       ledges : list pedge;
@@ -34,7 +40,7 @@ Module Pattern.
 
 End Pattern.
 
-(* TODO: refactor VVVVV this VVVVV *)
+(** Query definition **)
 
 Module ProjectionExpr.
 Inductive proj := AS (from : string) (to : string).
@@ -55,14 +61,3 @@ Record t := mk {
     ret : ProjectionExpr.t;
 }.
 End Query.
-
-(*
-Missing features:
-- UNION / UNION ALL
-- WHERE
-- EXPRESSIONS IN PROJECTION
-- DISTINCT
-- OPTIONAL MATCH
-- UNWIND
-- ORDER BY / SKIP / LIMIT
-*)

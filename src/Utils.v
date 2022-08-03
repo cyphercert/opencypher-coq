@@ -3,10 +3,14 @@ Import PropertyGraph.
 Require Import List.
 Import ListNotations.
 
+(** To create a common adjacency matrix that will store both vertex labels and edge vertex it is necessary to create generic types*)
+
 Inductive Label :=
 | vlabel (l : label)
 | elabel (l : label)
 .
+
+(** Functions for translation to the generic type and vice versa **)
 
 Fixpoint list_unique (l : list label) : list label :=
   match l with

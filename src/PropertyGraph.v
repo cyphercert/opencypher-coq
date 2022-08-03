@@ -3,9 +3,7 @@ Require Import List.
 Require Import BinNums.
 Import ListNotations.
 
-(* From hahn Require Import Hahn. *)
-
-(** Типы, которые поодерживаются для хранения в графовой базе данных*)
+(** Types supported by the database. Currently integers and strings are supported**)
 
 Module Property.
   Inductive t := 
@@ -15,25 +13,10 @@ Module Property.
   .
   
   Definition name := string.
-  
-  (* Definition eqb (p p' : t) : bool := *)
-  (*   match p, p' with *)
-  (*   | p_int i, p_int i' => Nat.eqb i i' *)
-  (*   | p_string s, p_string s' => String.eqb s s' *)
-  (*   | p_empty, p_empty => true *)
-  (*   | _, _ => false *)
-  (*   end. *)
 
-  (* Lemma eqP : Equality.axiom eqb. *)
-  (* Proof. *)
-  (*   unfold eqb. red. ins. desf; try constructor; desf. *)
-  (*   all: apply Bool.iff_reflect. *)
-  (*   all: symmetry; etransitivity. *)
-  (*   all: try apply PeanoNat.Nat.eqb_eq; try apply String.eqb_eq. *)
-  (*   all: split; intros AA; subst; auto. *)
-  (*   all: inv AA. *)
-  (* Qed. *)
 End Property.
+
+(** Property Graph structure **)
 
 Module PropertyGraph.
   Definition vertex    := nat.

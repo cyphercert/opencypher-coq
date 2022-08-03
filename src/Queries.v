@@ -10,6 +10,8 @@ Require Import Utils.
 
 Import Property.
 
+(** Query semantics **)
+
 Module QueryExpression.
 
 Inductive gobj : Type :=
