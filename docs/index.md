@@ -14,3 +14,6 @@ The current release of the model can be [downloaded from GitHub](https://github.
 
 The coqdoc model's presentations can be [browsed online](https://cyphercert.github.io/opencypher-coq/toc.html)
 
+Related article listed below (in progress)
+[Формализация и верификация Cypher на Coq](https://github.com/cyphercert/opencypher-coq/blob/master/article.pdf)
+
