@@ -14,8 +14,13 @@ Require Import Logic.
 Require Import Basics.
 From RelationAlgebra Require Import syntax matrix bmx ordinal.
 From RelationAlgebra Require Import monoid boolean prop sups bmx.
+(** To work properly with the graph we should transfer it to the adjacency matrix. *)
+(** Adjacency matrix has type bmx, matrix of booleans, which is implemented in RelationAlgebra library *)
+(** (see http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.bmx.html ) **)
 
 Local Open Scope nat_scope.
+
+(** Adds ability to work with abstract type of labels. See Utils file. **)
 
 Fixpoint list_of_label_to_vlabel (l : list label) : list Label :=
   match l with

@@ -51,6 +51,17 @@
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="OpencypherCoq.Utils.html#"><span class="id" title="library">Utils</span></a>.<br/>
 
 <br/>
+</div>
+
+<div class="doc">
+Build from current pattern matrix expression 
+<div class="paragraph"> </div>
+
+ Auxiliary function adding to the matrix expression necessary operations corresponding to the edge pattern part.  In fact, it is matrix addition 
+</div>
+<div class="code">
+
+<br/>
 <span class="id" title="keyword">Definition</span> <a id="types_to_expr" class="idref" href="#types_to_expr"><span class="id" title="definition">types_to_expr</span></a> (<a id="n:1" class="idref" href="#n:1"><span class="id" title="binder">n</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Numbers.BinNums.html#positive"><span class="id" title="inductive">positive</span></a>) (<a id="etypes:2" class="idref" href="#etypes:2"><span class="id" title="binder">etypes</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a>) (<a id="tr:3" class="idref" href="#tr:3"><span class="id" title="binder">tr</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a>) :<br/>
 <span class="id" title="inductive">expr</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> : <a class="idref" href="OpencypherCoq.Utils.html#Label"><span class="id" title="inductive">Label</span></a> =&gt; <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:1"><span class="id" title="variable">n</span></a>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> : <a class="idref" href="OpencypherCoq.Utils.html#Label"><span class="id" title="inductive">Label</span></a> =&gt; <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:1"><span class="id" title="variable">n</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:1"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:1"><span class="id" title="variable">n</span></a> :=<br/>
 &nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Lists.List.html#fold_right"><span class="id" title="definition">List.fold_right</span></a> <br/>
@@ -58,6 +69,14 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">e_pls</span> (<span class="id" title="keyword">if</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#tr:3"><span class="id" title="variable">tr</span></a> <span class="id" title="keyword">then</span> <span class="id" title="constructor">e_cnv</span> (<span class="id" title="constructor">e_var</span> (<a class="idref" href="OpencypherCoq.Utils.html#elabel"><span class="id" title="constructor">elabel</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#x:4"><span class="id" title="variable">x</span></a>)) <span class="id" title="keyword">else</span> <span class="id" title="constructor">e_var</span> (<a class="idref" href="OpencypherCoq.Utils.html#elabel"><span class="id" title="constructor">elabel</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#x:4"><span class="id" title="variable">x</span></a>)) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#y:5"><span class="id" title="variable">y</span></a>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="constructor">e_zer</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:1"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:1"><span class="id" title="variable">n</span></a>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpencypherCoq.KleeneTranslation.html#etypes:2"><span class="id" title="variable">etypes</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Similar function for vertex pattern part. Need to multiply all by diagonal matrices with corresponding conditions 
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Definition</span> <a id="labels_to_expr" class="idref" href="#labels_to_expr"><span class="id" title="definition">labels_to_expr</span></a> (<a id="n:6" class="idref" href="#n:6"><span class="id" title="binder">n</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Numbers.BinNums.html#positive"><span class="id" title="inductive">positive</span></a>) (<a id="vlabels:7" class="idref" href="#vlabels:7"><span class="id" title="binder">vlabels</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a>) : <br/>
@@ -68,11 +87,27 @@
 &nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpencypherCoq.KleeneTranslation.html#vlabels:7"><span class="id" title="variable">vlabels</span></a>.<br/>
 
 <br/>
+</div>
+
+<div class="doc">
+Auxiliary function for several sequential edges without vertices conditions between it. It also complements current matrix expression
+</div>
+<div class="code">
+
+<br/>
 <span class="id" title="keyword">Fixpoint</span> <a id="k_edges" class="idref" href="#k_edges"><span class="id" title="definition">k_edges</span></a> (<a id="n:10" class="idref" href="#n:10"><span class="id" title="binder">n</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Numbers.BinNums.html#positive"><span class="id" title="inductive">positive</span></a>) (<a id="etypes:11" class="idref" href="#etypes:11"><span class="id" title="binder">etypes</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a>) (<a id="tr:12" class="idref" href="#tr:12"><span class="id" title="binder">tr</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a>) (<a id="k:13" class="idref" href="#k:13"><span class="id" title="binder">k</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#k:13"><span class="id" title="variable">k</span></a> <span class="id" title="keyword">with</span> <br/>
 &nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#O"><span class="id" title="constructor">O</span></a> =&gt; <span class="id" title="constructor">e_one</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:10"><span class="id" title="variable">n</span></a><br/>
 &nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#S"><span class="id" title="constructor">S</span></a> <span class="id" title="var">k'</span> =&gt; <span class="id" title="constructor">e_dot</span> (<a class="idref" href="OpencypherCoq.KleeneTranslation.html#types_to_expr"><span class="id" title="definition">types_to_expr</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:10"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#etypes:11"><span class="id" title="variable">etypes</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#tr:12"><span class="id" title="variable">tr</span></a>) (<a class="idref" href="OpencypherCoq.KleeneTranslation.html#k_edges:14"><span class="id" title="definition">k_edges</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:10"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#etypes:11"><span class="id" title="variable">etypes</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#tr:12"><span class="id" title="variable">tr</span></a> <span class="id" title="var">k'</span>)<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Next function builds matrix expression from list of edge patterns using previous functions and inductive pattern construction 
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Fixpoint</span> <a id="edge_pattern_to_matrix" class="idref" href="#edge_pattern_to_matrix"><span class="id" title="definition">edge_pattern_to_matrix</span></a> (<a id="n:16" class="idref" href="#n:16"><span class="id" title="binder">n</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Numbers.BinNums.html#positive"><span class="id" title="inductive">positive</span></a>) (<a id="p:17" class="idref" href="#p:17"><span class="id" title="binder">p</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="OpencypherCoq.Cypher.html#Pattern.pedge"><span class="id" title="record">Pattern.pedge</span></a>) :<br/>
@@ -89,6 +124,12 @@
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
+</div>
+
+<div class="doc">
+Constructs matrix expression responsible for the start vertex in the pattern 
+</div>
+<div class="code">
 <span class="id" title="keyword">Definition</span> <a id="pattern_to_matrix" class="idref" href="#pattern_to_matrix"><span class="id" title="definition">pattern_to_matrix</span></a> (<a id="n:21" class="idref" href="#n:21"><span class="id" title="binder">n</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Numbers.BinNums.html#positive"><span class="id" title="inductive">positive</span></a>) (<a id="p:22" class="idref" href="#p:22"><span class="id" title="binder">p</span></a> : <a class="idref" href="OpencypherCoq.Cypher.html#Pattern.t"><span class="id" title="record">Pattern.t</span></a>) :<br/>
 <span class="id" title="inductive">expr</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> : <a class="idref" href="OpencypherCoq.Utils.html#Label"><span class="id" title="inductive">Label</span></a> =&gt; <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:21"><span class="id" title="variable">n</span></a>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> : <a class="idref" href="OpencypherCoq.Utils.html#Label"><span class="id" title="inductive">Label</span></a> =&gt; <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:21"><span class="id" title="variable">n</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:21"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:21"><span class="id" title="variable">n</span></a> :=<br/>
 &nbsp;&nbsp;<span class="id" title="constructor">e_dot</span> (<a class="idref" href="OpencypherCoq.KleeneTranslation.html#labels_to_expr"><span class="id" title="definition">labels_to_expr</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:21"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#p:22"><span class="id" title="variable">p</span></a>.(<a class="idref" href="OpencypherCoq.Cypher.html#Pattern.start"><span class="id" title="projection">start</span></a>).(<a class="idref" href="OpencypherCoq.Cypher.html#Pattern.vlabels"><span class="id" title="projection">vlabels</span></a>)) (<a class="idref" href="OpencypherCoq.KleeneTranslation.html#edge_pattern_to_matrix"><span class="id" title="definition">edge_pattern_to_matrix</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#n:21"><span class="id" title="variable">n</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#p:22"><span class="id" title="variable">p</span></a>.(<a class="idref" href="OpencypherCoq.Cypher.html#Pattern.ledges"><span class="id" title="projection">ledges</span></a>)).<br/>
@@ -96,13 +137,22 @@
 <br/>
 <span class="comment">(*&nbsp;http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.syntax.htmls.e.f *)</span><br/>
 <span class="comment">(*&nbsp;Use&nbsp;as&nbsp;a&nbsp;variable&nbsp;f.&nbsp;*&nbsp;*)</span><br/>
-<span class="id" title="keyword">Print</span> <a class="idref" href="OpencypherCoq.PGMatrixExtraction.html#pg_extract_lmatrices"><span class="id" title="definition">pg_extract_lmatrices</span></a>.<br/>
+
+<br/>
 <span class="id" title="keyword">Definition</span> <a id="e_var2matrix" class="idref" href="#e_var2matrix"><span class="id" title="definition">e_var2matrix</span></a> (<a id="g:23" class="idref" href="#g:23"><span class="id" title="binder">g</span></a> : <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.t"><span class="id" title="record">PropertyGraph.t</span></a>) :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">fun</span> (<a id="l:24" class="idref" href="#l:24"><span class="id" title="binder">l</span></a> : <a class="idref" href="OpencypherCoq.Utils.html#Label"><span class="id" title="inductive">Label</span></a>) =&gt;<br/>
 &nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#l:24"><span class="id" title="variable">l</span></a> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;| <a class="idref" href="OpencypherCoq.Utils.html#vlabel"><span class="id" title="constructor">vlabel</span></a> <span class="id" title="var">v</span> =&gt; <a class="idref" href="OpencypherCoq.PGMatrixExtraction.html#pg_extract_lmatrices"><span class="id" title="definition">pg_extract_lmatrices</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Lists.List.html#length"><span class="id" title="abbreviation">List.length</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:23"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.vertices"><span class="id" title="projection">vertices</span></a>)) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:23"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.vlab"><span class="id" title="projection">vlab</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#l:24"><span class="id" title="variable">l</span></a><br/>
 &nbsp;&nbsp;| <a class="idref" href="OpencypherCoq.Utils.html#elabel"><span class="id" title="constructor">elabel</span></a> <span class="id" title="var">e</span> =&gt; <a class="idref" href="OpencypherCoq.PGMatrixExtraction.html#pg_extract_tmatrices"><span class="id" title="definition">pg_extract_tmatrices</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Lists.List.html#length"><span class="id" title="abbreviation">List.length</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:23"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.vertices"><span class="id" title="projection">vertices</span></a>)) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:23"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.edges"><span class="id" title="projection">edges</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:23"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.elab"><span class="id" title="projection">elab</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:23"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.st"><span class="id" title="projection">st</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#l:24"><span class="id" title="variable">l</span></a> <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Substituting a graph represented as an adjacency graph into a matrix expression corresponding to a search pattern 
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Program Definition</span> <a id="e_var2matrix_real" class="idref" href="#e_var2matrix_real"><span class="id" title="definition">e_var2matrix_real</span></a> (<a id="g:26" class="idref" href="#g:26"><span class="id" title="binder">g</span></a> : <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.t"><span class="id" title="record">PropertyGraph.t</span></a>):<br/>
@@ -113,9 +163,6 @@
 &nbsp;&nbsp;| <a class="idref" href="OpencypherCoq.Utils.html#vlabel"><span class="id" title="constructor">vlabel</span></a> <span class="id" title="var">v</span> =&gt; <a class="idref" href="OpencypherCoq.PGMatrixExtraction.html#pg_extract_lmatrices"><span class="id" title="definition">pg_extract_lmatrices</span></a>  (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Lists.List.html#length"><span class="id" title="abbreviation">List.length</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:26"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.vertices"><span class="id" title="projection">vertices</span></a>)) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:26"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.vlab"><span class="id" title="projection">vlab</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#l:28"><span class="id" title="variable">l</span></a><br/>
 &nbsp;&nbsp;| <a class="idref" href="OpencypherCoq.Utils.html#elabel"><span class="id" title="constructor">elabel</span></a> <span class="id" title="var">e</span> =&gt; <a class="idref" href="OpencypherCoq.PGMatrixExtraction.html#pg_extract_tmatrices"><span class="id" title="definition">pg_extract_tmatrices</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Lists.List.html#length"><span class="id" title="abbreviation">List.length</span></a> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:26"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.vertices"><span class="id" title="projection">vertices</span></a>)) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:26"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.edges"><span class="id" title="projection">edges</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:26"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.elab"><span class="id" title="projection">elab</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#g:26"><span class="id" title="variable">g</span></a>.(<a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.st"><span class="id" title="projection">st</span></a>) <a class="idref" href="OpencypherCoq.KleeneTranslation.html#l:28"><span class="id" title="variable">l</span></a><br/>
 &nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
-
-<br/>
-<span class="id" title="keyword">Print</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#e_var2matrix_real"><span class="id" title="definition">e_var2matrix_real</span></a>.<br/>
 </div>
 </div>
 <div id="footer">

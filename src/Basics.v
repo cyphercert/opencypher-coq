@@ -5,6 +5,9 @@ Import ListNotations.
 
 Set Implicit Arguments.
 
+(** There is an additional part providing lemmas about list. *)
+(** Can be used in the implementation of storing the result of a subquery. Attention: Hahn library is required. **)
+
 (*Section Aux.
 Variable T : eqType.
 

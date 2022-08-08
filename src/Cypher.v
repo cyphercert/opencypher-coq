@@ -5,23 +5,49 @@ Import ListNotations.
 Require Import PropertyGraph.
 Import Property.
 
-(** Query pattern definition **)
+(** Query pattern definition. In general terms, the query pattern is the conditions on the edges *)
+(** and vertices in the desired path. These conditions (patterns) are stored sequentially: **)
+
+(** start vertex pattern --- first edge pattern --- vertex pattern --- ... --- edge pattern --- last vertex pattern **)
+
+(** (vertex and edge pattern alternate). We decided to store this query pattern in a special way. *)
+(** Pattern contains start vertex pattern and pairs (edge pattern, vertex pattern). **)
+
 Module Pattern.
-(** Pattern direction **)
+
+(** Possible conditions for edge direction. **)
+
   Inductive direction :=
   | OUT
   | IN
   | BOTH
   .
-(** Vertex pattern condition **)
+
+  (** Vertex pattern condition. **)
+
+  (** vlabels : list of labels stored in a vertex **)
+
+  (** vprops  : list of pairs (key, value) stored in a vertex **)
+
   Record pvertex := {
       vlabels : list string;
       vprops  : list (string * Property.t);
     }.
 
-(** Edge pattern. It ia a pair where the first item is edge condition *)
-(** (contained in elabels, eprops, edir, enum ) and the second item is pattern of *)
-(** following vertex (contained in evertex ) **)
+(** Edge pattern. It is a pair where the first item is edge condition (contained in elabels, eprops, edir, enum) *)
+(** and the second item is pattern of following vertex (contained in evertex). **)
+
+(** elabels : list of labels stored in an edge **)
+
+(** eprops  : list of pairs (key, value) stored in an edge **)
+
+(** edir    : direction condition **)
+
+(** enum    : number of sequential edges with current pattern in the desired path, by default is 1 *)
+(**           /future: add the range to enum/ **)
+
+(** evertex : vertex pattern **)
+
   Record pedge := {
       elabels : list string;
       eprops  : list (string * Property.t);
@@ -30,8 +56,12 @@ Module Pattern.
       evertex : pvertex;
     }.
   
-(** Query pattern. Field start is pattern of the first vertex, ledges is a list *)
-(** of consequеntive pattern edges**)
+(** Query pattern. **)
+
+(** start  : pattern of the first vertex **)
+
+(** ledges : list of consequеntive pattern edges **)
+
   Record t := {
       start : pvertex;
       ledges : list pedge;

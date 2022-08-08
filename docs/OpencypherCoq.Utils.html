@@ -34,10 +34,26 @@
 <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Lists.List.html#ListNotations"><span class="id" title="module">ListNotations</span></a>.<br/>
 
 <br/>
+</div>
+
+<div class="doc">
+To create a common adjacency matrix that will store both vertex labels and edge vertex it is necessary to create generic types
+</div>
+<div class="code">
+
+<br/>
 <span class="id" title="keyword">Inductive</span> <a id="Label" class="idref" href="#Label"><span class="id" title="inductive">Label</span></a> :=<br/>
 | <a id="vlabel" class="idref" href="#vlabel"><span class="id" title="constructor">vlabel</span></a> (<a id="l:3" class="idref" href="#l:3"><span class="id" title="binder">l</span></a> : <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a>)<br/>
 | <a id="elabel" class="idref" href="#elabel"><span class="id" title="constructor">elabel</span></a> (<a id="l:4" class="idref" href="#l:4"><span class="id" title="binder">l</span></a> : <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a>)<br/>
 .<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Functions for translation to the generic type and vice versa 
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Fixpoint</span> <a id="list_unique" class="idref" href="#list_unique"><span class="id" title="definition">list_unique</span></a> (<a id="l:5" class="idref" href="#l:5"><span class="id" title="binder">l</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a>) : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="OpencypherCoq.PropertyGraph.html#PropertyGraph.label"><span class="id" title="definition">label</span></a> :=<br/>
