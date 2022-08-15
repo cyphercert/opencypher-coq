@@ -1,3 +1,4 @@
+![Build Status](https://github.com/cyphercert/opencypher-coq/actions/workflows/docker-action.yml/badge.svg?branch=master)
 # opencypher-coq
 A Coq formalizaton of "Formalizing openCypher Graph Queries in Relational Algebra" [Marton-al:ADBIS17]
 
