@@ -128,7 +128,7 @@ Proof.
   symmetry in EP.
   unfold eqb in EP.
   destruct c.
-  - apply beq_nat_true in EP. apply H in EP. inversion EP.
+  - apply Nat.eqb_eq in EP. apply H in EP. inversion EP.
   - reflexivity.
 Qed.
 
@@ -185,7 +185,7 @@ Proof.
   apply functional_extensionality. intros x0.
   unfold t_update_nat. remember (x =? x0) as c eqn:EP.
   destruct c.
-  + symmetry in EP. apply beq_nat_true in EP. rewrite EP. reflexivity.
+  + symmetry in EP. apply Nat.eqb_eq in EP. rewrite EP. reflexivity.
   + reflexivity.
 Qed.
 
@@ -224,7 +224,7 @@ Proof.
   remember (x2 =? x0) as c2 eqn:EP2. symmetry in EP2.
   destruct c1.
   + destruct c2.
-    * apply beq_nat_true in EP1. apply beq_nat_true in EP2.
+    * apply Nat.eqb_eq in EP1. apply Nat.eqb_eq in EP2.
       rewrite<-EP1 in EP2. apply H in EP2. inversion EP2.
     * reflexivity.
   + destruct c2.

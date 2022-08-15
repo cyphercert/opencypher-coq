@@ -46,6 +46,12 @@
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="OpencypherCoq.Basics.html#"><span class="id" title="library">Basics</span></a>.<br/>
 <span class="id" title="keyword">From</span> <span class="id" title="var">RelationAlgebra</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">syntax</span> <span class="id" title="library">matrix</span> <span class="id" title="library">bmx</span> <span class="id" title="library">ordinal</span>.<br/>
 <span class="id" title="keyword">From</span> <span class="id" title="var">RelationAlgebra</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">monoid</span> <span class="id" title="library">boolean</span> <span class="id" title="library">prop</span> <span class="id" title="library">sups</span> <span class="id" title="library">bmx</span>.<br/>
+</div>
+
+<div class="doc">
+To work properly with the graph we should transfer it to the adjacency matrix.  Adjacency matrix has type bmx, matrix of booleans, which is implemented in RelationAlgebra library  (see http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.bmx.html ) 
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Local Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">nat_scope</span>.<br/>
@@ -54,10 +60,7 @@
 </div>
 
 <div class="doc">
-To work properly with the graph we should transfer it to the adjacency matrix.  Adjacency matrix has type bmx, matrix of booleans, which is implemented in RelationAlgebra library  (see http://perso.ens-lyon.fr/damien.pous/ra/html/RelationAlgebra.bmx.html ) 
-<div class="paragraph"> </div>
-
- Adds ability to work with abstract type of labels. See Utils file. 
+Adds ability to work with abstract type of labels. See Utils file. 
 </div>
 <div class="code">
 
