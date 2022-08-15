@@ -309,7 +309,7 @@ Proof.
   intros A h n m H.
   apply functional_extensionality. intros x.
   unfold t_update_nat. destruct (n =? x) eqn:E.
-  - apply beq_nat_true in E. rewrite<-E. apply H.
+  - apply Nat.eqb_eq in E. rewrite<-E. apply H.
   - reflexivity.
 Qed.
 
@@ -319,12 +319,12 @@ Proof.
   intros A h n m k l H.
   apply functional_extensionality. intros x.
   destruct (n =? x) eqn:E1; destruct (m =? x) eqn:E2.
-  - apply beq_nat_true in E1. apply beq_nat_true in E2.
+  - apply Nat.eqb_eq  in E1. apply Nat.eqb_eq  in E2.
     rewrite<-E2 in E1. apply H in E1. inversion E1.
-  - apply beq_nat_true in E1. rewrite E1. rewrite update_eq.
+  - apply Nat.eqb_eq  in E1. rewrite E1. rewrite update_eq.
     rewrite update_neq. rewrite update_eq. reflexivity.
     apply beq_nat_false in E2. apply E2.
-  - apply beq_nat_true in E2. rewrite E2. rewrite update_eq.
+  - apply Nat.eqb_eq  in E2. rewrite E2. rewrite update_eq.
     rewrite update_neq. rewrite update_eq. reflexivity.
     apply beq_nat_false in E1. apply E1.
   - apply beq_nat_false in E1. apply beq_nat_false in E2.
