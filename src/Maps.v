@@ -327,6 +327,6 @@ Proof.
   - apply Nat.eqb_eq  in E2. rewrite E2. rewrite update_eq.
     rewrite update_neq. rewrite update_eq. reflexivity.
     apply Nat.eqb_neq  in E1. apply E1.
-  - apply Nat.eqb_neq in E1. apply beq_nat_false in E2.
+  - apply Nat.eqb_neq in E1. apply Nat.eqb_neq in E2.
     repeat(rewrite update_neq); try(reflexivity); try(assumption).
 Qed.
