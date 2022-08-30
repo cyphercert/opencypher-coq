@@ -55,16 +55,21 @@ Module Pattern.
       enum    : nat;
       evertex : pvertex;
     }.
-  
+
+  Inductive tree : Type :=
+  | Leaf (x : pedge)
+  | Node (t1 : tree) (t2 : tree).
+
+
 (** Query pattern. **)
 
 (** start  : pattern of the first vertex **)
 
 (** ledges : list of consequеntive pattern edges **)
 
-  Record t := {
+  Record t := mk {
       start : pvertex;
-      ledges : list pedge;
+      ledges : tree;
     }.
 
 

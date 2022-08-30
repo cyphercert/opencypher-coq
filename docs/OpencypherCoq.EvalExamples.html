@@ -144,8 +144,7 @@ Tests for database model
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <a id="DataExamples.lt2" class="idref" href="#DataExamples.lt2"><span class="id" title="lemma">lt2</span></a> : (2 <span class="id" title="notation">&lt;</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.length_nat"><span class="id" title="definition">length_nat</span></a>)%<span class="id" title="var">ltb</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.length_nat"><span class="id" title="definition">length_nat</span></a>. <span class="id" title="tactic">simpl</span>. <span class="id" title="var">lia</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.length_nat"><span class="id" title="definition">length_nat</span></a>. <span class="id" title="tactic">simpl</span>. <span class="id" title="var">lia</span>. <span class="id" title="keyword">Qed</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Definition</span> <a id="DataExamples.num" class="idref" href="#DataExamples.num"><span class="id" title="definition">num</span></a> {<a id="length_nat:7" class="idref" href="#length_nat:7"><span class="id" title="binder">length_nat</span></a>: <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>} : <span class="id" title="record">ord</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.length_nat"><span class="id" title="definition">DataExamples.length_nat</span></a> := @<span class="id" title="constructor">Ord</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.length_nat"><span class="id" title="definition">DataExamples.length_nat</span></a> 1 <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.lt1"><span class="id" title="lemma">lt1</span></a>.<br/>
@@ -153,7 +152,12 @@ Tests for database model
 
 <br/>
 &nbsp;<span class="comment">(*Let&nbsp;pattern1_test1&nbsp;{num&nbsp;:&nbsp;ord&nbsp;DataExamples.length_nat}&nbsp;:&nbsp;DataExamples.evaluated&nbsp;(@Ord&nbsp;DataExamples.length_nat&nbsp;1&nbsp;lt1)&nbsp;(@Ord&nbsp;DataExamples.length_nat&nbsp;1&nbsp;lt1)&nbsp;&nbsp;=&nbsp;true.<br/>
-&nbsp;&nbsp;Proof.&nbsp;unfold&nbsp;evaluated.&nbsp;simpl.&nbsp;Qed.*)</span><br/>
+&nbsp;&nbsp;Proof.&nbsp;unfold&nbsp;evaluated.&nbsp;simpl.&nbsp;Qed.*&nbsp;*&nbsp;*)</span><br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Compute</span> <a class="idref" href="OpencypherCoq.KleeneTranslation.html#eval_res"><span class="id" title="definition">eval_res</span></a> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.evaluated"><span class="id" title="definition">evaluated</span></a> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.num2"><span class="id" title="definition">num2</span></a>.<br/>
+
+<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Compute</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.evaluated"><span class="id" title="definition">evaluated</span></a> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.num"><span class="id" title="definition">num</span></a> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.num"><span class="id" title="definition">num</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Compute</span> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.evaluated"><span class="id" title="definition">evaluated</span></a> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.num2"><span class="id" title="definition">num2</span></a> <a class="idref" href="OpencypherCoq.EvalExamples.html#DataExamples.num2"><span class="id" title="definition">num2</span></a>.<br/>
 

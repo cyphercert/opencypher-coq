@@ -100,14 +100,16 @@ Definition property_graph1 : PropertyGraph.t :=
 
   Lemma lt2 : (2 < length_nat)%ltb.
   Proof.
-    unfold length_nat. simpl. lia.
-  Qed.
+    unfold length_nat. simpl. lia. Qed.
 
   Definition num {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 1 lt1.
   Definition num2 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 2 lt2.
 
  (*Let pattern1_test1 {num : ord DataExamples.length_nat} : DataExamples.evaluated (@Ord DataExamples.length_nat 1 lt1) (@Ord DataExamples.length_nat 1 lt1)  = true.
-  Proof. unfold evaluated. simpl. Qed.*)
+  Proof. unfold evaluated. simpl. Qed.* * *)
+
+  Compute eval_res evaluated num2.
+
   Compute evaluated num num.
   Compute evaluated num2 num2.
 

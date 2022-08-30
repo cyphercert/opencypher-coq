@@ -19,6 +19,7 @@ Import Pattern.
 Require Import PGMatrixExtraction.
 Require Import Utils.
 
+
 (** Build from current pattern matrix expression **)
 
 (** Auxiliary function adding to the matrix expression necessary operations corresponding to the edge pattern part. *)
@@ -51,17 +52,15 @@ Fixpoint k_edges (n : positive) (etypes : list label) (tr : bool) (k : nat) :=
 
 (** Next function builds matrix expression from list of edge patterns using previous functions and inductive pattern construction **)
 
-Fixpoint edge_pattern_to_matrix (n : positive) (p : list Pattern.pedge) :
+Fixpoint edge_pattern_to_matrix (n : positive) (p : Pattern.tree) :
 expr (fun _ : Label => n) (fun _ : Label => n) n n :=
   match p with
-  | nil => e_one n
-  | pedge :: l => 
-    let e := match pedge.(edir) with 
-      | IN => k_edges n pedge.(elabels) true pedge.(enum)
-      | OUT => k_edges n pedge.(elabels) false pedge.(enum)
-      | BOTH => e_pls (k_edges n pedge.(elabels) true pedge.(enum)) (k_edges n pedge.(elabels) false pedge.(enum))
-      end in e_dot (e_dot e (labels_to_expr n pedge.(evertex).(vlabels)))
-                            (edge_pattern_to_matrix n l)
+  | Leaf pedge => let e := match pedge.(edir) with
+                 | IN => k_edges n pedge.(elabels) true pedge.(enum)
+                 | OUT => k_edges n pedge.(elabels) false pedge.(enum)
+                 | BOTH => e_pls (k_edges n pedge.(elabels) true pedge.(enum)) (k_edges n pedge.(elabels) false pedge.(enum))
+                 end in e_dot e (labels_to_expr n pedge.(evertex).(vlabels))
+  | Node t1 t2 => e_dot (edge_pattern_to_matrix n t1) (edge_pattern_to_matrix n t2)
   end.
 
 (** Constructs matrix expression responsible for the start vertex in the pattern **)
@@ -89,3 +88,8 @@ Program Definition e_var2matrix_real (g : PropertyGraph.t):
   | vlabel v => pg_extract_lmatrices  (List.length g.(vertices)) g.(vlab) l
   | elabel e => pg_extract_tmatrices (List.length g.(vertices)) g.(edges) g.(elab) g.(st) l
    end.
+   
+(** if at least one element in a matrix row i true then true, else false **)
+Print seq.
+Definition eval_res {n: nat} (M: bmx n n) : ord n -> bool :=
+    fun i => sup (fun j => M i j) (ordinal.seq n).

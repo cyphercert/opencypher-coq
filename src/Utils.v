@@ -18,6 +18,12 @@ Fixpoint list_unique (l : list label) : list label :=
   | h :: tl => h :: filter (fun x => negb (String.eqb x h)) (list_unique tl)
   end.
 
+(*Fixpoint list_ord_nat (l : list nat) : list ord nat :=
+  match l with
+  | [] => []
+  | h :: tl => Some h :: list_ord_nat tl
+  end.*)
+
 Fixpoint list_inb_b (e : bool) (l : list bool) : bool :=
   match l with 
   | [] => false 
