@@ -67,3 +67,14 @@ Proof.
   intros a b EQ.
   subst VEVAL. now apply MXDOT_MORPH_R.
 Admitted.
+
+Theorem pattern_normalization_eq g v t :
+    let p  := Pattern.mk v t in
+    let np := Pattern.normalize p in
+    let size_pos :=
+      Pos.of_nat (Datatypes.length(PropertyGraph.vertices g)) in
+    let p1_m := pattern_to_matrix size_pos p  in
+    let p2_m := pattern_to_matrix size_pos np in
+    eval_graph g p ≡ eval_graph g np.
+Proof.
+Admitted.
