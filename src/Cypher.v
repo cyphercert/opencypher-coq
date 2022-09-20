@@ -71,7 +71,43 @@ Module Pattern.
       start : pvertex;
       ledges : tree;
     }.
+    
+  Fixpoint tree_left_height (t : tree) := 
+    match t with 
+    | Leaf _ => O
+    | Node t1 _ => S (tree_left_height t1)
+    end.
+    
+  Fixpoint tree_length (t : tree) := 
+    match t with
+    | Leaf _ => 1
+    | Node t1 t2 => (tree_length t1) + (tree_length t2)
+    end.
+      
+  Fixpoint tree_normalize_step (t : tree) (n : nat) :=
+    match n with 
+    | O => t
+    | S k => match t with
+             | Leaf _ => t
+             | Node t1 t2 => match t1 with
+                             | Leaf _ => t
+                             | Node t3 t4 => Node (tree_normalize_step t3 k) (Node t4 t2)
+                             end
+             end
+    end.
+    
+  Fixpoint tree_normalize_depth (t : tree) (n : nat) :=
+    match n with 
+    | 0 => t
+    | S k => match tree_normalize_step t (tree_left_height t) with
+             | Leaf _ => t
+             | Node t1 t2 => Node t1 (tree_normalize_depth t2 k)
+             end
+    end.
 
+  Definition tree_normalize (t : tree) := tree_normalize_depth t (tree_length t).
+
+  Definition normalize (p : t) := mk p.(start) (tree_normalize p.(ledges)).
 
 End Pattern.
 

@@ -17,7 +17,7 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 Local Open Scope nat_scope.
 
-From hahn Require Import HahnBase.
+Require Import HahnBase.
 
 Definition eval_graph g :=
     let size := Datatypes.length(PropertyGraph.vertices g) in
@@ -54,7 +54,7 @@ Proof.
   assert (forall X a b (EQ : a ≡ b), MXDOT X a ≡ MXDOT X b)
     as MXDOT_MORPH_R.
   { intros X a b EQ.
-    subst MXDOT.
+    subst MXDOT. Print eq_refl.
     admit. }
   remember
     (MXDOT
@@ -67,7 +67,7 @@ Proof.
   intros a b EQ.
   subst VEVAL. now apply MXDOT_MORPH_R.
 Admitted.
-
+Check (S O).
 Theorem pattern_normalization_eq g v t :
     let p  := Pattern.mk v t in
     let np := Pattern.normalize p in
@@ -75,6 +75,25 @@ Theorem pattern_normalization_eq g v t :
       Pos.of_nat (Datatypes.length(PropertyGraph.vertices g)) in
     let p1_m := pattern_to_matrix size_pos p  in
     let p2_m := pattern_to_matrix size_pos np in
-    eval_graph g p ≡ eval_graph g np.
+    eval_graph g p1_m ≡ eval_graph g p2_m.
 Proof.
-Admitted.
+    unfold eval_graph. simpl.
+    set (Datatypes.length (PropertyGraph.vertices g)) as n.
+    intros oa ob.
+    remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
+    assert (edge_pattern_to_matrix (Pos.of_nat n) t = edge_pattern_to_matrix (Pos.of_nat n) (Pattern.tree_normalize t)).
+    Focus 2. rewrite H. reflexivity.
+    induction (Pattern.tree_length t) as [| n'] eqn:h.
+    admit.
+    unfold Pattern.tree_normalize. rewrite h. destruct t.
+
+    { unfold Pattern.tree_normalize_depth.  destruct (Pattern.tree_normalize_step (Pattern.Leaf x)
+                                                     (Pattern.tree_left_height (Pattern.Leaf x))).
+     reflexivity.  }
+
+    Pattern.tree_normalize_depth. simpl. destruct t1.
+        (Pattern.tree_length (Pattern.Node t1 t2)) as [| n'] eqn:H.
+      + simpl in H. admit.
+      + simpl. destruct (Pattern.tree_left_height t1) as [| n2'] eqn:H2.
+          * destruct t1. {simpl}unfold Pattern.tree_normalize_depth  simpl.
+  Admitted.
