@@ -67,7 +67,24 @@ Proof.
   intros a b EQ.
   subst VEVAL. now apply MXDOT_MORPH_R.
 Admitted.
-Check (S O).
+
+Lemma edge_pattern_to_matrix_insert_tree_r x tl tr :
+  edge_pattern_to_matrix x (Pattern.Node tl tr) =
+  edge_pattern_to_matrix x (Pattern.insert_tree_r tr tl).
+Proof.
+  generalize dependent tr.
+  induction tl; ins.
+  rewrite <- IHtl2.
+Admitted.
+
+Lemma edge_pattern_to_matrix_tree_normalization t x :
+  edge_pattern_to_matrix x t = edge_pattern_to_matrix x (Pattern.tree_normalize t).
+Proof.
+    induction t; ins.
+    rewrite <- edge_pattern_to_matrix_insert_tree_r. ins.
+    now rewrite <- IHt2, <- IHt1.
+Qed.
+
 Theorem pattern_normalization_eq g v t :
     let p  := Pattern.mk v t in
     let np := Pattern.normalize p in
@@ -81,19 +98,8 @@ Proof.
     set (Datatypes.length (PropertyGraph.vertices g)) as n.
     intros oa ob.
     remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
-    assert (edge_pattern_to_matrix (Pos.of_nat n) t = edge_pattern_to_matrix (Pos.of_nat n) (Pattern.tree_normalize t)).
-    Focus 2. rewrite H. reflexivity.
-    induction (Pattern.tree_length t) as [| n'] eqn:h.
-    admit.
-    unfold Pattern.tree_normalize. rewrite h. destruct t.
-
-    { unfold Pattern.tree_normalize_depth.  destruct (Pattern.tree_normalize_step (Pattern.Leaf x)
-                                                     (Pattern.tree_left_height (Pattern.Leaf x))).
-     reflexivity.  }
-
-    Pattern.tree_normalize_depth. simpl. destruct t1.
-        (Pattern.tree_length (Pattern.Node t1 t2)) as [| n'] eqn:H.
-      + simpl in H. admit.
-      + simpl. destruct (Pattern.tree_left_height t1) as [| n2'] eqn:H2.
-          * destruct t1. {simpl}unfold Pattern.tree_normalize_depth  simpl.
-  Admitted.
+    enough (edge_pattern_to_matrix (Pos.of_nat n) t =
+            edge_pattern_to_matrix (Pos.of_nat n) (Pattern.tree_normalize t)) as AA.
+    { rewrite AA. reflexivity. }
+    apply edge_pattern_to_matrix_tree_normalization.
+Qed.

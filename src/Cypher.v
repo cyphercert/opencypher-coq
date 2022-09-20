@@ -71,42 +71,34 @@ Module Pattern.
       start : pvertex;
       ledges : tree;
     }.
-    
-  Fixpoint tree_left_height (t : tree) := 
-    match t with 
-    | Leaf _ => O
-    | Node t1 _ => S (tree_left_height t1)
-    end.
-    
-  Fixpoint tree_length (t : tree) := 
+  
+
+(**
+ Tree normalization: 
+
+   --               -
+  /  \             / \
+ -    -  ->       a   -
+/ \  / \             / \
+a  b c d             b  -
+                       / \
+                      c   d 
+**)
+  Fixpoint insert_tree_r (t_to_be_inserted t : tree) : tree :=
     match t with
-    | Leaf _ => 1
-    | Node t1 t2 => (tree_length t1) + (tree_length t2)
+    | Leaf _   => Node t t_to_be_inserted
+    | Node l r => Node l (insert_tree_r t_to_be_inserted r)
     end.
-      
-  Fixpoint tree_normalize_step (t : tree) (n : nat) :=
-    match n with 
-    | O => t
-    | S k => match t with
-             | Leaf _ => t
-             | Node t1 t2 => match t1 with
-                             | Leaf _ => t
-                             | Node t3 t4 => Node (tree_normalize_step t3 k) (Node t4 t2)
-                             end
-             end
+
+  Fixpoint tree_normalize (t : tree) :=
+    match t with
+    | Leaf _ => t
+    | Node l r =>
+        let nl := tree_normalize l in
+        let nr := tree_normalize r in
+        insert_tree_r nr nl
     end.
     
-  Fixpoint tree_normalize_depth (t : tree) (n : nat) :=
-    match n with 
-    | 0 => t
-    | S k => match tree_normalize_step t (tree_left_height t) with
-             | Leaf _ => t
-             | Node t1 t2 => Node t1 (tree_normalize_depth t2 k)
-             end
-    end.
-
-  Definition tree_normalize (t : tree) := tree_normalize_depth t (tree_length t).
-
   Definition normalize (p : t) := mk p.(start) (tree_normalize p.(ledges)).
 
 End Pattern.
