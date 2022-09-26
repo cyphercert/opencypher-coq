@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 opam repo add coq-released https://coq.inria.fr/opam/released
-opam repo add coq-released-hahn https://github.com/vafeiadis/hahn.git
+opam remote add coq-weakmemory-local -k git https://github.com/weakmemory/local-coq-opam-archive
 opam install coq-relation-algebra coq-hahn
