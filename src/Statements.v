@@ -68,15 +68,6 @@ Proof.
   subst VEVAL. now apply MXDOT_MORPH_R.
 Admitted.
 
-Lemma edge_pattern_to_matrix_insert_tree_r x tl tr :
-  edge_pattern_to_matrix x (Pattern.Node tl tr) =
-  edge_pattern_to_matrix x (Pattern.insert_tree_r tr tl).
-Proof.
-  generalize dependent tr.
-  induction tl; ins.
-  rewrite <- IHtl2.
-Admitted.
-
 Lemma edge_pattern_to_matrix_tree_normalization (t1 t2: Pattern.tree) (g: PropertyGraph.t):
   let n   := (Datatypes.length (PropertyGraph.vertices g)) in
   let pn  := Pos.of_nat n in
@@ -85,12 +76,11 @@ Lemma edge_pattern_to_matrix_tree_normalization (t1 t2: Pattern.tree) (g: Proper
      (fun _ => n) (e_var2matrix_real g) pn pn
      (edge_pattern_to_matrix pn (Pattern.insert_tree_r t2 t1))
   )
-  ≡
-  mx_dot bool_ops bool_tt n n n (@eval Label pnf pnf bmx
-                                   (fun _ => n) (e_var2matrix_real g) pn pn 
+  = mx_dot bool_ops bool_tt n n n (@eval Label pnf pnf bmx
+                                   (fun _ => n) (e_var2matrix_real g) pn pn
                                    (edge_pattern_to_matrix pn t1))
   (@eval Label pnf pnf bmx
-     (fun _ => n) (e_var2matrix_real g) pn pn 
+     (fun _ => n) (e_var2matrix_real g) pn pn
      (edge_pattern_to_matrix pn t2)) .
 Proof.
     intros n.
@@ -99,33 +89,25 @@ Proof.
     remember (@eval Label (fun _ => (Pos.of_nat n)) (fun _ => (Pos.of_nat n)) bmx
                 (fun _ => n) (e_var2matrix_real g) (Pos.of_nat n) (Pos.of_nat n)) as EVAL.
     remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
-
-    assert (forall a, EVAL (edge_pattern_to_matrix (Pos.of_nat n) (Pattern.insert_tree_r t2 t1_2)) a =
-                       MXDOT
-             (EVAL (edge_pattern_to_matrix (Pos.of_nat n) t1_2))
-             (EVAL (edge_pattern_to_matrix (Pos.of_nat n) t2)) a) as IH1.
-    {intros. apply functional_extensionality. apply IHt1_2. }
-
-     assert (forall a, EVAL (edge_pattern_to_matrix (Pos.of_nat n) (Pattern.insert_tree_r t2 t1_1)) a =
-                       MXDOT
-             (EVAL (edge_pattern_to_matrix (Pos.of_nat n) t1_1))
-             (EVAL (edge_pattern_to_matrix (Pos.of_nat n) t2)) a) as IH2.
-    {intros. apply functional_extensionality. apply IHt1_1. }
-    apply  functional_extensionality in IH1. apply functional_extensionality in IH2. rewrite IH1.
+    rewrite IHt1_2.
     assert (forall a b c,
              MXDOT (MXDOT a b) c ≡
              MXDOT a (MXDOT b c))
     as MXDOT_ASSOC.
-  { intros x y z. subst MXDOT.
+    { intros x y z. subst MXDOT.
      rewrite mx_dotA with (M:=x) (N:=y) (P:=z).
      reflexivity.}
-  simpl.
-
-
-    (*induction t; ins.
-    rewrite <- edge_pattern_to_matrix_insert_tree_r. ins.
-    now rewrite <- IHt2, <- IHt1.*)
-Admitted.
+    assert (forall a b c,
+             MXDOT (MXDOT a b) c =
+             MXDOT a (MXDOT b c))
+    as MXDOT_ASSOC2.
+    {
+      intros a b c.
+      apply functional_extensionality. intros.
+      apply functional_extensionality. intros.
+      now rewrite MXDOT_ASSOC. }
+      rewrite MXDOT_ASSOC2. reflexivity.
+Qed.
 
 Theorem pattern_normalization_eq g v t :
     let p  := Pattern.mk v t in
@@ -134,60 +116,35 @@ Theorem pattern_normalization_eq g v t :
       Pos.of_nat (Datatypes.length(PropertyGraph.vertices g)) in
     let p1_m := pattern_to_matrix size_pos p  in
     let p2_m := pattern_to_matrix size_pos np in
-    eval_graph g p1_m = eval_graph g p2_m.
+    eval_graph g p1_m ≡ eval_graph g p2_m.
 Proof.
   unfold eval_graph. simpl.
   set (Datatypes.length (PropertyGraph.vertices g)) as n.
-  match goal with
-  | |- mx_dot _ _ _ _ _ _ ?X = mx_dot _ _ _ _ _ _ ?Y => enough (X = Y) as EQ
-  end.
-  { now rewrite EQ. }
-  induction t; ins.
-  rewrite IHt1, IHt2.
-  (* TODO: to be continued... *)
-
-  rewrite edge_pattern_to_matrix_tree_normalization with
-    (t2 := Pattern.tree_normalize t2) (t1 := Pattern.tree_normalize t1) (g := g).
-  do 2 match goal with
-    | H : forall a a0 : ord n, ?A a a0 = ?B a a0 |- _ =>
-        assert (A = B) as AA by (do 2 (apply functional_extensionality; intros); apply H);
-        clear H; rename AA into H
-    end.
-  now rewrite IHt1, IHt2.
-Qed.
-
-
-  (* enough (f t = f (Pattern.tree_normalize t)) as EQ. *)
-  (* { now rewrite EQ. } *)
-  (* subst f. *)
+  intros a a0.
   remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
-  assert (forall a b c,
-             MXDOT (MXDOT a b) c ≡
-               MXDOT a (MXDOT b c))
-    as MXDOT_ASSOC.
-  { intros a b c. subst MXDOT.
-    rewrite mx_dotA with (M:=a) (N:=b) (P:=c).
-    reflexivity. }
-  remember
+   remember
     (MXDOT
        (eval (e_var2matrix_real g)
           (labels_to_expr
              (Pos.of_nat n)
              (Pattern.vlabels v)))) as VEVAL.
-  assert (forall a b (EQ : a = b), VEVAL a ≡ VEVAL b) as MORPH.
-  { intros a b EQ. now rewrite EQ. }
-  apply MORPH. 
+  assert (forall a b c,
+             MXDOT (MXDOT a b) c ≡
+             MXDOT a (MXDOT b c))
+    as MXDOT_ASSOC.
+  { intros a1 b c. subst MXDOT.
+    rewrite mx_dotA with (M:=a1) (N:=b) (P:=c).
+    reflexivity. }
 
+
+  match goal with
+  | |- VEVAL ?X _ _  = VEVAL ?Y _ _ => enough (X = Y) as EQ
+  end.
+  { now rewrite EQ. }
   induction t; ins.
   rewrite IHt1, IHt2.
-  rewrite edge_pattern_to_matrix_tree_normalization with
+  unfold n.
+  rewrite<-edge_pattern_to_matrix_tree_normalization with
     (t2 := Pattern.tree_normalize t2) (t1 := Pattern.tree_normalize t1) (g := g).
-  do 2 match goal with
-    | H : forall a a0 : ord n, ?A a a0 = ?B a a0 |- _ =>
-        assert (A = B) as AA by (do 2 (apply functional_extensionality; intros); apply H);
-        clear H; rename AA into H
-    end.
-  now rewrite IHt1, IHt2.
+  reflexivity.
 Qed.
-
-
