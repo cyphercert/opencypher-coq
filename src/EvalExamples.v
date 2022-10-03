@@ -83,7 +83,7 @@ Definition property_graph1 : PropertyGraph.t :=
 
   Definition pattern1 : Pattern.t :=
     {| Pattern.start := vertex_pattern1;
-       Pattern.ledges := [edge_pattern1] |}.
+       Pattern.ledges := Pattern.Leaf edge_pattern1 |}.
 
   Definition length : positive := Pos.of_nat (Datatypes.length(PropertyGraph.vertices property_graph1)).
   Definition length_nat : nat := Datatypes.length(PropertyGraph.vertices property_graph1).
@@ -126,7 +126,7 @@ Definition property_graph1 : PropertyGraph.t :=
 
   Definition pattern2 : Pattern.t :=
     {| Pattern.start := vertex_pattern2;
-       Pattern.ledges := [edge_pattern2] |}.
+       Pattern.ledges := Pattern.Leaf edge_pattern2 |}.
 
   Definition matrix_pattern2 := pattern_to_matrix length pattern2.
   Definition evaluated2 := @eval Label (fun _ => length) (fun _ => length) bmx
@@ -159,7 +159,7 @@ Definition property_graph1 : PropertyGraph.t :=
 
   Definition pattern3 : Pattern.t :=
     {| Pattern.start := vertex_pattern1;
-       Pattern.ledges := [edge_pattern3; edge_pattern2] |}.
+       Pattern.ledges := Pattern.Node (Pattern.Leaf edge_pattern3) (Pattern.Leaf edge_pattern2) |}.
 
   Definition matrix_pattern3 := pattern_to_matrix length pattern3.
   Definition evaluated3 := @eval Label (fun _ => length) (fun _ => length) bmx
