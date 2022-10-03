@@ -83,30 +83,28 @@ Lemma edge_pattern_to_matrix_tree_normalization (t1 t2: Pattern.tree) (g: Proper
      (fun _ => n) (e_var2matrix_real g) pn pn
      (edge_pattern_to_matrix pn t2)) .
 Proof.
-    intros n.
-    induction t1. simpl. reflexivity.
-    ins.
-    remember (@eval Label (fun _ => (Pos.of_nat n)) (fun _ => (Pos.of_nat n)) bmx
-                (fun _ => n) (e_var2matrix_real g) (Pos.of_nat n) (Pos.of_nat n)) as EVAL.
-    remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
-    rewrite IHt1_2.
-    assert (forall a b c,
+  intros n.
+  induction t1. simpl. reflexivity.
+  ins.
+  remember (@eval Label (fun _ => (Pos.of_nat n)) (fun _ => (Pos.of_nat n)) bmx
+              (fun _ => n) (e_var2matrix_real g) (Pos.of_nat n) (Pos.of_nat n)) as EVAL.
+  remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
+  rewrite IHt1_2.
+  assert (forall a b c,
              MXDOT (MXDOT a b) c ≡
-             MXDOT a (MXDOT b c))
+               MXDOT a (MXDOT b c))
     as MXDOT_ASSOC.
-    { intros x y z. subst MXDOT.
-     rewrite mx_dotA with (M:=x) (N:=y) (P:=z).
-     reflexivity.}
-    assert (forall a b c,
+  { intros x y z. subst MXDOT.
+    now rewrite mx_dotA with (M:=x) (N:=y) (P:=z). }
+  assert (forall a b c,
              MXDOT (MXDOT a b) c =
-             MXDOT a (MXDOT b c))
+               MXDOT a (MXDOT b c))
     as MXDOT_ASSOC2.
-    {
-      intros a b c.
-      apply functional_extensionality. intros.
-      apply functional_extensionality. intros.
-      now rewrite MXDOT_ASSOC. }
-      rewrite MXDOT_ASSOC2. reflexivity.
+  2: { now rewrite MXDOT_ASSOC2. }
+  intros a b c.
+  apply functional_extensionality. intros.
+  apply functional_extensionality. intros.
+  now rewrite MXDOT_ASSOC.
 Qed.
 
 Theorem pattern_normalization_eq g v t :
@@ -122,7 +120,7 @@ Proof.
   set (Datatypes.length (PropertyGraph.vertices g)) as n.
   intros a a0.
   remember (mx_dot bool_ops bool_tt n n n) as MXDOT.
-   remember
+  remember
     (MXDOT
        (eval (e_var2matrix_real g)
           (labels_to_expr
@@ -130,12 +128,10 @@ Proof.
              (Pattern.vlabels v)))) as VEVAL.
   assert (forall a b c,
              MXDOT (MXDOT a b) c ≡
-             MXDOT a (MXDOT b c))
+               MXDOT a (MXDOT b c))
     as MXDOT_ASSOC.
   { intros a1 b c. subst MXDOT.
-    rewrite mx_dotA with (M:=a1) (N:=b) (P:=c).
-    reflexivity. }
-
+    now rewrite mx_dotA with (M:=a1) (N:=b) (P:=c). }
 
   match goal with
   | |- VEVAL ?X _ _  = VEVAL ?Y _ _ => enough (X = Y) as EQ
@@ -144,7 +140,6 @@ Proof.
   induction t; ins.
   rewrite IHt1, IHt2.
   unfold n.
-  rewrite<-edge_pattern_to_matrix_tree_normalization with
+  now rewrite <- edge_pattern_to_matrix_tree_normalization with
     (t2 := Pattern.tree_normalize t2) (t1 := Pattern.tree_normalize t1) (g := g).
-  reflexivity.
 Qed.
