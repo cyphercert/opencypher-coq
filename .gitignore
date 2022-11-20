@@ -1,6 +1,7 @@
 Makefile.coq
 Makefile.coq.conf
 .Makefile.coq.d
+.Makefile.coq.local.d
 _CoqProject
 
 *~
@@ -9,3 +10,4 @@ _CoqProject
 *.vos
 *.glob
 *.aux
+*.cache
