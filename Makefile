@@ -14,9 +14,11 @@ quick: Makefile.coq
 quick-check: Makefile.coq
 	$(MAKE) -f Makefile.coq vio2vo J=6
 
-Makefile.coq: Makefile $(COQTHEORIES)
+_CoqProject: Makefile $(COQTHEORIES)
 	(echo "-R src $(COQMODULE)"; \
 	echo $(COQTHEORIES)) > _CoqProject
+
+Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
 %.vo: Makefile.coq
@@ -27,7 +29,12 @@ Makefile.coq: Makefile $(COQTHEORIES)
 
 clean:
 	$(MAKE) -f Makefile.coq clean
-	rm -f _CoqProject Makefile.coq
+	rm -f _CoqProject Makefile.coq Makefile.coq.conf
+	rm -f src/*.glob
+	rm -f src/*.vo
+	rm -f src/*.vok
+	rm -f src/*.vos
+	rm -f src/.*.aux
 
 tounicode:
 	sed -i 's/<</⟪/g' $(COQTHEORIES) 
