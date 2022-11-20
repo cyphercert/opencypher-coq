@@ -1,5 +1,3 @@
-# This file was generated from `meta.yml`, please do not edit manually.
-# Follow the instructions on https://github.com/coq-community/templates to regenerate.
 name: Docker CI
 
 on:
@@ -18,17 +16,31 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image:
-          - 'coqorg/coq:dev'
-          - 'coqorg/coq:8.15'
+        os:
+          - ubuntu-latest
+        coq_version:
+          - '8.15'
+        ocaml_version:
+          - '4.11.2'
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: coq-community/docker-coq-action@v1
+      - uses: actions/checkout@v3
+      - name: Try to restore opam cache
+        if: runner.os != 'Windows'
+        id: opam-cache
+        uses: actions/cache@v2
         with:
-          opam_file: 'coq-cypher.opam'
-          custom_image: ${{ matrix.image }}
+          path: "~/.opam"
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}
 
-# See also:
-# https://github.com/coq-community/docker-coq-action#readme
-# https://github.com/erikmd/docker-coq-github-action-demo
+      - name: Add packages sources
+        run: opam repo add coq-released https://coq.inria.fr/opam/released && opam remote add coq-weakmemory-local -k git https://github.com/weakmemory/local-coq-opam-archive
+      
+      - name: Install dependencies
+        run: opam install . --deps-only --yes
+      
+      - name: Run linter
+        run: make lint
+
+      - name: Build theories
+        run: opam exec -- dune build

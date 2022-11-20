@@ -40,6 +40,13 @@ clean:
 	rm -f src/*.vos
 	rm -f src/.*.aux
 
+fmt:
+	opam exec -- dune build @fmt --auto-promote
+
+lint:
+	opam exec -- dune build @fmt
+	opam lint .
+
 tounicode:
 	sed -i 's/<</⟪/g' $(COQTHEORIES) 
 	sed -i 's/>>/⟫/g' $(COQTHEORIES)

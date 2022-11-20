@@ -4,6 +4,8 @@
 
 (name coq-cypher)
 (version dev)
+(authors "JetBrains Research")
+(maintainers "Anton Podkopaev")
 
 (source
  (github cyphercert/opencypher-coq))
