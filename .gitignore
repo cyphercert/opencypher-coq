@@ -1,3 +1,7 @@
+_opam
+_build
+*.code-workspace
+
 Makefile.coq
 Makefile.coq.conf
 .Makefile.coq.d
