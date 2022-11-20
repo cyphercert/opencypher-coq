@@ -23,7 +23,7 @@ _CoqProject: Makefile $(COQTHEORIES)
 	echo $(COQTHEORIES)) > _CoqProject
 
 Makefile.coq: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
+	opam exec -- coq_makefile -f _CoqProject -o Makefile.coq
 
 %.vo: Makefile.coq
 	$(MAKE) -f Makefile.coq "$@"
