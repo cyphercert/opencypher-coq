@@ -19,7 +19,7 @@ jobs:
         os:
           - ubuntu-latest
         coq-version:
-          - '8.15'
+          - '8.15.2'
         ocaml-version:
           - '4.11.2'
       fail-fast: false
