@@ -2,10 +2,11 @@
 # opencypher-coq
 A Coq formalizaton of "Formalizing openCypher Graph Queries in Relational Algebra" [Marton-al:ADBIS17]
 
-## Installation 
-You must have opam installed.
-To install opam, visit the [site](https://opam.ocaml.org/doc/Install.html).
-When you have opam, run
+## Building 
+You must have `opam` [installed](https://opam.ocaml.org/doc/Install.html).
+
+For an easy start run:
 ```
-./make_switch.sh new_switch
+./make_switch.sh
 ```
+This will create a local `opam` switch, configure repositories, and install all the dependencies.
