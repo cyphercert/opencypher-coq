@@ -18,24 +18,33 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-        coq_version:
+        coq-version:
           - '8.15'
-        ocaml_version:
+        ocaml-version:
           - '4.11.2'
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
+
       - name: Try to restore opam cache
         if: runner.os != 'Windows'
         id: opam-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: "~/.opam"
-          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-${{ matrix.coq-version }}
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
 
       - name: Add packages sources
         run: opam repo add coq-released https://coq.inria.fr/opam/released && opam remote add coq-weakmemory-local -k git https://github.com/weakmemory/local-coq-opam-archive
       
+      - name: Install Coq
+        run: opam install coq=${{ matrix.coq-version }}
+
       - name: Install dependencies
         run: opam install . --deps-only --yes
       
