@@ -1,7 +1,7 @@
 COQMODULE    := OpencypherCoq
 COQTHEORIES  := src/*.v
 
-.PHONY: all theories clean tounicode
+.PHONY: all theories fmt lint docs clean tounicode
 
 all: build
 
@@ -32,13 +32,17 @@ Makefile.coq: _CoqProject
 	$(MAKE) -f Makefile.coq "$@"
 
 clean:
-	$(MAKE) -f Makefile.coq clean
-	rm -f _CoqProject Makefile.coq Makefile.coq.conf
 	rm -f src/*.glob
 	rm -f src/*.vo
 	rm -f src/*.vok
 	rm -f src/*.vos
 	rm -f src/.*.aux
+	rm -f _CoqProject.dune
+	$(MAKE) -f Makefile.coq clean
+	rm -f _CoqProject Makefile.coq Makefile.coq.conf
+
+docs: Makefile.coq
+	$(MAKE) -f Makefile.coq coqdoc
 
 fmt:
 	opam exec -- dune build @fmt --auto-promote
