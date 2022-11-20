@@ -14,6 +14,10 @@ quick: Makefile.coq
 quick-check: Makefile.coq
 	$(MAKE) -f Makefile.coq vio2vo J=6
 
+_CoqProject.dune: Makefile $(COQTHEORIES)
+	(echo "-R _build/default/src $(COQMODULE)"; \
+	echo _build/default/$(COQTHEORIES)) > _CoqProject.dune
+
 _CoqProject: Makefile $(COQTHEORIES)
 	(echo "-R src $(COQMODULE)"; \
 	echo $(COQTHEORIES)) > _CoqProject
