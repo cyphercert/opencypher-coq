@@ -28,13 +28,8 @@ Makefile.coq: _CoqProject
 	$(MAKE) -f Makefile.coq "$@"
 
 clean:
-	rm -f src/*.glob
-	rm -f src/*.vo
-	rm -f src/*.vok
-	rm -f src/*.vos
-	rm -f src/.*.aux
-	rm -f _CoqProject.dune
 	$(MAKE) -f Makefile.coq clean
+	rm -f src/.*.aux
 	rm -f _CoqProject Makefile.coq Makefile.coq.conf
 
 docs: Makefile.coq
