@@ -6,15 +6,12 @@ COQTHEORIES  := src/*.v
 all: build
 
 build: Makefile.coq
-	eval $$(opam env) && \
 	$(MAKE) -f Makefile.coq all
 
 quick: Makefile.coq
-	eval $$(opam env) && \
 	$(MAKE) -f Makefile.coq quick
 
 quick-check: Makefile.coq
-	eval $$(opam env) && \
 	$(MAKE) -f Makefile.coq vio2vo J=6
 
 _CoqProject.dune: Makefile $(COQTHEORIES)
@@ -29,11 +26,9 @@ Makefile.coq: _CoqProject
 	opam exec -- coq_makefile -f _CoqProject -o Makefile.coq
 
 %.vo: Makefile.coq
-	eval $$(opam env) && \
 	$(MAKE) -f Makefile.coq "$@"
 
 %.vio: Makefile.coq
-	eval $$(opam env) && \
 	$(MAKE) -f Makefile.coq "$@"
 
 clean:

@@ -49,13 +49,13 @@ jobs:
         run: opam install . --deps-only --yes
       
       - name: Run linter
-        run: make lint
+        run: eval $$(opam env) && make lint
 
       - name: Build theories
-        run: make build
+        run: eval $$(opam env) && make build
 
       - name: Build docs
-        run: make docs
+        run: eval $$(opam env) && make docs
 
       - name: Deploy docs
         uses: peaceiris/actions-gh-pages@v3
