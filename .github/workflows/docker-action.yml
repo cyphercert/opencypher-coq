@@ -1,5 +1,3 @@
-# This file was generated from `meta.yml`, please do not edit manually.
-# Follow the instructions on https://github.com/coq-community/templates to regenerate.
 name: Docker CI
 
 on:
@@ -18,17 +16,50 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image:
-          - 'coqorg/coq:dev'
-          - 'coqorg/coq:8.15'
+        os:
+          - ubuntu-latest
+        coq-version:
+          - '8.15.2'
+        ocaml-version:
+          - '4.11.2'
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: coq-community/docker-coq-action@v1
-        with:
-          opam_file: 'coq-cypher.opam'
-          custom_image: ${{ matrix.image }}
+      - uses: actions/checkout@v3
 
-# See also:
-# https://github.com/coq-community/docker-coq-action#readme
-# https://github.com/erikmd/docker-coq-github-action-demo
+      - name: Try to restore opam cache
+        if: runner.os != 'Windows'
+        id: opam-cache
+        uses: actions/cache@v3
+        with:
+          path: "~/.opam"
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-${{ matrix.coq-version }}
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Add packages sources
+        run: opam repo add coq-released https://coq.inria.fr/opam/released && opam remote add coq-weakmemory-local -k git https://github.com/weakmemory/local-coq-opam-archive
+      
+      - name: Install Coq
+        run: opam install coq=${{ matrix.coq-version }}
+
+      - name: Install dependencies
+        run: opam install . --deps-only --yes
+      
+      - name: Run linter
+        run: opam exec -- make lint
+
+      - name: Build theories
+        run: opam exec -- make build
+
+      - name: Build docs
+        run: opam exec -- make docs
+
+      - name: Deploy docs
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/master'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs

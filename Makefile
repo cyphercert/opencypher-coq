@@ -1,7 +1,7 @@
 COQMODULE    := OpencypherCoq
 COQTHEORIES  := src/*.v
 
-.PHONY: all theories clean tounicode
+.PHONY: all theories fmt lint docs clean tounicode
 
 all: build
 
@@ -14,9 +14,11 @@ quick: Makefile.coq
 quick-check: Makefile.coq
 	$(MAKE) -f Makefile.coq vio2vo J=6
 
-Makefile.coq: Makefile $(COQTHEORIES)
+_CoqProject: Makefile $(COQTHEORIES)
 	(echo "-R src $(COQMODULE)"; \
 	echo $(COQTHEORIES)) > _CoqProject
+
+Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
 %.vo: Makefile.coq
@@ -27,7 +29,14 @@ Makefile.coq: Makefile $(COQTHEORIES)
 
 clean:
 	$(MAKE) -f Makefile.coq clean
-	rm -f _CoqProject Makefile.coq
+	rm -f src/.*.aux
+	rm -f _CoqProject Makefile.coq Makefile.coq.conf
+
+docs: Makefile.coq
+	$(MAKE) -f Makefile.coq coqdoc
+
+lint:
+	opam lint .
 
 tounicode:
 	sed -i 's/<</⟪/g' $(COQTHEORIES) 
