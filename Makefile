@@ -14,10 +14,6 @@ quick: Makefile.coq
 quick-check: Makefile.coq
 	$(MAKE) -f Makefile.coq vio2vo J=6
 
-_CoqProject.dune: Makefile $(COQTHEORIES)
-	(echo "-R _build/default/src $(COQMODULE)"; \
-	echo _build/default/$(COQTHEORIES)) > _CoqProject.dune
-
 _CoqProject: Makefile $(COQTHEORIES)
 	(echo "-R src $(COQMODULE)"; \
 	echo $(COQTHEORIES)) > _CoqProject
@@ -42,14 +38,9 @@ clean:
 	rm -f _CoqProject Makefile.coq Makefile.coq.conf
 
 docs: Makefile.coq
-	eval $$(opam env) && \
 	$(MAKE) -f Makefile.coq coqdoc
 
-fmt:
-	opam exec -- dune build @fmt --auto-promote
-
 lint:
-	opam exec -- dune build @fmt
 	opam lint .
 
 tounicode:
