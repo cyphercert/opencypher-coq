@@ -7,7 +7,6 @@ Makefile.coq.conf
 .Makefile.coq.d
 .Makefile.coq.local.d
 _CoqProject
-_CoqProject.dune
 
 *~
 *.vok

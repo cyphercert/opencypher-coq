@@ -137,12 +137,5 @@ Inductive query : Type :=
   | BQIsFalse (e : QueryExpression.bqexp)
   | BQIsNotFalse (e : QueryExpression.bqexp).
 
-(*Fixpoint query_eval (q : query) (g : PropertyGraph.t) (t : binding_table) : binding_table :=
-  match q with
-  | ReturnAll => t
-  | UnionAll q1 q2 =>
-  | IntersectAll q1 q2 => binding_table
-  | QEdgeKey e k => g.(vprops) k e
-  end.*)
 
 End Query.
