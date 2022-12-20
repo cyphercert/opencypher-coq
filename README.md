@@ -17,4 +17,15 @@ Note that this will create all the build artefacts right in the `src` next to th
 
 ## IDE support
 
-Note that some IDEs require to be configured to work with the local `coq` installation. For example, to be able to use it with `VSCoq` plugin you have to set `Coq: Bin Path` setting. You can look up the path with `where coqtop` command when the local switch is active.
+Note that some IDEs require to be configured to work with the local `coq` installation. For example, to be able to use it with [VSCoq](https://marketplace.visualstudio.com/items?itemName=maximedenes.vscoq) plugin you have to set `Coq: Bin Path` setting. You can look up the path with `where coqtop` command when the local switch is active (note that you need to provide path to the `bin` folder where the executable is contained, not to the executable itself).
+
+### CTags support
+
+This project supports basic jump-to-definition IDE features with Ctags. Note that you need to configure your Universal Ctags installation as described in [coq.ctags](https://github.com/tomtomjhj/coq.ctags) README.
+
+To generate `.tags` file run:
+```console
+$ make tags
+```
+
+For example, you can use this file in VSCode with [CTags Support](https://marketplace.visualstudio.com/items?itemName=jaydenlin.ctags-support) plugin.
