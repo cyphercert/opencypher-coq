@@ -12,7 +12,6 @@ Module Property.
   Inductive t := 
   | p_int (i : Z)
   | p_string (s : string)
-  | p_empty
   .
   
   Definition name := string.
@@ -50,8 +49,8 @@ Module PropertyGraph.
          st       : edge -> vertex * vertex;
          vlab     : vertex -> list label;
          elab     : edge -> label;
-         vprops   : list (Property.name * (vertex -> Property.t)); 
-         eprops   : list (Property.name * (edge   -> Property.t)); 
+         vprops   : vertex -> list (Property.name * Property.t); 
+         eprops   : edge   -> list (Property.name * Property.t); 
       }.
 
 End PropertyGraph.

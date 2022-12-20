@@ -66,8 +66,8 @@ Definition property_graph1 : PropertyGraph.t :=
                             | 12 => "FRIEND_OF"
                             | _  => ""
                             end
-    ; PropertyGraph.vprops    := nil
-    ; PropertyGraph.eprops    := nil
+    ; PropertyGraph.vprops    := fun _ => nil
+    ; PropertyGraph.eprops    := fun _ => nil
     |}.
 
   Definition vertex_pattern1 : Pattern.pvertex :=
