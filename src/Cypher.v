@@ -106,21 +106,21 @@ End Pattern.
 (** Query definition **)
 
 Module ProjectionExpr.
-Inductive proj := AS (from : string) (to : string).
+  Inductive proj := AS (from : string) (to : string).
 
-Definition t := list proj.
+  Definition t := list proj.
 End ProjectionExpr.
 
 Module Clause.
-Inductive t := 
-| MATCH (patterns : list Pattern.t)
-| WITH (pexpr : ProjectionExpr.t)
-.           
+  Inductive t := 
+  | MATCH (patterns : list Pattern.t)
+  | WITH (pexpr : ProjectionExpr.t)
+  .           
 End Clause.
 
 Module Query.
-Record t := mk {
-    clauses : list Clause.t;
-    ret : ProjectionExpr.t;
-}.
+  Record t := mk {
+      clauses : list Clause.t;
+      ret : ProjectionExpr.t;
+  }.
 End Query.
