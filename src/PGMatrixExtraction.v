@@ -20,21 +20,13 @@ From RelationAlgebra Require Import monoid boolean prop sups bmx.
 
 Local Open Scope nat_scope.
 
-(** Adds ability to work with abstract type of labels. See Utils file. **)
-
-Fixpoint list_of_label_to_vlabel (l : list label) : list Label :=
-  match l with
-  | nil => nil
-  | a :: m => vlabel a :: list_of_label_to_vlabel m
-  end.
-
 (** Building adjacency matrix for current property graph **)
 
 (** Adjacency matrix for verteces **)
 Definition pg_extract_lmatrices (n : nat) (vlab : vertex -> list label) (lbl : Label) :
     bmx n n :=
   fun x y =>
-      if eqb_ord x y then sup (fun i => Label_eqb lbl i) (list_of_label_to_vlabel (vlab x))
+      if eqb_ord x y then sup (fun i => Label_eqb lbl i) (map vlabel (vlab x))
                      else false.
 
 Definition ord_to_nat (n : nat) (o : ord n) : nat :=
