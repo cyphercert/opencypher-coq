@@ -8,8 +8,6 @@ Import ListNotations.
 
 Require Import Cypher.
 Import PropertyGraph.
-Require Import KleeneTranslation.
-Require Import PGMatrixExtraction.
 Require Import Utils.
 Require Import Lia.
 
@@ -87,11 +85,6 @@ Definition property_graph1 : PropertyGraph.t :=
 
   Definition length : positive := Pos.of_nat (Datatypes.length(PropertyGraph.vertices property_graph1)).
   Definition length_nat : nat := Datatypes.length(PropertyGraph.vertices property_graph1).
-  Definition matrix_pattern := pattern_to_matrix length pattern1.
-  Definition f_eval := e_var2matrix_real property_graph1.
-  Definition evaluated := @eval Label (fun _ => length) (fun _ => length) bmx
-                                      (fun _ => length_nat) f_eval length length matrix_pattern.
-
 
   Lemma lt1 : (1 < length_nat)%ltb.
   Proof.
@@ -108,11 +101,6 @@ Definition property_graph1 : PropertyGraph.t :=
  (*Let pattern1_test1 {num : ord DataExamples.length_nat} : DataExamples.evaluated (@Ord DataExamples.length_nat 1 lt1) (@Ord DataExamples.length_nat 1 lt1)  = true.
   Proof. unfold evaluated. simpl. Qed.* * *)
 
-  Compute eval_res evaluated num2.
-
-  Compute evaluated num num.
-  Compute evaluated num2 num2.
-
   Definition vertex_pattern2 : Pattern.pvertex :=
     {| Pattern.vlabels := ["HOST"];
        Pattern.vprops  := nil |}.
@@ -128,9 +116,6 @@ Definition property_graph1 : PropertyGraph.t :=
     {| Pattern.start := vertex_pattern2;
        Pattern.ledges := Pattern.Leaf edge_pattern2 |}.
 
-  Definition matrix_pattern2 := pattern_to_matrix length pattern2.
-  Definition evaluated2 := @eval Label (fun _ => length) (fun _ => length) bmx
-                                      (fun _ => length_nat) f_eval length length matrix_pattern2.
   Lemma lt4 : (4 < length_nat)%ltb.
   Proof.
     unfold length_nat. simpl. lia.
@@ -144,11 +129,6 @@ Definition property_graph1 : PropertyGraph.t :=
   Qed.
 
   Definition num5 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 5 lt5.
-  Compute evaluated2 num num.
-  Compute evaluated2 num2 num.
-  Compute evaluated2 num2 num4.
-  Compute evaluated2 num2 num5.
-
 
   Definition edge_pattern3 : Pattern.pedge :=
     {| Pattern.elabels := ["KNOWS"];
@@ -160,11 +140,5 @@ Definition property_graph1 : PropertyGraph.t :=
   Definition pattern3 : Pattern.t :=
     {| Pattern.start := vertex_pattern1;
        Pattern.ledges := Pattern.Node (Pattern.Leaf edge_pattern3) (Pattern.Leaf edge_pattern2) |}.
-
-  Definition matrix_pattern3 := pattern_to_matrix length pattern3.
-  Definition evaluated3 := @eval Label (fun _ => length) (fun _ => length) bmx
-                                       (fun _ => length_nat) f_eval length length matrix_pattern3.
-  Compute evaluated3 num num5.
-
 
 End DataExamples.
