@@ -30,25 +30,26 @@ Module PropertyGraph.
 
   (** Graph database model **)
 
-  (** vertices : list of verteces **)
+  (** vertices : vertices of the graph **)
 
-  (** edges    : list of edges **)
+  (** edges    : edges of the graph **)
 
-  (** st       : matches edge's names and pairs of verteces **)
+  (** st       : maps an edge to a pair of its ends **)
 
-  (** vlab     : matches list of labels to verteces **)
+  (** vlab     : maps a vertex to a list of its labels **)
 
-  (** elab     : matches label to edges **)
+  (** elab     : maps an edge to its relationship type **)
 
-  (** vprops   : list of triples (key, vertex, value) which provide to store smth in the database **)
+  (** vprops   : maps a vertex to key-value pairs of its properties **)
 
-  (** eprops   : list of triples (key, edge, value) which provide to store smth in the database **)
+  (** eprops   : maps an edge to key-value pairs of its properties **)
+  
   Record t :=
     mk { vertices : list vertex;
          edges    : list edge;
          st       : edge -> vertex * vertex;
          vlab     : vertex -> list label;
-         elab     : edge -> label;
+         elab     : edge   -> label;
          vprops   : vertex -> list (Property.name * Property.t); 
          eprops   : edge   -> list (Property.name * Property.t); 
       }.
