@@ -40,7 +40,7 @@ Definition property_graph1 : PropertyGraph.t :=
                             | 12 => (5, 6)
                             | _  => (0, 0)
                             end
-    ; PropertyGraph.vlab      := fun v => match v with
+    ; PropertyGraph.vlabels := fun v => match v with
                             | 1 => ["USER"]
                             | 2 => ["HOST"]
                             | 3 => ["USER"; "HOST"]
@@ -49,7 +49,7 @@ Definition property_graph1 : PropertyGraph.t :=
                             | 6 => ["USER"; "GUEST"]
                             | _ => []
                             end
-    ; PropertyGraph.elab      := fun e => match e with
+    ; PropertyGraph.elabel  := fun e => match e with
                             | 1  => "FRIEND_OF"
                             | 2  => "KNOWS"
                             | 3  => "KNOWS"
@@ -69,19 +69,18 @@ Definition property_graph1 : PropertyGraph.t :=
     |}.
 
   Definition vertex_pattern1 : Pattern.pvertex :=
-    {| Pattern.vlabels := ["USER"];
-       Pattern.vprops  := nil |}.
+    {| Pattern.pv_labels := ["USER"];
+       Pattern.pv_name   := None;
+       Pattern.pv_props  := nil |}.
 
   Definition edge_pattern1 : Pattern.pedge := 
-    {| Pattern.elabels := nil;
-       Pattern.eprops  := nil;
-       Pattern.edir    := Pattern.BOTH;
-       Pattern.enum    := 0;
-       Pattern.evertex := vertex_pattern1 |}.
+    {| Pattern.pe_name   := None;
+       Pattern.pe_labels := nil;
+       Pattern.pe_props  := nil;
+       Pattern.pe_dir    := Pattern.BOTH |}.
 
   Definition pattern1 : Pattern.t :=
-    {| Pattern.start := vertex_pattern1;
-       Pattern.ledges := Pattern.Leaf edge_pattern1 |}.
+    Pattern.cons vertex_pattern1 edge_pattern1 (Pattern.pnil vertex_pattern1).
 
   Definition length : positive := Pos.of_nat (Datatypes.length(PropertyGraph.vertices property_graph1)).
   Definition length_nat : nat := Datatypes.length(PropertyGraph.vertices property_graph1).
@@ -102,19 +101,18 @@ Definition property_graph1 : PropertyGraph.t :=
   Proof. unfold evaluated. simpl. Qed.* * *)
 
   Definition vertex_pattern2 : Pattern.pvertex :=
-    {| Pattern.vlabels := ["HOST"];
-       Pattern.vprops  := nil |}.
+    {| Pattern.pv_name   := None;
+       Pattern.pv_labels := ["HOST"];
+       Pattern.pv_props  := nil |}.
 
   Definition edge_pattern2 : Pattern.pedge :=
-    {| Pattern.elabels := ["FRIEND_OF"];
-       Pattern.eprops  := nil;
-       Pattern.edir    := Pattern.BOTH;
-       Pattern.enum    := 1;
-       Pattern.evertex := vertex_pattern1 |}.
+    {| Pattern.pe_name   := None;
+       Pattern.pe_labels := ["FRIEND_OF"];
+       Pattern.pe_props  := nil;
+       Pattern.pe_dir    := Pattern.BOTH; |}.
 
   Definition pattern2 : Pattern.t :=
-    {| Pattern.start := vertex_pattern2;
-       Pattern.ledges := Pattern.Leaf edge_pattern2 |}.
+    Pattern.cons vertex_pattern2 edge_pattern2 (Pattern.pnil vertex_pattern1).
 
   Lemma lt4 : (4 < length_nat)%ltb.
   Proof.
@@ -131,14 +129,12 @@ Definition property_graph1 : PropertyGraph.t :=
   Definition num5 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 5 lt5.
 
   Definition edge_pattern3 : Pattern.pedge :=
-    {| Pattern.elabels := ["KNOWS"];
-       Pattern.eprops  := nil;
-       Pattern.edir    := Pattern.BOTH;
-       Pattern.enum    := 2;
-       Pattern.evertex := vertex_pattern2 |}.
+    {| Pattern.pe_name   := None;
+       Pattern.pe_labels := ["KNOWS"];
+       Pattern.pe_props  := nil;
+       Pattern.pe_dir    := Pattern.BOTH |}.
 
   Definition pattern3 : Pattern.t :=
-    {| Pattern.start := vertex_pattern1;
-       Pattern.ledges := Pattern.Node (Pattern.Leaf edge_pattern3) (Pattern.Leaf edge_pattern2) |}.
+    Pattern.cons vertex_pattern2 edge_pattern3 (Pattern.pnil vertex_pattern1).
 
 End DataExamples.

@@ -15,91 +15,67 @@ Import Property.
 
 Module Pattern.
 
-(** Possible conditions for edge direction. **)
+  (** Possible conditions for edge direction. **)
 
   Inductive direction :=
-  | OUT
-  | IN
-  | BOTH
+  | OUT  (* --> *)
+  | IN   (* <-- *)
+  | BOTH (* --- *)
   .
 
   (** Vertex pattern condition. **)
 
-  (** vlabels : list of labels stored in a vertex **)
+  (** pv_name   : optional name for the pattern **)
+  
+  (** pv_labels : list of labels stored in a vertex **)
 
-  (** vprops  : list of pairs (key, value) stored in a vertex **)
+  (** pv_props  : list of pairs (key, value) stored in a vertex **)
 
   Record pvertex := {
-      vlabels : list string;
-      vprops  : list (string * Property.t);
+      pv_name   : option string;
+      pv_labels : list string;
+      pv_props  : list (string * Property.t);
     }.
 
-(** Edge pattern. It is a pair where the first item is edge condition (contained in elabels, eprops, edir, enum) *)
-(** and the second item is pattern of following vertex (contained in evertex). **)
+  (** Edge pattern. It is a pair where the first item is edge condition (contained in elabels, eprops, edir, enum) *)
+  (** and the second item is pattern of following vertex (contained in evertex). **)
 
-(** elabels : list of labels stored in an edge **)
+  (** pe_name   : optional name for the pattern **)
 
-(** eprops  : list of pairs (key, value) stored in an edge **)
+  (** pe_labels : list of labels stored in an edge **)
 
-(** edir    : direction condition **)
+  (** pe_props  : list of pairs (key, value) stored in an edge **)
 
-(** enum    : number of sequential edges with current pattern in the desired path, by default is 1 *)
-(**           /future: add the range to enum/ **)
-
-(** evertex : vertex pattern **)
+  (** pe_dir    : direction condition **)
 
   Record pedge := {
-      elabels : list string;
-      eprops  : list (string * Property.t);
-      edir    : direction;
-      enum    : nat;
-      evertex : pvertex;
+      pe_name   : option string;
+      pe_labels : list string;
+      pe_props  : list (string * Property.t);
+      pe_dir    : direction;
     }.
-
-  Inductive tree : Type :=
-  | Leaf (x : pedge)
-  | Node (t1 : tree) (t2 : tree).
-
 
 (** Query pattern. **)
 
-(** start  : pattern of the first vertex **)
+(** phops : list of consequtive pattern edges **)
 
-(** ledges : list of consequеntive pattern edges **)
+(** pend  : pattern of the first vertex **)
 
   Record t := mk {
-      start : pvertex;
-      ledges : tree;
+      phops : list (pvertex * pedge);
+      pend : pvertex;
     }.
   
+  Definition pnil (pv : pvertex) := mk nil pv.
 
-(**
- Tree normalization: 
+  Definition cons (pv : pvertex) (pe : pedge) (p : t) :=
+    mk ((pv, pe) :: phops p) (pend p).
 
-   --               -
-  /  \             / \
- -    -  ->       a   -
-/ \  / \             / \
-a  b c d             b  -
-                       / \
-                      c   d 
-**)
-  Fixpoint insert_tree_r (t_to_be_inserted t : tree) : tree :=
-    match t with
-    | Leaf _   => Node t t_to_be_inserted
-    | Node l r => Node l (insert_tree_r t_to_be_inserted r)
+  Definition hd (p : t) :=
+    match phops p with
+    | (pv, pe) :: h => pv
+    | nil => pend p
     end.
-
-  Fixpoint tree_normalize (t : tree) :=
-    match t with
-    | Leaf _ => t
-    | Node l r =>
-        let nl := tree_normalize l in
-        let nr := tree_normalize r in
-        insert_tree_r nr nl
-    end.
-    
-  Definition normalize (p : t) := mk p.(start) (tree_normalize p.(ledges)).
 
 End Pattern.
 

@@ -28,6 +28,10 @@ Module PropertyGraph.
   Definition edge      := nat.
   Definition label     := string.
 
+  Inductive gobj : Type :=
+  | gedge (e: PropertyGraph.edge)
+  | gvertex (v: PropertyGraph.vertex).
+
   (** Graph database model **)
 
   (** vertices : vertices of the graph **)
@@ -48,8 +52,8 @@ Module PropertyGraph.
     mk { vertices : list vertex;
          edges    : list edge;
          st       : edge -> vertex * vertex;
-         vlab     : vertex -> list label;
-         elab     : edge   -> label;
+         vlabels  : vertex -> list label;
+         elabel   : edge   -> label;
          vprops   : vertex -> list (Property.name * Property.t); 
          eprops   : edge   -> list (Property.name * Property.t); 
       }.
