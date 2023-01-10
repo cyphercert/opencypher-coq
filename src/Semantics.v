@@ -371,19 +371,22 @@ End QueryExpr.
 
 Module EvalQuerySpec.
   Record t := mk_spec {
-    eval_clause : PropertyGraph.t -> Clause.t -> BindingTable.t -> BindingTable.t;
-    eval_query : PropertyGraph.t -> Query.t -> BindingTable.t;
+    eval_clause : PropertyGraph.t -> Clause.t -> BindingTable.t -> option BindingTable.t;
+    eval_query : PropertyGraph.t -> Query.t -> option BindingTable.t;
 
     match_clause_eval : forall g path pattern table r,
-      In r (eval_clause g (Clause.MATCH pattern) table) <->
-        Path.matches g r path pattern /\
-        Rcd.matches_pattern_dom r pattern /\
-        exists r1 r2,
-          r = Rcd.join r1 r2 /\ 
-          Rcd.disjoint r1 r2 /\
-          In r1 table;
+      BindingTable.wf table ->
+        exists table', eval_clause g (Clause.MATCH pattern) table = Some table' /\
+          In r table' <->
+            Path.matches g r path pattern /\
+            Rcd.matches_pattern_dom r pattern /\
+            exists r1 r2,
+              r = Rcd.join r1 r2 /\ 
+              Rcd.disjoint r1 r2 /\
+              In r1 table;
 
     query_eval : forall g q,
-      eval_query g q = eval_clause g (Query.clause q) (BindingTable.empty);
+      Query.wf q ->
+        eval_query g q = eval_clause g (Query.clause q) (BindingTable.empty);
   }.
 End EvalQuerySpec.

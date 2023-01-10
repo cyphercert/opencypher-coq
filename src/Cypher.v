@@ -83,9 +83,19 @@ Module Pattern.
     | start pv => [vname pv]
     end.
 
-  (* Pattern is well-formed iff all the names are different *)
-  Definition wf (p : Pattern.t) := NoDup (dom p).
+  Fixpoint dom_vertices (p : Pattern.t) : list Pattern.name :=
+    match p with
+    | hop p pe pv =>
+      vname pv :: dom_vertices p
+    | start pv => [vname pv]
+    end.
 
+  Fixpoint dom_edges (p : Pattern.t) : list Pattern.name :=
+    match p with
+    | hop p pe pv =>
+      ename pe :: dom_edges p
+    | start pv => nil
+    end.
 End Pattern.
 
 (** Query definition **)
@@ -130,9 +140,10 @@ Module Clause.
   | MATCH (pattern : Pattern.t)
   .
 
+  (* For later extensions *)
   Definition wf (clause : t) :=
     match clause with
-    | MATCH pattern => Pattern.wf pattern
+    | MATCH pattern => True
     end.
 End Clause.
 
