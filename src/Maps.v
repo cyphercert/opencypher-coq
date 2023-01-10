@@ -242,8 +242,6 @@ Definition partial_map (A : Type) := total_map (option A).
 Definition empty {A : Type} : partial_map A :=
   t_empty None.
 
-Print None.
-
 Definition update {A : Type} (m : partial_map A)
            (x : string) (v : A) :=
   (x !-> Some v ; m).

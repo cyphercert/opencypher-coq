@@ -23,6 +23,7 @@ End Value.
 Module Rcd.
   Definition t := string -> option Value.t.
 
+  (* Predicate that defines the domain of a record *)
   Definition in_dom (k : string) (r : t) :=
     exists v, r k = Some v.
 
@@ -65,6 +66,30 @@ Module BindingTable.
 
   Definition empty : t := nil.
   Definition add (r : Rcd.t) (T : t) := r :: T.
+
+  (* Binding table is well-formed iff all the records have the same domain *)
+  Definition wf (T : t) := forall r1 r2,
+    In r1 T -> In r2 T -> forall k, Rcd.in_dom k r1 <-> Rcd.in_dom k r2.
+
+  (* Predicate that defines the domain of a table *)
+  Definition in_dom (k : string) (T : t) :=
+    match T with
+    | r :: _ => Rcd.in_dom k r
+    | nil => False
+    end.
+
+  (* The domain of a well-formed table is the same as
+     the domain of any of its records *)
+  Lemma in_dom_wf : forall T r,
+    wf T -> In r T -> forall k, in_dom k T <-> Rcd.in_dom k r.
+  Proof.
+    intros T r Hwf HIn k.
+    destruct T as [| r1 ?].
+    - inversion HIn.
+    - apply Hwf.
+      + left. reflexivity.
+      + apply HIn.
+  Qed.
 End BindingTable.
 
 Module Path.
@@ -86,19 +111,13 @@ Module Path.
     Variable u : Rcd.t.
 
     Record matches_pvertex (v : vertex) (p : pvertex) : Prop := {
-        matches_vname : match Pattern.vname p with
-                        | None => True
-                        | Some name => u name = Some (Value.GObj (gvertex v))
-                        end;
+        matches_vname : u (Pattern.vname p) = Some (Value.GObj (gvertex v));
         matches_vlabels : Pattern.vlabels p = nil \/ exists l, In l (Pattern.vlabels p) /\ In l (PropertyGraph.vlabels g v);
         matches_vprops : forall prop, In prop (Pattern.vprops p) -> In prop (PropertyGraph.vprops g v);
       }.
 
     Record matches_pedge (e : edge) (p : pedge) : Prop := {
-        matches_ename : match Pattern.ename p with
-                        | None => True
-                        | Some name => u name = Some (Value.GObj (gedge e))
-                        end;
+        matches_ename : u (Pattern.ename p) = Some (Value.GObj (gedge e));
         matches_elabels : Pattern.elabels p = nil \/ In (PropertyGraph.elabel g e) (Pattern.elabels p);
         matches_eprops : forall prop, In prop (Pattern.eprops p) -> In prop (PropertyGraph.eprops g e);
       }.

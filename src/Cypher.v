@@ -27,16 +27,16 @@ Module Pattern.
 
   (** Vertex pattern condition. **)
 
-  (** pv_name   : optional name for the pattern **)
+  (** vname   : name for the pattern **)
   
-  (** pv_labels : list of labels stored in a vertex **)
+  (** vlabels : list of labels stored in a vertex **)
 
-  (** pv_props  : list of pairs (key, value) stored in a vertex **)
+  (** vprops  : list of pairs (key, value) stored in a vertex **)
 
   Definition name := string.
 
   Record pvertex := {
-      vname   : option name;
+      vname   : name;
       vlabels : list PropertyGraph.label;
       vprops  : list (Property.name * Property.t);
     }.
@@ -44,26 +44,26 @@ Module Pattern.
   (** Edge pattern. It is a pair where the first item is edge condition (contained in elabels, eprops, edir, enum) *)
   (** and the second item is pattern of following vertex (contained in evertex). **)
 
-  (** pe_name   : optional name for the pattern **)
+  (** ename   : name for the pattern **)
 
-  (** pe_labels : list of labels stored in an edge **)
+  (** elabels : list of labels stored in an edge **)
 
-  (** pe_props  : list of pairs (key, value) stored in an edge **)
+  (** eprops  : list of pairs (key, value) stored in an edge **)
 
-  (** pe_dir    : direction condition **)
+  (** edir    : direction condition **)
 
   Record pedge := {
-      ename   : option name;
+      ename   : name;
       elabels : list PropertyGraph.label;
       eprops  : list (Property.name * Property.t);
       edir    : direction;
     }.
 
-(** Query pattern. **)
+  (** Query pattern. **)
 
-(** phops : list of consequtive pattern edges **)
+  (** start  : pattern of the first vertex **)
 
-(** pend  : pattern of the first vertex **)
+  (** hop    : go to a vertex through an edge **)
 
   Inductive t := 
   | start (pv : pvertex)
@@ -75,21 +75,16 @@ Module Pattern.
     | start pv => pv
     end.
 
-  Fixpoint dom (p : Pattern.t) : list string :=
+  (* Domain of the pattern, i.e. names of the variables *)
+  Fixpoint dom (p : Pattern.t) : list Pattern.name :=
     match p with
     | hop p pe pv =>
-      match ename pe, vname pv with
-      | Some ne, Some nv => ne :: nv :: dom p
-      | Some ne, None    => ne :: dom p
-      | None,    Some nv => nv :: dom p
-      | None,    None    => dom p
-      end
-    | start pv =>
-      match vname pv with
-      | Some nv => [ nv ]
-      | None    => nil
-      end
+      vname pv :: ename pe :: dom p
+    | start pv => [vname pv]
     end.
+
+  (* Pattern is well-formed iff all the names are different *)
+  Definition wf (p : Pattern.t) := NoDup (dom p).
 
 End Pattern.
 
@@ -133,11 +128,18 @@ End ProjectionExpr.
 Module Clause.
   Inductive t := 
   | MATCH (pattern : Pattern.t)
-  .           
+  .
+
+  Definition wf (clause : t) :=
+    match clause with
+    | MATCH pattern => Pattern.wf pattern
+    end.
 End Clause.
 
 Module Query.
   Record t := mk {
     clause : Clause.t;
   }.
+
+  Definition wf (query : t) := Clause.wf (clause query).
 End Query.
