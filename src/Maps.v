@@ -236,17 +236,17 @@ Qed.
 (* ################################################################# *)
 (** * Partial maps *)
 
-(**Definition partial_map (A : Type) := total_map (option A).**)
-Definition partial_map_nat (A : Type) := total_map_nat (option A).
+Definition partial_map (A : Type) := total_map (option A).
+(* Definition partial_map_nat (A : Type) := total_map_nat (option A). *)
 
-Definition empty {A : Type} : partial_map_nat A :=
-  t_empty_nat None.
+Definition empty {A : Type} : partial_map A :=
+  t_empty None.
 
 Print None.
 
-Definition update {A : Type} (m : partial_map_nat A)
-           (x : nat) (v : A) :=
-  (x !!-> Some v ; m).
+Definition update {A : Type} (m : partial_map A)
+           (x : string) (v : A) :=
+  (x !-> Some v ; m).
 
 Notation "x '|->' v ';' m" := (update m x v)
   (at level 100, v at next level, right associativity).
@@ -255,78 +255,78 @@ Notation "x '|->' v" := (update empty x v)
   (at level 100).
 
 Example examplepmap :=
-  (2 |-> true ; 1 |-> false).
+  ("a" |-> true ; "b" |-> false).
 
 
-Lemma apply_empty : forall (A : Type) (x : nat),
+Lemma apply_empty : forall (A : Type) (x : string),
     @empty A x = None.
 Proof.
-  intros. unfold empty. rewrite t_apply_empty_nat.
+  intros. unfold empty. rewrite t_apply_empty.
   reflexivity.
 Qed.
 
-Lemma update_eq : forall (A : Type) (m : partial_map_nat A) x v,
+Lemma update_eq : forall (A : Type) (m : partial_map A) x v,
     (x |-> v ; m) x = Some v.
 Proof.
-  intros. unfold update. rewrite t_update_eq_nat.
+  intros. unfold update. rewrite t_update_eq.
   reflexivity.
 Qed.
 
-Theorem update_neq : forall (A : Type) (m : partial_map_nat A) x1 x2 v,
+Theorem update_neq : forall (A : Type) (m : partial_map A) x1 x2 v,
     x2 <> x1 ->
     (x2 |-> v ; m) x1 = m x1.
 Proof.
   intros A m x1 x2 v H.
-  unfold update. rewrite t_update_neq_nat. reflexivity.
+  unfold update. rewrite t_update_neq. reflexivity.
   apply H. Qed.
 
-Lemma update_shadow : forall (A : Type) (m : partial_map_nat A) x v1 v2,
+Lemma update_shadow : forall (A : Type) (m : partial_map A) x v1 v2,
     (x |-> v2 ; x |-> v1 ; m) = (x |-> v2 ; m).
 Proof.
-  intros A m x v1 v2. unfold update. rewrite t_update_shadow_nat.
+  intros A m x v1 v2. unfold update. rewrite t_update_shadow.
   reflexivity.
 Qed.
 
-Theorem update_same : forall (A : Type) (m : partial_map_nat A) x v,
+Theorem update_same : forall (A : Type) (m : partial_map A) x v,
     m x = Some v ->
     (x |-> v ; m) = m.
 Proof.
   intros A m x v H. unfold update. rewrite <- H.
-  apply t_update_same_nat.
+  apply t_update_same.
 Qed.
 
-Theorem update_permute : forall (A : Type) (m : partial_map_nat A)
+Theorem update_permute : forall (A : Type) (m : partial_map A)
                                 x1 x2 v1 v2,
     x2 <> x1 ->
     (x1 |-> v1 ; x2 |-> v2 ; m) = (x2 |-> v2 ; x1 |-> v1 ; m).
 Proof.
   intros A m x1 x2 v1 v2. unfold update.
-  apply t_update_permute_nat.
+  apply t_update_permute.
 Qed.
 
-Lemma add_none: forall (A : Type) (h : partial_map_nat A) n m, h n = None -> h = (n !!-> None; n !!-> Some m; h).
+Lemma add_none: forall (A : Type) (h : partial_map A) n m, h n = None -> h = (n !-> None; n !-> Some m; h).
 Proof.
   intros A h n m H.
   apply functional_extensionality. intros x.
-  unfold t_update_nat. destruct (n =? x) eqn:E.
-  - apply Nat.eqb_eq in E. rewrite<-E. apply H.
+  unfold t_update. destruct (eqb_string n x) eqn:E.
+  - apply eqb_string_true_iff in E. rewrite<-E. apply H.
   - reflexivity.
 Qed.
 
-Lemma add_swap: forall (A : Type) (h : partial_map_nat A) n m k l,
+Lemma add_swap: forall (A : Type) (h : partial_map A) n m k l,
     n <> m -> (n |-> k; m |-> l; h) = (m |-> l; n |-> k; h).
 Proof.
   intros A h n m k l H.
   apply functional_extensionality. intros x.
-  destruct (n =? x) eqn:E1; destruct (m =? x) eqn:E2.
-  - apply Nat.eqb_eq  in E1. apply Nat.eqb_eq  in E2.
+  destruct (eqb_string n x) eqn:E1, (eqb_string m x) eqn:E2.
+  - apply eqb_string_true_iff  in E1. apply eqb_string_true_iff  in E2.
     rewrite<-E2 in E1. apply H in E1. inversion E1.
-  - apply Nat.eqb_eq  in E1. rewrite E1. rewrite update_eq.
+  - apply eqb_string_true_iff  in E1. rewrite E1. rewrite update_eq.
     rewrite update_neq. rewrite update_eq. reflexivity.
-    apply Nat.eqb_neq in E2. apply E2.
-  - apply Nat.eqb_eq  in E2. rewrite E2. rewrite update_eq.
+    apply eqb_string_false_iff in E2. apply E2.
+  - apply eqb_string_true_iff  in E2. rewrite E2. rewrite update_eq.
     rewrite update_neq. rewrite update_eq. reflexivity.
-    apply Nat.eqb_neq  in E1. apply E1.
-  - apply Nat.eqb_neq in E1. apply Nat.eqb_neq in E2.
+    apply eqb_string_false_iff  in E1. apply E1.
+  - apply eqb_string_false_iff in E1. apply eqb_string_false_iff in E2.
     repeat(rewrite update_neq); try(reflexivity); try(assumption).
 Qed.
