@@ -8,7 +8,6 @@ Import ListNotations.
 Require Import Cypher.
 Require Import PropertyGraph.
 Import PropertyGraph.
-Import Pattern.
 
 Module Value.
   Inductive t :=
@@ -81,6 +80,8 @@ Module Path.
     end.
 
   Section matches.
+    Import Pattern.
+
     Variable g : PropertyGraph.t.
     Variable u : Rcd.t.
 
