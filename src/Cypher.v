@@ -3,6 +3,8 @@ Require Import List.
 Import ListNotations.
 
 Require Import PropertyGraph.
+Require Import Maps.
+Require Import Utils.
 Import Property.
 
 (** Query pattern definition. In general terms, the query pattern is the conditions on the edges *)
@@ -31,10 +33,12 @@ Module Pattern.
 
   (** pv_props  : list of pairs (key, value) stored in a vertex **)
 
+  Definition name := string.
+
   Record pvertex := {
-      pv_name   : option string;
-      pv_labels : list string;
-      pv_props  : list (string * Property.t);
+      vname   : option name;
+      vlabels : list PropertyGraph.label;
+      vprops  : list (Property.name * Property.t);
     }.
 
   (** Edge pattern. It is a pair where the first item is edge condition (contained in elabels, eprops, edir, enum) *)
@@ -49,10 +53,10 @@ Module Pattern.
   (** pe_dir    : direction condition **)
 
   Record pedge := {
-      pe_name   : option string;
-      pe_labels : list string;
-      pe_props  : list (string * Property.t);
-      pe_dir    : direction;
+      ename   : option name;
+      elabels : list PropertyGraph.label;
+      eprops  : list (Property.name * Property.t);
+      edir    : direction;
     }.
 
 (** Query pattern. **)
@@ -61,25 +65,64 @@ Module Pattern.
 
 (** pend  : pattern of the first vertex **)
 
-  Record t := mk {
-      phops : list (pvertex * pedge);
-      pend : pvertex;
-    }.
-  
-  Definition pnil (pv : pvertex) := mk nil pv.
-
-  Definition cons (pv : pvertex) (pe : pedge) (p : t) :=
-    mk ((pv, pe) :: phops p) (pend p).
+  Inductive t := 
+  | start (pv : pvertex)
+  | hop (pi : t) (pe : pedge) (pv : pvertex).
 
   Definition hd (p : t) :=
-    match phops p with
-    | (pv, pe) :: h => pv
-    | nil => pend p
+    match p with
+    | hop _ _ pv => pv
+    | start pv => pv
+    end.
+
+  Fixpoint dom (p : Pattern.t) : list string :=
+    match p with
+    | hop p pe pv =>
+      match ename pe, vname pv with
+      | Some ne, Some nv => ne :: nv :: dom p
+      | Some ne, None    => ne :: dom p
+      | None,    Some nv => nv :: dom p
+      | None,    None    => dom p
+      end
+    | start pv =>
+      match vname pv with
+      | Some nv => [ nv ]
+      | None    => nil
+      end
     end.
 
 End Pattern.
 
 (** Query definition **)
+
+Module QueryExpr.
+  Inductive t : Type :=
+  | QEGObj (go : PropertyGraph.gobj) : t
+  | QEVar  (n : Pattern.name) : t
+  | QEProj (a : t) (k : Property.name) : t
+
+  | QEEq (a1 a2 : t) : t
+  | QENe (a1 a2 : t) : t
+  | QEGe (a1 a2 : t) : t
+  | QELe (a1 a2 : t) : t
+  | QELt (a1 a2 : t) : t
+  | QEGt (a1 a2 : t) : t
+
+  | QETrue : t
+  | QEFalse : t
+  | QEUnknown : t
+  | QEOr (a1 a2 : t)
+  | QEAnd (a1 a2 : t)
+  | QEXor (a1 a2 : t)
+  | QENot (a: t)
+  | QEIsUnknown (e : t)
+  | QEIsNotUnknown (e : t)
+  | QEIsTrue (e : t)
+  | QEIsNotTrue (e : t)
+  | QEIsFalse (e : t)
+  | QEIsNotFalse (e : t)
+  .
+End QueryExpr.
 
 Module ProjectionExpr.
   Inductive proj := AS (from : string) (to : string).
@@ -89,14 +132,12 @@ End ProjectionExpr.
 
 Module Clause.
   Inductive t := 
-  | MATCH (patterns : list Pattern.t)
-  | WITH (pexpr : ProjectionExpr.t)
+  | MATCH (pattern : Pattern.t)
   .           
 End Clause.
 
 Module Query.
   Record t := mk {
-      clauses : list Clause.t;
-      ret : ProjectionExpr.t;
+    clause : Clause.t;
   }.
 End Query.

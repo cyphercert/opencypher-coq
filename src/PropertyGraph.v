@@ -1,6 +1,7 @@
 Require Import String.
 Require Import List.
 Require Import BinNums.
+Require Import Maps.
 Import ListNotations.
 
 
@@ -38,7 +39,7 @@ Module PropertyGraph.
 
   (** edges    : edges of the graph **)
 
-  (** st       : maps an edge to a pair of its ends **)
+  (** ends     : maps an edge to a pair of its ends **)
 
   (** vlab     : maps a vertex to a list of its labels **)
 
@@ -51,11 +52,32 @@ Module PropertyGraph.
   Record t :=
     mk { vertices : list vertex;
          edges    : list edge;
-         st       : edge -> vertex * vertex;
+         ends     : edge -> vertex * vertex;
          vlabels  : vertex -> list label;
          elabel   : edge   -> label;
          vprops   : vertex -> list (Property.name * Property.t); 
          eprops   : edge   -> list (Property.name * Property.t); 
       }.
+
+  Fixpoint get_prop (k : Property.name) (props : list (Property.name * Property.t)) : option Property.t :=
+    match props with
+    | (k', v) :: props => if eqb_string k k' then Some v else get_prop k props
+    | nil => None
+    end.
+
+  Definition get_vprop (g : PropertyGraph.t) (k : Property.name) (v : vertex) : option Property.t :=
+    get_prop k (vprops g v).
+
+  Definition get_eprop (g : PropertyGraph.t) (k : Property.name) (e : edge) : option Property.t :=
+    get_prop k (eprops g e).
+
+  Definition get_gobj_prop (g : PropertyGraph.t) (k : Property.name) (go : gobj) : option Property.t :=
+    match go with
+    | gedge e => get_eprop g k e
+    | gvertex v => get_vprop g k v
+    end.
+
+  Definition e_from (g : t) (e : edge) := fst (ends g e).
+  Definition e_to   (g : t) (e : edge) := snd (ends g e).
 
 End PropertyGraph.
