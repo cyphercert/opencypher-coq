@@ -23,7 +23,7 @@ End Property.
 
 Module PropertyGraph.
 
-  (** Types are used for indexing verteces and edges **)
+  (** Types are used for indexing vertices and edges **)
 
   Definition vertex    := nat.
   Definition edge      := nat.
@@ -77,7 +77,23 @@ Module PropertyGraph.
     | gvertex v => get_vprop g k v
     end.
 
+  Definition get_gobj_labels (g : PropertyGraph.t) (go : gobj) : list label :=
+    match go with
+    | gvertex v => vlabels g v
+    | gedge e => [ elabel g e ]
+    end.
+
   Definition e_from (g : t) (e : edge) := fst (ends g e).
   Definition e_to   (g : t) (e : edge) := snd (ends g e).
+
+  Record wf (g : t) := mk_wf {
+    ends_In : forall v v' e,
+      In e (edges g) -> ends g e = (v, v') -> In v (vertices g) /\ In v' (vertices g);
+
+    vlabels_In : forall v, vlabels g v <> nil -> In v (vertices g);
+
+    vprops_In : forall v, vprops g v <> nil -> In v (vertices g);
+    eprops_In : forall e, eprops g e <> nil -> In e (edges g);
+  }.
 
 End PropertyGraph.
