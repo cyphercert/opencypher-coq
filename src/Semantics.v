@@ -2,9 +2,11 @@ Require Import String.
 Require Import List.
 Require Import Bool.
 Require Import BinNums.
+From Coq Require Import Classes.EquivDec.
 From Coq Require Import Logic.FunctionalExtensionality.
 Import ListNotations.
 
+Require Import Maps.
 Require Import Cypher.
 Require Import PropertyGraph.
 Import PropertyGraph.
@@ -17,6 +19,37 @@ Module Value.
   | Str (s : string)
   | GObj (go : gobj)
   .
+
+  Search ({?x = ?y} + {?x <> ?y}).
+
+  #[global]
+  Program Instance int_eq_eqdec : EqDec Z eq := BinInt.Z.eq_dec.
+
+  #[global]
+  Program Instance string_eqdec : EqDec string eq := String.string_dec.
+
+  Definition eq_value_dec (a b : t) : {a = b} + {a <> b}.
+    refine (
+      match a, b with
+      | Unknown,          Unknown          => left _
+      | Bool a,           Bool b           => if a == b then left _ else right _
+      | Int a,            Int b            => if a == b then left _ else right _
+      | Str a,            Str b            => if a == b then left _ else right _
+      | GObj (gvertex a), GObj (gvertex b) => if a == b then left _ else right _
+      | GObj (gedge a),   GObj (gedge b)   => if a == b then left _ else right _
+      | _,                _                => right _
+      end
+    );
+    try reflexivity; (* Solve Unknown = Unknown *)
+    try discriminate; (* Solve goals with different constructors *)
+    repeat f_equal; try assumption;  (* Solve goals when underlying values are equal *)
+    intros H; injection H as H; contradiction. (* Solve goals when underlying values are not equal *)
+  Defined.
+
+  #[global]
+  Program Instance value_eqdec : EqDec t eq := eq_value_dec.
+
+  Definition eqb (a b : t) : bool := a ==b b.
 End Value.
 
 (* Record / Assignment *)
@@ -142,6 +175,16 @@ Module Path.
         matches (Path.hop p e v) (Pattern.hop pi pe pv)
     .
   End matches.
+  
+  (* r' is expanded from r by traversing one edge *)
+  Definition expansion_of (g : PropertyGraph.t) (r' r : Rcd.t)
+                          (n_from n_edge n_to : Pattern.name)
+                          (d : Pattern.direction) :=
+    exists v_from e v_to, In e (edges g) /\
+      r n_from = Some (Value.GObj (gvertex v_to)) /\
+      matches_direction g v_from v_to e d /\
+      r' = (n_to |-> Value.GObj (gvertex v_to); n_edge |-> Value.GObj (gedge e); r).
+
 End Path.
 
 (* Notation "g , u , p '|=' pi" := (Path.matches g u p pi) (at level 80, p at next level, u at next level, pi at next level, no associativity) : type_scope. *)
@@ -176,9 +219,9 @@ Section QueryExpr.
 
       | QEEq a1 a2  =>
         match eval_qexpr a1, eval_qexpr a2 with
-        | Some (Bool b1), Some (Bool b2) => Some (Bool (Bool.eqb b1 b2))
-        | Some (Int i1),  Some (Int i2)  => Some (Bool (BinIntDef.Z.eqb i1 i2))
-        | Some (Str s1),  Some (Str s2)  => Some (Bool (String.eqb s1 s2))
+        | Some (Bool b1), Some (Bool b2) => Some (Bool (b1 ==b b2))
+        | Some (Int i1),  Some (Int i2)  => Some (Bool (i1 ==b i2))
+        | Some (Str s1),  Some (Str s2)  => Some (Bool (s1 ==b s2))
         | Some (Bool _),  Some Unknown   => Some Unknown
         | Some (Int _),   Some Unknown   => Some Unknown
         | Some (Str _),   Some Unknown   => Some Unknown
@@ -190,9 +233,9 @@ Section QueryExpr.
 
       | QENe a1 a2 =>
         match eval_qexpr a1, eval_qexpr a2 with
-        | Some (Bool b1), Some (Bool b2) => Some (Bool (negb (Bool.eqb b1 b2)))
-        | Some (Int i1),  Some (Int i2)  => Some (Bool (negb (BinIntDef.Z.eqb i1 i2)))
-        | Some (Str s1),  Some (Str s2)  => Some (Bool (negb (String.eqb s1 s2)))
+        | Some (Bool b1), Some (Bool b2) => Some (Bool (b1 <>b b2))
+        | Some (Int i1),  Some (Int i2)  => Some (Bool (i1 <>b i2))
+        | Some (Str s1),  Some (Str s2)  => Some (Bool (s1 <>b s2))
         | Some (Bool _),  Some Unknown   => Some Unknown
         | Some (Int _),   Some Unknown   => Some Unknown
         | Some (Str _),   Some Unknown   => Some Unknown
