@@ -7,6 +7,7 @@ From Coq Require Import Logic.FunctionalExtensionality.
 Import ListNotations.
 
 Require Import Maps.
+Require Import Utils.
 Require Import Cypher.
 Require Import PropertyGraph.
 Import PropertyGraph.
@@ -17,16 +18,58 @@ Module Value.
   | Bool (b : bool)
   | Int (i : Z)
   | Str (s : string)
-  | GObj (go : gobj)
+  | GVertex (v : vertex)
+  | GEdge (e : edge)
   .
 
-  Search ({?x = ?y} + {?x <> ?y}).
+  Inductive T :=
+  | UnknownT
+  | BoolT
+  | IntT
+  | StrT 
+  | GVertexT
+  | GEdgeT
+  .
 
-  #[global]
-  Program Instance int_eq_eqdec : EqDec Z eq := BinInt.Z.eq_dec.
+  Definition type_of (v : t) : T :=
+    match v with
+    | Unknown   => UnknownT
+    | Bool _    => BoolT
+    | Int _     => IntT
+    | Str _     => StrT
+    | GVertex _ => GVertexT
+    | GEdge _   => GEdgeT
+    end.
 
-  #[global]
-  Program Instance string_eqdec : EqDec string eq := String.string_dec.
+  Lemma type_of_UnknownT : forall v,
+    type_of v = UnknownT -> v = Unknown.
+  Proof. intros v H. destruct v; try discriminate. reflexivity. Qed.
+
+  Lemma type_of_BoolT : forall v,
+    type_of v = BoolT -> exists b, v = Bool b.
+  Proof. intros v H. destruct v; try discriminate. exists b. reflexivity. Qed.
+
+  Lemma type_of_IntT : forall v,
+    type_of v = IntT -> exists i, v = Int i.
+  Proof. intros v H. destruct v; try discriminate. exists i. reflexivity. Qed.
+
+  Lemma type_of_StrT : forall v,
+    type_of v = StrT -> exists s, v = Str s.
+  Proof. intros v H. destruct v; try discriminate. exists s. reflexivity. Qed.
+
+  Lemma type_of_GVertexT : forall v,
+    type_of v = GVertexT -> exists v', v = GVertex v'.
+  Proof. intros v H. destruct v; try discriminate. exists v. reflexivity. Qed.
+
+  Lemma type_of_GEdgeT : forall v,
+    type_of v = GEdgeT -> exists e, v = GEdge e.
+  Proof. intros v H. destruct v; try discriminate. exists e. reflexivity. Qed.
+
+  Definition from_property (x : Property.t) : Value.t :=
+    match x with
+    | Property.p_int i => Int i
+    | Property.p_string s => Str s
+    end.
 
   Definition eq_value_dec (a b : t) : {a = b} + {a <> b}.
     refine (
@@ -35,15 +78,15 @@ Module Value.
       | Bool a,           Bool b           => if a == b then left _ else right _
       | Int a,            Int b            => if a == b then left _ else right _
       | Str a,            Str b            => if a == b then left _ else right _
-      | GObj (gvertex a), GObj (gvertex b) => if a == b then left _ else right _
-      | GObj (gedge a),   GObj (gedge b)   => if a == b then left _ else right _
+      | GVertex a,        GVertex b        => if a == b then left _ else right _
+      | GEdge a,          GEdge b          => if a == b then left _ else right _
       | _,                _                => right _
       end
     );
     try reflexivity; (* Solve Unknown = Unknown *)
     try discriminate; (* Solve goals with different constructors *)
-    repeat f_equal; try assumption;  (* Solve goals when underlying values are equal *)
-    intros H; injection H as H; contradiction. (* Solve goals when underlying values are not equal *)
+    try f_equal; try assumption;  (* Solve goals when underlying values are equal *)
+    injection as H; contradiction. (* Solve goals when underlying values are not equal *)
   Defined.
 
   #[global]
@@ -55,6 +98,16 @@ End Value.
 (* Record / Assignment *)
 Module Rcd.
   Definition t := string -> option Value.t.
+  Definition T := string -> option Value.T.
+
+  Definition empty : t := fun _ => None.
+  Definition emptyT : T := fun _ => None.
+
+  Definition type_of (r : t) : T :=
+    fun k => option_map Value.type_of (r k).
+
+  Lemma type_of_empty : type_of empty = emptyT.
+  Proof. reflexivity. Qed.
 
   (* Predicate that defines the domain of a record *)
   Definition in_dom (k : string) (r : t) :=
@@ -72,7 +125,6 @@ Module Rcd.
       | Some val => Some val
       | None     => r2 k
       end.
-
 
     Lemma join_comm' : forall r1 r2,
       disjoint r1 r2 -> forall k, (join r1 r2) k = (join r2 r1) k.
@@ -96,13 +148,70 @@ End Rcd.
 
 Module BindingTable.
   Definition t := list Rcd.t.
+  Definition T := Rcd.T.
 
   Definition empty : t := nil.
   Definition add (r : Rcd.t) (T : t) := r :: T.
 
-  (* Binding table is well-formed iff all the records have the same domain *)
-  Definition wf (T : t) := forall r1 r2,
-    In r1 T -> In r2 T -> forall k, Rcd.in_dom k r1 <-> Rcd.in_dom k r2.
+  (* Binding table is well-formed iff all the records have the same type *)
+  Definition wf (table : t) := forall r1 r2,
+    In r1 table -> In r2 table -> Rcd.type_of r1 = Rcd.type_of r2.
+
+  (* Predicate that defines the type of a table *)
+  (* If a table if not-empty its type is defined *)
+  Definition of_type (table : t) (ty : Rcd.T) :=
+    forall r, In r table -> Rcd.type_of r = ty.
+
+  (* The type of a well-formed table is the same as
+     the type of any of its records *)
+  Lemma wf_of_type : forall table r,
+    wf table -> In r table -> of_type table (Rcd.type_of r).
+  Proof.
+    intros table r Hwf HIn r' HIn'.
+    unfold wf in Hwf. apply Hwf. apply HIn'. apply HIn.
+  Qed.
+
+  (* A type exists if the table is well-formed *)
+  Lemma of_type_exists : forall table,
+    wf table -> exists ty, of_type table ty.
+  Proof.
+    intros [| r] Hwf.
+    - exists Rcd.emptyT. intros r' HIn. inversion HIn.
+    - exists (Rcd.type_of r). apply wf_of_type. apply Hwf.
+      left. reflexivity.
+  Qed.
+
+  (* If a type exists, the table is well-formed *)
+  Lemma of_type_wf : forall table ty,
+    of_type table ty -> wf table.
+  Proof.
+    intros table ty Htype.
+    unfold wf. intros r1 r2 HIn1 HIn2.
+    transitivity ty.
+    - apply Htype. apply HIn1.
+    - symmetry. apply Htype. apply HIn2.
+  Qed.
+
+  (* If a table is not empty, the type is unique *)
+  Lemma of_type_unique : forall table ty1 ty2,
+    table <> nil -> of_type table ty1 -> of_type table ty2 -> ty1 = ty2.
+  Proof.
+    intros table ty1 ty2 Hneq Htype1 Htype2.
+    destruct table as [| r].
+    - contradiction.
+    - transitivity (Rcd.type_of r).
+      + symmetry.
+        apply Htype1. left. reflexivity.
+      + apply Htype2. left. reflexivity.
+  Qed.
+
+  (* The empty table is of any type *)
+  Lemma empty_of_type : forall ty, of_type empty ty.
+  Proof. intros ty r HIn. inversion HIn. Qed.
+
+  (* The empty table is well-formed *)
+  Lemma empty_wf : wf empty.
+  Proof. intros r1 r2 HIn1 HIn2. inversion HIn1. Qed.
 
   (* Predicate that defines the domain of a table *)
   Definition in_dom (k : string) (T : t) :=
@@ -111,7 +220,7 @@ Module BindingTable.
     | nil => False
     end.
 
-  (* The domain of a well-formed table is the same as
+  (* (* The domain of a well-formed table is the same as
      the domain of any of its records *)
   Lemma in_dom_wf : forall T r,
     wf T -> In r T -> forall k, in_dom k T <-> Rcd.in_dom k r.
@@ -122,7 +231,7 @@ Module BindingTable.
     - apply Hwf.
       + left. reflexivity.
       + apply HIn.
-  Qed.
+  Qed. *)
 End BindingTable.
 
 Module Path.
@@ -141,16 +250,16 @@ Module Path.
     Import Pattern.
 
     Variable g : PropertyGraph.t.
-    Variable u : Rcd.t.
+    Variable r : Rcd.t.
 
     Record matches_pvertex (v : vertex) (p : pvertex) : Prop := {
-        matches_vname : u (Pattern.vname p) = Some (Value.GObj (gvertex v));
+        matches_vname : r (Pattern.vname p) = Some (Value.GVertex v);
         matches_vlabels : Pattern.vlabels p = nil \/ exists l, In l (Pattern.vlabels p) /\ In l (PropertyGraph.vlabels g v);
         matches_vprops : forall prop, In prop (Pattern.vprops p) -> In prop (PropertyGraph.vprops g v);
       }.
 
     Record matches_pedge (e : edge) (p : pedge) : Prop := {
-        matches_ename : u (Pattern.ename p) = Some (Value.GObj (gedge e));
+        matches_ename : r (Pattern.ename p) = Some (Value.GEdge e);
         matches_elabels : Pattern.elabels p = nil \/ In (PropertyGraph.elabel g e) (Pattern.elabels p);
         matches_eprops : forall prop, In prop (Pattern.eprops p) -> In prop (PropertyGraph.eprops g e);
       }.
@@ -181,9 +290,9 @@ Module Path.
                           (n_from n_edge n_to : Pattern.name)
                           (d : Pattern.direction) :=
     exists v_from e v_to, In e (edges g) /\
-      r n_from = Some (Value.GObj (gvertex v_to)) /\
+      r n_from = Some (Value.GVertex v_to) /\
       matches_direction g v_from v_to e d /\
-      r' = (n_to |-> Value.GObj (gvertex v_to); n_edge |-> Value.GObj (gedge e); r).
+      r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r).
 
 End Path.
 
@@ -199,21 +308,18 @@ Section QueryExpr.
 
     Fixpoint eval_qexpr (a : QueryExpr.t) : option Value.t :=
       match a with
-      | QEGObj go => Some (GObj go)
+      | QEGObj go =>
+        match go with
+        | gvertex v => Some (GVertex v)
+        | gedge e => Some (GEdge e)
+        end
 
       | QEVar n => u n
 
-      | QEProj a k =>
+      | QEProj a k => option_map Value.from_property
         match eval_qexpr a with
-        | Some (GObj go) =>
-            match get_gobj_prop g k go with
-            | Some val =>
-              match val with
-              | Property.p_int i => Some (Int i)
-              | Property.p_string s => Some (Str s)
-              end
-            | None => Some Unknown
-            end
+        | Some (GVertex v) => get_vprop g k v
+        | Some (GEdge e) => get_eprop g k e
         | _       => None
         end
 

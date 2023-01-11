@@ -1,5 +1,6 @@
 Require Import String.
 Require Import List.
+Require Import Utils.
 Require Import BinNums.
 Require Import Maps.
 Import ListNotations.
@@ -61,7 +62,7 @@ Module PropertyGraph.
 
   Fixpoint get_prop (k : Property.name) (props : list (Property.name * Property.t)) : option Property.t :=
     match props with
-    | (k', v) :: props => if eqb_string k k' then Some v else get_prop k props
+    | (k', v) :: props => if k ==b k' then Some v else get_prop k props
     | nil => None
     end.
 

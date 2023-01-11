@@ -3,7 +3,7 @@ Require Import String.
 Require Import List.
 Require Import Bool.
 Require Import BinNums.
-From Coq Require Import Classes.EquivDec.
+From Coq Require Export Classes.EquivDec.
 Import ListNotations.
 
 Fixpoint list_inb {A : Type} `{EqDec A eq} (e : A) (l : list A) : bool :=
