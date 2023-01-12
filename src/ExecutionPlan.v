@@ -106,19 +106,19 @@ Module ExecutionPlan.
     match plan with
     | ScanVertices n => True
     | FilterByLabel plan n l =>
-      << HIn : In n (dom plan) >> /\
+      << Htype : type_of plan n = Some Value.GVertexT >> /\
       << Hwf : wf plan >>
     | ExpandAll plan n_from n_edge n_to d =>
-      << HIn_from : In n_from (dom plan) >> /\
-      << HIn_edge : ~(In n_edge (dom plan)) >> /\
-      << HIn_to : ~(In n_to (dom plan)) >> /\
+      << Htype_from : type_of plan n_from = Some Value.GVertexT >> /\
+      << Htype_edge : type_of plan n_edge = None >> /\
+      << Htype_to : type_of plan n_to = None >> /\
       << Hneq_from : n_from =/= n_edge >> /\
       << Hneq_to : n_to =/= n_edge >> /\
       << Hwf : wf plan >>
     | ExpandInto plan n_from n_edge n_to d =>
-      << HIn_from : In n_from (dom plan) >> /\
-      << HIn_edge : ~(In n_edge (dom plan)) >> /\
-      << HIn_to : (In n_to (dom plan)) >> /\
+      << Htype_from : type_of plan n_from = Some Value.GVertexT >> /\
+      << Htype_edge : type_of plan n_edge = None >> /\
+      << Htype_to : type_of plan n_to = Some Value.GVertexT >> /\
       << Hneq_from : n_from =/= n_edge >> /\
       << Hneq_to : n_to =/= n_edge >> /\
       << Hwf : wf plan >>
@@ -139,16 +139,15 @@ Module ExecutionPlan.
     - rewrite update_neq; [| now symmetry ].
       rewrite update_eq. now exists (Value.GVertexT).
     - rewrite update_neq. rewrite update_neq.
-      * now apply IHplan.
-      * intros ?. subst. now apply HIn_to.
-      * intros ?. subst. now apply HIn_edge.
+      { now apply IHplan. }
+      all: intros ?; rewrite IHplan in H; [| now assumption ]; desf.
     - unfold update, t_update, Pattern.name in *.
       destruct (equiv_decbP n_edge n), (equiv_decbP n_to n); subst; auto.
       right. right. apply IHplan; [ assumption | now exists ty ].
       - rewrite update_eq. now exists (Value.GEdgeT).
       - rewrite update_neq.
-        * now apply IHplan.
-        * intros ?. subst. now apply HIn_edge.
+        { now apply IHplan. }
+        intros ?; rewrite IHplan in H; [| now assumption ]; desf.
       - unfold update, t_update, Pattern.name in *.
         destruct (equiv_decbP n_edge n); subst; auto.
         right. apply IHplan; [ assumption | now exists ty ].
@@ -201,26 +200,19 @@ Module ExecutionPlan.
     Theorem eval_wf plan graph (Hwf : wf plan) (Hwf' : PropertyGraph.wf graph) :
         exists table', eval graph plan = Some table'.
     Proof.
-      induction plan. all: simpl in *.
-      - apply scan_vertices_wf. apply Hwf'.
-      - destruct Hwf as [Hwf1 Hwf].
-        apply IHplan in Hwf as [table IH]. rewrite IH.
-        apply filter_by_label_wf with (type_of plan).
-        + apply Hwf'.
-        + apply eval_type_of in IH. apply IH.
-        + 
-    Admitted.
-      (* - simpl in *. destruct Hwf as [Hwf1 [Hwf2 [Hwf3 Hwf]]].
-        apply IHplan in Hwf as [table IH]. rewrite IH.
-        apply expand_all_wf.
-        + apply Hwf'.
-        + apply eval_wf' in IH. apply IH.
-      - simpl in *. destruct Hwf as [Hwf1 [Hwf2 [Hwf3 Hwf]]].
-        apply IHplan in Hwf as [table IH]. rewrite IH.
-        apply expand_into_wf.
-        + apply Hwf'.
-        + apply eval_wf' in IH. apply IH.
-    Qed. *)
+      induction plan. all: simpl in *; desf.
+      { apply scan_vertices_wf. assumption. }
+      all: destruct IHplan as [table IH]; [ now assumption | ].
+      all: rewrite IH.
+      { 
+        apply filter_by_label_wf with (type_of plan); try assumption. 
+        - apply eval_type_of in IH. assumption.
+        - assert (H' := type_of_types plan n). desf. auto.
+      }
+      1: apply expand_all_wf with (type_of plan); try assumption.
+      2: apply expand_into_wf with (type_of plan); try assumption.
+      all: apply eval_type_of in IH; assumption.
+    Qed.
   End EvalPlan.
 End ExecutionPlan.
 
