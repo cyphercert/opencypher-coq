@@ -69,7 +69,9 @@ Module Pattern.
   | start (pv : pvertex)
   | hop (pi : t) (pe : pedge) (pv : pvertex).
 
-  Definition hd (p : t) :=
+  (*hop (start a) b c :  (a)-[b]-(c) *)
+
+  Definition last (p : t) :=
     match p with
     | hop _ _ pv => pv
     | start pv => pv
@@ -102,20 +104,20 @@ End Pattern.
 
 Module QueryExpr.
   Inductive t : Type :=
-  | QEGObj (go : PropertyGraph.gobj) : t
-  | QEVar  (n : Pattern.name) : t
-  | QEProj (a : t) (k : Property.name) : t
+  | QEGObj (go : PropertyGraph.gobj)
+  | QEVar  (n : Pattern.name)
+  | QEProj (a : t) (k : Property.name)
 
-  | QEEq (a1 a2 : t) : t
-  | QENe (a1 a2 : t) : t
-  | QEGe (a1 a2 : t) : t
-  | QELe (a1 a2 : t) : t
-  | QELt (a1 a2 : t) : t
-  | QEGt (a1 a2 : t) : t
+  | QEEq (a1 a2 : t)
+  | QENe (a1 a2 : t)
+  | QEGe (a1 a2 : t)
+  | QELe (a1 a2 : t)
+  | QELt (a1 a2 : t)
+  | QEGt (a1 a2 : t)
 
-  | QETrue : t
-  | QEFalse : t
-  | QEUnknown : t
+  | QETrue
+  | QEFalse
+  | QEUnknown
   | QEOr (a1 a2 : t)
   | QEAnd (a1 a2 : t)
   | QEXor (a1 a2 : t)

@@ -6,6 +6,8 @@ From Coq Require Import Classes.EquivDec.
 From Coq Require Import Logic.FunctionalExtensionality.
 Import ListNotations.
 
+From hahn Require Import HahnBase.
+
 Require Import Maps.
 Require Import Utils.
 Require Import Cypher.
@@ -41,9 +43,9 @@ Module Value.
     | GEdge _   => GEdgeT
     end.
 
-  Lemma type_of_UnknownT : forall v,
-    type_of v = UnknownT -> v = Unknown.
-  Proof. intros v H. destruct v; try discriminate. reflexivity. Qed.
+  Lemma type_of_UnknownT v (H : type_of v = UnknownT) : 
+    v = Unknown.
+  Proof. destruct v; try discriminate. reflexivity. Qed.
 
   Lemma type_of_BoolT : forall v,
     type_of v = BoolT -> exists b, v = Bool b.
@@ -97,8 +99,8 @@ End Value.
 
 (* Record / Assignment *)
 Module Rcd.
-  Definition t := string -> option Value.t.
-  Definition T := string -> option Value.T.
+  Definition t := Pattern.name -> option Value.t.
+  Definition T := Pattern.name -> option Value.T.
 
   Definition empty : t := fun _ => None.
   Definition emptyT : T := fun _ => None.
@@ -131,17 +133,15 @@ Module Rcd.
     Proof.
       intros r1 r2 H k.
       unfold join.
-      destruct (H k) as [H1 | H2].
-      - rewrite H1. destruct (r2 k); reflexivity.
-      - rewrite H2. destruct (r1 k); reflexivity.
+      destruct (H k); desf.
     Qed.
 
     Lemma join_comm : forall r1 r2,
       disjoint r1 r2 -> join r1 r2 = join r2 r1.
     Proof.
-      intros r1 r2 H.
+      intros r1 r2 ?.
       extensionality k.
-      apply join_comm'. apply H.
+      now apply join_comm'.
     Qed.
   End join.
 End Rcd.
@@ -163,55 +163,53 @@ Module BindingTable.
     forall r, In r table -> Rcd.type_of r = ty.
 
   (* The type of a well-formed table is the same as
-     the type of any of its records *)
-  Lemma wf_of_type : forall table r,
-    wf table -> In r table -> of_type table (Rcd.type_of r).
+    the type of any of its records *)
+  Lemma wf_of_type (table : t) (Hwf : wf table) r (HIn : In r table) :
+    of_type table (Rcd.type_of r).
   Proof.
-    intros table r Hwf HIn r' HIn'.
+    intros r' HIn'.
     unfold wf in Hwf. apply Hwf. apply HIn'. apply HIn.
   Qed.
 
   (* A type exists if the table is well-formed *)
-  Lemma of_type_exists : forall table,
-    wf table -> exists ty, of_type table ty.
+  Lemma of_type_exists (table : t) (Hwf : wf table) :
+    exists ty, of_type table ty.
   Proof.
-    intros [| r] Hwf.
+    destruct table as [| r ?].
     - exists Rcd.emptyT. intros r' HIn. inversion HIn.
     - exists (Rcd.type_of r). apply wf_of_type. apply Hwf.
       left. reflexivity.
   Qed.
 
   (* If a type exists, the table is well-formed *)
-  Lemma of_type_wf : forall table ty,
-    of_type table ty -> wf table.
+  Lemma of_type_wf table ty (Htype : of_type table ty) : wf table.
   Proof.
-    intros table ty Htype.
-    unfold wf. intros r1 r2 HIn1 HIn2.
-    transitivity ty.
-    - apply Htype. apply HIn1.
-    - symmetry. apply Htype. apply HIn2.
+    intros r1 r2 HIn1 HIn2.
+    transitivity ty; [| symmetry].
+    all: apply Htype.
+    all: assumption.
   Qed.
 
   (* If a table is not empty, the type is unique *)
-  Lemma of_type_unique : forall table ty1 ty2,
-    table <> nil -> of_type table ty1 -> of_type table ty2 -> ty1 = ty2.
+  Lemma of_type_unique (table : t) ty1 ty2 (Hneq : table <> nil)
+                       (Htype1 : of_type table ty1) (Htype2 : of_type table ty2) :
+    ty1 = ty2.
   Proof.
-    intros table ty1 ty2 Hneq Htype1 Htype2.
     destruct table as [| r].
-    - contradiction.
-    - transitivity (Rcd.type_of r).
-      + symmetry.
-        apply Htype1. left. reflexivity.
-      + apply Htype2. left. reflexivity.
+    { contradiction. }
+    transitivity (Rcd.type_of r).
+    1: symmetry; apply Htype1.
+    2: apply Htype2.
+    all: left; reflexivity.
   Qed.
 
   (* The empty table is of any type *)
-  Lemma empty_of_type : forall ty, of_type empty ty.
-  Proof. intros ty r HIn. inversion HIn. Qed.
+  Lemma empty_of_type ty : of_type empty ty.
+  Proof. intros r HIn. inv HIn. Qed.
 
   (* The empty table is well-formed *)
   Lemma empty_wf : wf empty.
-  Proof. intros r1 r2 HIn1 HIn2. inversion HIn1. Qed.
+  Proof. intros r1 r2 HIn1 HIn2. inv HIn1. Qed.
 
   (* Predicate that defines the domain of a table *)
   Definition in_dom (k : string) (T : t) :=
@@ -240,7 +238,7 @@ Module Path.
   | start (v : vertex)
   | hop (p : t) (e : edge) (v : vertex).
 
-  Definition hd (p : t) :=
+  Definition last (p : t) :=
     match p with
     | hop _ _ v => v
     | start v => v
@@ -254,8 +252,11 @@ Module Path.
 
     Record matches_pvertex (v : vertex) (p : pvertex) : Prop := {
         matches_vname : r (Pattern.vname p) = Some (Value.GVertex v);
-        matches_vlabels : Pattern.vlabels p = nil \/ exists l, In l (Pattern.vlabels p) /\ In l (PropertyGraph.vlabels g v);
-        matches_vprops : forall prop, In prop (Pattern.vprops p) -> In prop (PropertyGraph.vprops g v);
+        matches_vlabels : << Hnil : Pattern.vlabels p = nil >> \/
+          exists l, << HIn_pattern : In l (Pattern.vlabels p) >> /\
+                    << HIn_graph : In l (PropertyGraph.vlabels g v) >>;
+        matches_vprops : forall prop (HIn : In prop (Pattern.vprops p)),
+          In prop (PropertyGraph.vprops g v);
       }.
 
     Record matches_pedge (e : edge) (p : pedge) : Prop := {
@@ -273,14 +274,13 @@ Module Path.
 
     Inductive matches : Path.t -> Pattern.t -> Prop :=
     | matches_nil (pv : pvertex) (v : vertex) 
-      : matches_pvertex v pv -> 
+                  (Hpv : matches_pvertex v pv) :
         matches (Path.start v) (Pattern.start pv) 
     | matches_cons (v : vertex) (e : edge) (p : Path.t)
-                  (pv : pvertex) (pe : pedge) (pi : Pattern.t) 
-      : matches p pi ->
-        matches_pedge e pe ->
-        matches_direction v (Path.hd p) e (Pattern.edir pe) ->
-        matches_pvertex v pv ->
+                   (pv : pvertex) (pe : pedge) (pi : Pattern.t) 
+                   (Hpi : matches p pi) (Hpe : matches_pedge e pe)
+                   (Hdir : matches_direction (Path.last p) v e (Pattern.edir pe))
+                   (Hpv : matches_pvertex v pv) :
         matches (Path.hop p e v) (Pattern.hop pi pe pv)
     .
   End matches.
