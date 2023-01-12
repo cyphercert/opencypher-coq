@@ -4,103 +4,251 @@ Require Import Bool.
 Require Import BinNums.
 From Coq Require Import Logic.FunctionalExtensionality.
 Import ListNotations.
+From hahn Require Import HahnBase.
+From Coq Require Import Classes.EquivDec.
+From Coq Require Import Classes.RelationClasses.
 
 Require Import Cypher.
 Require Import Semantics.
 Require Import PropertyGraph.
 Require Import Maps.
+Require Import Utils.
 Import PropertyGraph.
 
 Module ExecutionPlan.
+  Definition step0 := PropertyGraph.t -> option BindingTable.t.
+  Definition step1 := PropertyGraph.t -> BindingTable.t -> option BindingTable.t.
+
+  Module Type Spec.
+    (* scan_vertices (n : Pattern.name) : step0 *)
+    Parameter scan_vertices : Pattern.name -> step0.
+
+    (* filter_by_label (n : Pattern.name) (l : label) : step1 *)
+    Parameter filter_by_label : Pattern.name -> label -> step1.
+
+    (* expand_all (n_from n_edge n_to : Pattern.name) (d : Pattern.direction) : step1 *)
+    Parameter expand_all : Pattern.name -> Pattern.name -> Pattern.name -> Pattern.direction -> step1.
+
+    (* expand_into (n_from n_edge n_to : Pattern.name) (d : Pattern.direction) : step1 *)
+    Parameter expand_into : Pattern.name -> Pattern.name -> Pattern.name -> Pattern.direction -> step1.
+
+
+    (** If the inputs are well-formed then the operation will return the result *)
+
+    Axiom scan_vertices_wf : forall n graph,
+      PropertyGraph.wf graph ->
+        exists table', scan_vertices n graph = Some table'.
+
+    Axiom filter_by_label_wf : forall n l graph table ty,
+      PropertyGraph.wf graph -> BindingTable.of_type table ty ->
+        (ty n = Some Value.GVertexT \/ ty n = Some Value.GEdgeT) ->
+          exists table', filter_by_label n l graph table = Some table'.
+
+    Axiom expand_all_wf : forall n_from n_edge n_to d graph table ty,
+      PropertyGraph.wf graph -> BindingTable.of_type table ty ->
+        ty n_from = Some Value.GVertexT -> ty n_edge = None -> ty n_to = None ->
+            exists table', expand_all n_from n_edge n_to d graph table = Some table'.
+    
+    Axiom expand_into_wf : forall n_from n_edge n_to d graph table ty,
+      PropertyGraph.wf graph -> BindingTable.of_type table ty ->
+        ty n_from = Some Value.GVertexT -> ty n_edge = None -> ty n_to = Some Value.GVertexT ->
+          exists table', expand_into n_from n_edge n_to d graph table = Some table'.
+
+
+    (** If the operation returned some table then the type of the table is correct *)
+
+    Axiom scan_vertices_type : forall n graph table',
+      scan_vertices n graph = Some table' ->
+        BindingTable.of_type table' (n |-> Value.GVertexT).
+    
+    Axiom filter_by_label_type : forall n l graph table table' ty,
+      filter_by_label n l graph table = Some table' ->
+        BindingTable.of_type table ty ->
+          BindingTable.of_type table' ty.
+
+    Axiom expand_all_type : forall n_from n_edge n_to d graph table table' ty,
+      expand_all n_from n_edge n_to d graph table = Some table' ->
+        BindingTable.of_type table ty ->
+          BindingTable.of_type table'
+            (n_edge |-> Value.GEdgeT; n_to |-> Value.GVertexT; ty).
+
+    Axiom expand_into_type : forall n_from n_edge n_to d graph table table' ty,
+      expand_into n_from n_edge n_to d graph table = Some table' ->
+        BindingTable.of_type table ty ->
+          BindingTable.of_type table'
+            (n_edge |-> Value.GEdgeT; ty).
+  End Spec.
+
   Inductive t :=
-  | ScanNodes (n : Pattern.name)
-  | FilterByLabel (plan : t) (go : gobj) (l : label)
+  | ScanVertices (n : Pattern.name)
+  | FilterByLabel (plan : t) (n : Pattern.name) (l : label)
   | ExpandAll (plan : t) (n_from n_edge n_to : Pattern.name) (d : Pattern.direction)
   | ExpandInto (plan : t) (n_from n_edge n_to : Pattern.name) (d : Pattern.direction)
   .
 
-  (* Domain of the plan is the domain of resulting binding table *)
   Fixpoint dom (plan : t) : list Pattern.name := 
     match plan with
-    | ScanNodes n => [ n ]
-    | FilterByLabel plan go l => dom plan
-    | ExpandAll plan n_from n_edge n_to d => n_from :: n_edge :: n_to :: dom plan
-    | ExpandInto plan n_from n_edge n_to d => n_from :: n_edge :: n_to :: dom plan
+    | ScanVertices n => [ n ]
+    | FilterByLabel plan n l => dom plan
+    | ExpandAll plan n_from n_edge n_to d => n_edge :: n_to :: dom plan
+    | ExpandInto plan n_from n_edge n_to d => n_edge :: dom plan
+    end.
+
+  Fixpoint type_of (plan : t) : BindingTable.T :=
+    match plan with
+    | ScanVertices n => n |-> Value.GVertexT
+    | FilterByLabel plan n l => type_of plan
+    | ExpandAll plan n_from n_edge n_to d => n_edge |-> Value.GEdgeT; n_to |-> Value.GVertexT; type_of plan
+    | ExpandInto plan n_from n_edge n_to d => n_edge |-> Value.GEdgeT; type_of plan
     end.
 
   Fixpoint wf (plan : t) :=
     match plan with
-    | ScanNodes n => True
-    | FilterByLabel plan go l => wf plan
+    | ScanVertices n => True
+    | FilterByLabel plan n l =>
+      << HIn : In n (dom plan) >> /\
+      << Hwf : wf plan >>
     | ExpandAll plan n_from n_edge n_to d =>
-      In n_from (dom plan) /\ ~(In n_edge (dom plan)) /\ ~(In n_to (dom plan)) /\ wf plan
+      << HIn_from : In n_from (dom plan) >> /\
+      << HIn_edge : ~(In n_edge (dom plan)) >> /\
+      << HIn_to : ~(In n_to (dom plan)) >> /\
+      << Hneq_from : n_from =/= n_edge >> /\
+      << Hneq_to : n_to =/= n_edge >> /\
+      << Hwf : wf plan >>
     | ExpandInto plan n_from n_edge n_to d =>
-      In n_from (dom plan) /\ ~(In n_edge (dom plan)) /\ In n_to (dom plan) /\ wf plan
+      << HIn_from : In n_from (dom plan) >> /\
+      << HIn_edge : ~(In n_edge (dom plan)) >> /\
+      << HIn_to : (In n_to (dom plan)) >> /\
+      << Hneq_from : n_from =/= n_edge >> /\
+      << Hneq_to : n_to =/= n_edge >> /\
+      << Hwf : wf plan >>
     end.
 
-  Record spec := mk_spec {
-    eval : ExecutionPlan.t -> PropertyGraph.t -> option BindingTable.t;
+  (* Domain of the plan is the domain of resulting binding table *)
+  Lemma dom__type_of (plan : t) (Hwf : wf plan) (n : Pattern.name) :
+    In n (dom plan) <-> exists ty, type_of plan n = Some ty.
+  Proof.
+    induction plan; simpl in *.
+    2: now apply IHplan.
+    all: split; intros H; desf.
+    - subst. rewrite update_eq. now exists (Value.GVertexT).
+    - unfold update, t_update, Pattern.name in *.
+      destruct (equiv_decbP n0 n); try discriminate H.
+      now left.
+    - rewrite update_eq. now exists (Value.GEdgeT).
+    - rewrite update_neq; [| now symmetry ].
+      rewrite update_eq. now exists (Value.GVertexT).
+    - rewrite update_neq. rewrite update_neq.
+      * now apply IHplan.
+      * intros ?. subst. now apply HIn_to.
+      * intros ?. subst. now apply HIn_edge.
+    - unfold update, t_update, Pattern.name in *.
+      destruct (equiv_decbP n_edge n), (equiv_decbP n_to n); subst; auto.
+      right. right. apply IHplan; [ assumption | now exists ty ].
+      - rewrite update_eq. now exists (Value.GEdgeT).
+      - rewrite update_neq.
+        * now apply IHplan.
+        * intros ?. subst. now apply HIn_edge.
+      - unfold update, t_update, Pattern.name in *.
+        destruct (equiv_decbP n_edge n); subst; auto.
+        right. apply IHplan; [ assumption | now exists ty ].
+  Qed.
+      
 
-    eval_wf : forall plan graph,
-      wf plan -> exists table, eval plan graph = Some table /\ BindingTable.wf table;
+  Module EvalPlan (S : Spec).
+    Import S.
 
-    eval_ScanNodes_spec : forall graph n,
-      exists table, eval (ScanNodes n) graph = Some table /\
-        table = map (fun v => n |-> Value.GObj (gvertex v)) (vertices graph);
+    Section eval.
+      Variable graph : PropertyGraph.t.
+      Fixpoint eval (plan : ExecutionPlan.t) :=
+        match plan with
+        | ScanVertices n => scan_vertices n graph
+        | FilterByLabel plan n l =>
+          eval plan >>= filter_by_label n l graph
+        | ExpandAll plan n_from n_edge n_to d => 
+          eval plan >>= expand_all n_from n_edge n_to d graph
+        | ExpandInto plan n_from n_edge n_to d => 
+          eval plan >>= expand_into n_from n_edge n_to d graph
+        end.
+    End eval.
 
-    eval_FilterByLabel_spec : forall graph plan go l table,
-      let plan' := FilterByLabel plan go l in
-        wf plan' -> eval plan graph = Some table ->
-            exists table', eval plan' graph = Some table' /\
-              forall r, In r table' <->
-                (In r table /\ In l (get_gobj_labels graph go));
+    Theorem eval_type_of plan graph table'
+                         (Heval : eval graph plan = Some table') :
+        BindingTable.of_type table' (type_of plan).
+    Proof.
+      generalize dependent table'.
+      induction plan; intros table' Heval; simpl in *.
+      { apply scan_vertices_type with graph. assumption. }
+      all: destruct (eval graph plan) as [table |]; try discriminate Heval.
+      - apply filter_by_label_type with n l graph table; auto.
+      - apply expand_all_type with n_from d graph table; auto.
+      - apply expand_into_type with n_from n_to d graph table; auto.
+    Qed.
 
-    eval_ExpandAll_spec : forall graph plan n_from n_edge n_to d table,
-      let plan' := ExpandAll plan n_from n_edge n_to d in
-        PropertyGraph.wf graph -> wf plan' ->
-          eval plan graph = Some table ->
-            exists table', eval plan' graph = Some table' /\
-              forall r', In r' table' <-> (exists r,
-                In r table /\ Path.expansion_of graph r' r n_from n_edge n_to d);
+    Lemma type_of_types plan k :
+      type_of plan k = Some Value.GVertexT \/
+      type_of plan k = Some Value.GEdgeT \/
+      type_of plan k = None.
+    Proof.
+      induction plan; simpl in *.
+      all: try unfold update, t_update, Pattern.name in *.
+      all: try (destruct (n ==b k)).
+      all: try (destruct (n_edge ==b k)).
+      all: try (destruct (n_to ==b k)).
+      all: auto.
+    Qed.
 
-    eval_ExpandInto_spec : forall graph plan n_from n_edge n_to d table,
-      let plan' := ExpandInto plan n_from n_edge n_to d in
-        PropertyGraph.wf graph -> wf plan' ->
-          eval plan graph = Some table ->
-            exists table', eval plan' graph = Some table' /\
-              forall r', In r' table' <-> (exists r,
-                In r table /\ Path.expansion_of graph r' r n_from n_edge n_to d);
-  }.
+    Theorem eval_wf plan graph (Hwf : wf plan) (Hwf' : PropertyGraph.wf graph) :
+        exists table', eval graph plan = Some table'.
+    Proof.
+      induction plan. all: simpl in *.
+      - apply scan_vertices_wf. apply Hwf'.
+      - destruct Hwf as [Hwf1 Hwf].
+        apply IHplan in Hwf as [table IH]. rewrite IH.
+        apply filter_by_label_wf with (type_of plan).
+        + apply Hwf'.
+        + apply eval_type_of in IH. apply IH.
+        + 
+    Admitted.
+      (* - simpl in *. destruct Hwf as [Hwf1 [Hwf2 [Hwf3 Hwf]]].
+        apply IHplan in Hwf as [table IH]. rewrite IH.
+        apply expand_all_wf.
+        + apply Hwf'.
+        + apply eval_wf' in IH. apply IH.
+      - simpl in *. destruct Hwf as [Hwf1 [Hwf2 [Hwf3 Hwf]]].
+        apply IHplan in Hwf as [table IH]. rewrite IH.
+        apply expand_into_wf.
+        + apply Hwf'.
+        + apply eval_wf' in IH. apply IH.
+    Qed. *)
+  End EvalPlan.
 End ExecutionPlan.
 
-Module ExecutionPlanImpl.
-  Definition scan_nodes (n : Pattern.name)
+Module ExecutionPlanImpl : ExecutionPlan.Spec.
+  Definition scan_vertices (n : Pattern.name)
                         (graph : PropertyGraph.t)
-                        (table : BindingTable.t)
                         : option BindingTable.t :=
-    Some (map (fun v => n |-> Value.GObj (gvertex v)) (vertices graph)).
+    Some (map (fun v => n |-> Value.GVertex v) (vertices graph)).
 
-  Definition filter_by_label (plan : ExecutionPlan.t)
-                             (go : gobj) (l : PropertyGraph.label)
+  Definition filter_by_label (n : Pattern.name)
+                             (l : PropertyGraph.label)
                              (graph : PropertyGraph.t)
                              (table : BindingTable.t)
                              : option BindingTable.t.
   Admitted.
 
-  Definition expand_all (plan : ExecutionPlan.t)
-                        (n_from n_edge n_to : Pattern.name)
+  Definition expand_all (n_from n_edge n_to : Pattern.name)
                         (d : Pattern.direction)
                         (graph : PropertyGraph.t)
                         (table : BindingTable.t)
                         : option BindingTable.t.
   Admitted.
 
-  Definition expand_into (plan : ExecutionPlan.t)
-                         (n_from n_edge n_to : Pattern.name)
+  Definition expand_into (n_from n_edge n_to : Pattern.name)
                          (d : Pattern.direction)
                          (graph : PropertyGraph.t)
                          (table : BindingTable.t)
                          : option BindingTable.t :=
-    expand_all plan n_from n_edge n_to d graph table.
+    expand_all n_from n_edge n_to d graph table.
 End ExecutionPlanImpl.
 

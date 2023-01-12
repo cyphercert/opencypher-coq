@@ -4,6 +4,7 @@ Require Import List.
 Require Import Bool.
 Require Import BinNums.
 From Coq Require Export Classes.EquivDec.
+From Coq Require Export Classes.RelationClasses.
 Import ListNotations.
 
 Fixpoint list_inb {A : Type} `{EqDec A eq} (e : A) (l : list A) : bool :=
@@ -18,7 +19,7 @@ Fixpoint list_inb_b (e : bool) (l : list bool) : bool :=
   | h :: tl => if (Bool.eqb e h) then true else list_inb_b e tl
   end.
 
-Definition option_bind {A B : Type} (f : A -> option B) (x : option A) : option B :=
+Definition option_bind {A B : Type} (x : option A) (f : A -> option B) : option B :=
   match x with
   | Some x' => f x'
   | None => None
@@ -79,4 +80,11 @@ Proof.
   destruct (x == y) as [Heq | Hneq].
   + apply ReflectT. apply Heq.
   + apply ReflectF. apply Hneq.
+Qed.
+
+#[global]
+Instance neq_symmetric {A : Type} : Symmetric (fun (x y : A) => ~(x = y)).
+Proof.
+  intros x y Hneq Heq.
+  apply Hneq. symmetry. apply Heq.
 Qed.

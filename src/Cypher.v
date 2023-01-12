@@ -98,6 +98,9 @@ Module Pattern.
       ename pe :: dom_edges p
     | start pv => nil
     end.
+
+  Definition wf (p : Pattern.t) :=
+    forall k, In k (dom_vertices p) -> In k (dom_edges p) -> False.
 End Pattern.
 
 (** Query definition **)
@@ -145,7 +148,7 @@ Module Clause.
   (* For later extensions *)
   Definition wf (clause : t) :=
     match clause with
-    | MATCH pattern => True
+    | MATCH pattern => Pattern.wf pattern
     end.
 End Clause.
 
