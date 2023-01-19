@@ -274,10 +274,42 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     Variable graph : PropertyGraph.t.
     Variable table : BindingTable.t.
 
-    Definition expand_all : option BindingTable.t.
-    Admitted.
+    Definition expand_all_single (r : Rcd.t) : option BindingTable.t :=
+      match r n_from, r n_to with
+      | Some (Value.GVertex v_from), None => Some
+          match d with
+          | Pattern.OUT  => map (fun e => n_edge |-> Value.GEdge e)
+                                (out_edges graph v_from)
+          | Pattern.IN   => map (fun e => n_edge |-> Value.GEdge e)
+                                (in_edges  graph v_from)
+          | Pattern.BOTH => map (fun e => n_edge |-> Value.GEdge e)
+                                (out_edges graph v_from ++
+                                 in_edges graph v_from)
+          end
+      | _, _ => None
+      end.
 
-    Definition expand_into : option BindingTable.t := expand_all.
+    Definition expand_into_single (r : Rcd.t) : option BindingTable.t :=
+      match r n_from, r n_to with
+      | Some (Value.GVertex v_from), Some (Value.GVertex v_to) => Some
+          match d with
+          | Pattern.OUT  => map (fun e => n_edge |-> Value.GEdge e)
+                                (edges_between graph v_from v_to)
+          | Pattern.IN   => map (fun e => n_edge |-> Value.GEdge e)
+                                (edges_between graph v_to   v_from)
+          | Pattern.BOTH => map (fun e => n_edge |-> Value.GEdge e)
+                                (edges_between graph v_from v_to ++
+                                  edges_between graph v_to   v_from)
+          end
+      | _, _ => None
+      end.
+
+    Definition expand_base (expand_single : Rcd.t -> option BindingTable.t) :=
+      option_map (@List.concat Rcd.t) (fold_option (map expand_single table)).
+
+    Definition expand_all := expand_base expand_all_single.
+    
+    Definition expand_into := expand_base expand_into_single.
 
     Definition expand : option BindingTable.t :=
       match mode with

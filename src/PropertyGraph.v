@@ -3,6 +3,7 @@ Require Import List.
 Require Import Utils.
 Require Import BinNums.
 Require Import Maps.
+Require Import Bool.
 Import ListNotations.
 
 
@@ -86,6 +87,15 @@ Module PropertyGraph.
 
   Definition e_from (g : t) (e : edge) := fst (ends g e).
   Definition e_to   (g : t) (e : edge) := snd (ends g e).
+
+  Definition in_edges (g : t) (v : vertex) :=
+    filter (fun e => e_from g e ==b v) (edges g).
+  
+  Definition out_edges (g : t) (v : vertex) :=
+    filter (fun e => e_to g e ==b v) (edges g).
+
+  Definition edges_between (g : t) (from to : vertex) :=
+    filter (fun e => (e_from g e ==b from) && (e_to g e ==b to)) (edges g).
 
   Record wf (g : t) := mk_wf {
     ends_In : forall v v' e,

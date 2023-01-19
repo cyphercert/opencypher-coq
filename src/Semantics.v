@@ -334,12 +334,42 @@ Module Path.
         matches_eprops : forall prop, In prop (Pattern.eprops p) -> In prop (PropertyGraph.eprops g e);
       }.
 
-    Definition matches_direction (s t : vertex) (e : edge) (d : direction) : Prop :=
+    Definition matches_direction (from to : vertex) (e : edge) (d : direction) : Prop :=
         match d with
-        | OUT  => ends g e = (s, t)
-        | IN   => ends g e = (t, s)
-        | BOTH => ends g e = (s, t) \/ ends g e = (t, s)
+        | OUT  => ends g e = (from, to)
+        | IN   => ends g e = (to, from)
+        | BOTH => ends g e = (from, to) \/ ends g e = (to, from)
         end.
+
+    Definition matches_direction_dec (from to : vertex) (e : edge) (d : direction) :
+      {matches_direction from to e d} + {~ matches_direction from to e d}.
+    Proof.
+      refine (
+        match d with
+        | OUT  => if (e_from g e == from) then
+                    if (e_to g e == to)
+                    then left _ else right _
+                  else right _
+        | IN   => if (e_from g e == to) then
+                    if (e_to g e == from)
+                    then left _ else right _
+                  else right _
+        | BOTH => if (e_from g e == from) then
+                    if (e_to g e == to)
+                    then left _ else right _
+                  else
+                    if (e_from g e == to) then
+                      if (e_to g e == from)
+                      then left _ else right _
+                    else right _
+        end
+      ).
+      all: unfold matches_direction, equiv, e_from, e_to in *.
+      all: destruct (ends g e) as [from' to']; simpls.
+      all: try by desf.
+      all: try by intro; desf.
+      all: auto.
+    Defined.
 
     Inductive matches : Path.t -> Pattern.t -> Prop :=
     | matches_nil (pv : pvertex) (v : vertex) 
@@ -358,11 +388,12 @@ Module Path.
   Definition expansion_of (g : PropertyGraph.t) (r' r : Rcd.t)
                           (n_from n_edge n_to : Pattern.name)
                           (d : Pattern.direction) :=
-    exists v_from e v_to, In e (edges g) /\
-      r n_from = Some (Value.GVertex v_to) /\
-      matches_direction g v_from v_to e d /\
-      r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r).
-
+    exists v_from e v_to,
+      << HIn_e : In e (edges g) >> /\
+      << Hval_from : r n_from = Some (Value.GVertex v_from) >> /\
+      << Hval_to : r n_from = None \/ r n_from = Some (Value.GVertex v_to) >> /\
+      << Hdir : matches_direction g v_from v_to e d >> /\
+      << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >>.
 End Path.
 
 (* Notation "g , u , p '|=' pi" := (Path.matches g u p pi) (at level 80, p at next level, u at next level, pi at next level, no associativity) : type_scope. *)

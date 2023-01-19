@@ -8,6 +8,11 @@ From Coq Require Export Classes.EquivDec.
 From Coq Require Export Classes.RelationClasses.
 Import ListNotations.
 
+Definition coerce_sumbool {A B : Prop} (x : {A} + {B}) : bool :=
+  if x then true else false.
+
+Coercion coerce_sumbool : sumbool >-> bool.
+
 Definition option_bind {A B : Type} (x : option A) (f : A -> option B) : option B :=
   match x with
   | Some x' => f x'
@@ -101,8 +106,7 @@ Fixpoint In_dec {A : Type} `{EqDec A eq} (a : A) (xs : list A) : {In a xs} + {~ 
   intros contra. desf.
 Defined.
 
-Definition In_decb {A : Type} `{EqDec A eq} (a : A) (xs : list A) :=
-  if (In_dec a xs) then true else false.
+Definition In_decb {A : Type} `{EqDec A eq} (a : A) (xs : list A) : bool := In_dec a xs.
 
 Lemma In_decb_true_iff : forall {A : Type} `{EqDec A eq} (a : A) (xs : list A),
   In_decb a xs = true <-> In a xs.
