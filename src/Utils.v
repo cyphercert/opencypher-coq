@@ -116,29 +116,23 @@ Lemma fold_option_In {A : Type} (xs : list (option A)) (xs' : list A) (a' : A)
   In (Some a') xs <-> In a' xs'.
 Proof.
   generalize dependent xs'.
-  induction xs as [| x xs]; intros xs'.
-  - simpl. split.
-    2: injection H as H; subst.
-    all: contradiction.
-  - intros H. simpl. split.
-    all: destruct xs' as [|x' xs'].
-    3: contradiction.
-    all: intros [Hx | Hx]; subst.
-    all: try destruct x as [a |]; simpl in H;
-         destruct (fold_option xs); simpl in *.
-    all: try discriminate.
-    all: injection H; intros; subst.
-    1, 3: now left.
-    all: right; eapply IHxs; eauto.
+  induction xs as [| x xs]; ins.
+  { inv H. }
+  split.
+  all: destruct xs' as [|x' xs']; try easy.
+  all: unfold option_bind in *; desf.
+  all: intros [Hx | Hx]; subst; auto.
+  { inv Hx. now left. }
+  { right. now apply IHxs. }
+  apply IHxs in Hx; auto.
 Qed.
 
 Lemma fold_option_none {A : Type} (xs : list (option A))
                        (Hnone : In None xs) :
   fold_option xs = None.
 Proof.
-  induction xs as [| x xs], Hnone.
-  - now subst.
-  - simpl. rewrite (IHxs H). now destruct x.
+  induction xs as [| x xs], Hnone; subst; auto.
+  simpl. rewrite (IHxs H). now destruct x.
 Qed.
 
 Section filter_map.

@@ -229,7 +229,7 @@ Module ExecutionPlan.
     Proof with (try eassumption).
       induction plan. all: simpl in *; desf; desf.
       { apply scan_vertices_wf... }
-      all: destruct IHplan as [table IH]; [ now assumption | ].
+      all: destruct IHplan as [table IH]...
       all: rewrite IH.
       1: eapply filter_vertices_by_label_wf...
       2: eapply filter_edges_by_label_wf...
@@ -335,14 +335,12 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                                     (Hty : ty n = Some Value.GVertexT) :
     exists table', filter_vertices_by_label n l graph table = Some table'.
   Proof.
-    induction table as [| r table IH]; simpl in *.
-    { now eexists. }
-    assert (exists v, r n = Some (Value.GVertex v)) as [v Hval];
-      [ apply Rcd.type_of_GVertexT; rewrite Htype; [assumption | now left ] | ].
+    induction table as [| r table IH]; ins; eauto.
+    assert (exists v, r n = Some (Value.GVertex v)) as [v Hval].
+    { apply Rcd.type_of_GVertexT; rewrite Htype; auto. now left. }
     rewrite Hval.
     destruct IH as [table' IH]; eauto.
-    rewrite IH. desf.
-    all: now eexists.
+    rewrite IH. desf; eauto.
   Qed.
 
   Lemma filter_edges_by_label_wf graph table ty n l
@@ -351,26 +349,26 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                                  (Hty : ty n = Some Value.GEdgeT) :
     exists table', filter_edges_by_label n l graph table = Some table'.
   Proof.
-    induction table as [| r table IH]; simpl in *.
-    { now eexists. }
-    assert (exists e, r n = Some (Value.GEdge e)) as [e Hval];
-      [ apply Rcd.type_of_GEdgeT; rewrite Htype; [assumption | now left ] | ].
+    induction table as [| r table IH]; ins; eauto.
+    assert (exists e, r n = Some (Value.GEdge e)) as [e Hval].
+    { apply Rcd.type_of_GEdgeT; rewrite Htype; auto; now left. }
     rewrite Hval.
     destruct IH as [table' IH]; eauto.
-    rewrite IH. desf.
-    all: now eexists.
+    rewrite IH. desf; eauto.
   Qed.
 
   (** If the operation returned some table then the type of the table is correct *)
 
+  #[local]
+  Hint Unfold update t_update Pattern.name equiv_decb
+    BindingTable.of_type Rcd.type_of : unfold_pat.
+  
   Lemma scan_vertices_type graph table' n 
                            (Hres : scan_vertices n graph = Some table') :
     BindingTable.of_type table' (n |-> Value.GVertexT).
   Proof.
     unfold scan_vertices in Hres.
-    unfold update, t_update, Pattern.name, equiv_decb,
-           BindingTable.of_type, Rcd.type_of in *.
-
+    autounfold with unfold_pat in *.
     injection Hres as Hres. subst. intros r' HIn.
     apply in_map_iff in HIn as [r [Heq HIn]].
     subst. extensionality k.
@@ -384,10 +382,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Proof.
     generalize dependent table'.
     destruct mode.
-    all: induction table as [| r table IH]; simpl in *;
-          intros table' Hres; desf.
-    all: try injection Hres; ins.
-    all: eauto.
+    all: induction table; ins; desf; eauto.
   Qed.
 
   (** scan_vertices specification *)
@@ -399,13 +394,12 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Proof.
     injection Hres as Hres. subst.
     split.
-    - intros [r [HIn Hval]].
+    { intros [r [HIn Hval]].
       apply in_map_iff in HIn as [v' [Heq HIn]]. subst.
-      rewrite update_eq in Hval. injection Hval as Hval.
-      now subst.
-    - intros HIn. eexists. split.
-      apply in_map. { now eassumption. }
-      apply update_eq.
+      rewrite update_eq in Hval. inv Hval. }
+    intros HIn. eexists. split.
+    apply in_map; eauto.
+    apply update_eq.
   Qed.
 
   (** filter_by_label specification *)
@@ -421,11 +415,11 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
            simpls; intros table' Hres; desf.
 
     (* r = r0 *)
-    { exists r. split; [now left | assumption]. }
+    { exists r. split; eauto. now left. }
 
     (* r <> r0 *)
     all: edestruct IH as [r' [HIn' Hval']]; eauto.
-    all: eexists; split; [ right; eassumption | assumption ].
+    eexists; split; eauto. now right.
   Qed.
 
   Lemma filter_edges_by_label_spec graph table table' n l e r 
@@ -443,8 +437,9 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
     (* r <> r0 *)
     all: edestruct IH as [r' [HIn' Hval']]; eauto.
-    all: eexists; split; [ right; eassumption | assumption ].
-  Qed.
+  (*   all: eexists; split; [ right; eassumption | assumption ]. *)
+  (* Qed. *)
+  Admitted.
 
   Lemma filter_by_label_spec_v' graph table table' n l v r'
                                (Hres : filter_by_label n l graph table = Some table')
