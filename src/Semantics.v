@@ -111,6 +111,47 @@ Module Rcd.
   Lemma type_of_empty : type_of empty = emptyT.
   Proof. reflexivity. Qed.
 
+  
+  Lemma type_of_UnknownT r k (Htype : type_of r k = Some Value.UnknownT) : 
+    r k = Some Value.Unknown.
+  Proof.
+    unfold type_of in Htype.
+    destruct (r k); try discriminate.
+    f_equal. apply Value.type_of_UnknownT.
+    now injection Htype as Htype.
+  Qed.
+
+  Ltac solve_type_of_T f :=
+    match goal with
+      Htype : type_of ?r ?k = Some ?T
+      |- _ =>
+        unfold type_of in Htype;
+        destruct (r k) as [v |]; try discriminate;
+        destruct (f v);
+        [ now injection Htype as Htype |
+        eexists; f_equal; eassumption ]
+    end.
+    
+  Lemma type_of_BoolT r k (Htype : type_of r k = Some Value.BoolT) :
+    exists b, r k = Some (Value.Bool b).
+  Proof. solve_type_of_T Value.type_of_BoolT. Qed.
+
+  Lemma type_of_IntT r k (Htype : type_of r k = Some Value.IntT) :
+    exists i, r k = Some (Value.Int i).
+  Proof. solve_type_of_T Value.type_of_IntT. Qed.
+
+  Lemma type_of_StrT r k (Htype : type_of r k = Some Value.StrT) :
+    exists s, r k = Some (Value.Str s).
+  Proof. solve_type_of_T Value.type_of_StrT. Qed.
+
+  Lemma type_of_GVertexT r k (Htype : type_of r k = Some Value.GVertexT) :
+    exists v, r k = Some (Value.GVertex v).
+  Proof. solve_type_of_T Value.type_of_GVertexT. Qed.
+
+  Lemma type_of_GEdgeT r k (Htype : type_of r k = Some Value.GEdgeT) :
+    exists e, r k = Some (Value.GEdge e).
+  Proof. solve_type_of_T Value.type_of_GEdgeT. Qed.
+
   (* Predicate that defines the domain of a record *)
   Definition in_dom (k : string) (r : t) :=
     exists v, r k = Some v.
@@ -162,6 +203,9 @@ Module BindingTable.
   Definition of_type (table : t) (ty : Rcd.T) :=
     forall r, In r table -> Rcd.type_of r = ty.
 
+  #[global]
+  Hint Unfold of_type : core.
+
   (* The type of a well-formed table is the same as
     the type of any of its records *)
   Lemma wf_of_type (table : t) (Hwf : wf table) r (HIn : In r table) :
@@ -203,9 +247,34 @@ Module BindingTable.
     all: left; reflexivity.
   Qed.
 
+  Lemma of_type_cons_l (table : t) ty r (Htype : of_type (r :: table) ty) :
+    Rcd.type_of r = ty.
+  Proof.
+    apply Htype. now left.
+  Qed.
+
+  Lemma of_type_cons_r (table : t) ty r (Htype : of_type (r :: table) ty) :
+    of_type table ty.
+  Proof.
+    intros r' HIn. apply Htype.
+    right. assumption.
+  Qed.
+
+  Lemma of_type_cons (table : t) ty r (Htype_r : Rcd.type_of r = ty)
+                     (Htype_table : of_type table ty) :
+    of_type (r :: table) ty.
+  Proof.
+    intros r' HIn. destruct HIn as [Heq | HIn].
+    - now subst.
+    - now apply Htype_table.
+  Qed.
+
   (* The empty table is of any type *)
   Lemma empty_of_type ty : of_type empty ty.
   Proof. intros r HIn. inv HIn. Qed.
+
+  #[global]
+  Hint Resolve of_type_cons of_type_cons_l of_type_cons_r empty_of_type : core.
 
   (* The empty table is well-formed *)
   Lemma empty_wf : wf empty.
