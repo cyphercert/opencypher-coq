@@ -62,6 +62,14 @@ Proof.
   - apply Hneq'.
 Qed.
 
+Lemma equiv_decb_true_iff : forall {A : Type} `{EqDec A eq} (a b : A),
+  (a ==b b) = true <-> a = b.
+Proof.
+  intros. split.
+  apply equiv_decb_true'.
+  apply equiv_decb_true.
+Qed.
+
 Lemma equiv_decbP : forall {A : Type} `{EqDec A eq} (x y : A),
   reflect (x = y) (x ==b y).
 Proof.
@@ -92,6 +100,18 @@ Fixpoint In_dec {A : Type} `{EqDec A eq} (a : A) (xs : list A) : {In a xs} + {~ 
   all: auto.
   intros contra. desf.
 Defined.
+
+Definition In_decb {A : Type} `{EqDec A eq} (a : A) (xs : list A) :=
+  if (In_dec a xs) then true else false.
+
+Lemma In_decb_true_iff : forall {A : Type} `{EqDec A eq} (a : A) (xs : list A),
+  In_decb a xs = true <-> In a xs.
+Proof.
+  intros. unfold In_decb.
+  destruct (In_dec a xs) as [HIn | HIn].
+  all: split; auto.
+  ins.
+Qed.
 
 Fixpoint fold_option {A : Type} (xs : list (option A)) : option (list A) :=
   match xs with

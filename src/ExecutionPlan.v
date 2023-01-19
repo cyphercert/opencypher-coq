@@ -113,23 +113,13 @@ Module ExecutionPlan.
 
       Axiom filter_vertices_by_label_spec : forall n l v r,
         filter_by_label Vertices n l graph table = Some table' ->
-          In l (vlabels graph v) -> In r table -> r n = Some (Value.GVertex v) ->
-            (exists r', In r' table' /\ r' n = Some (Value.GVertex v)).
-
-      Axiom filter_vertices_by_label_spec' : forall n l v r',
-        filter_by_label Edges n l graph table = Some table' ->
-          In r' table' -> r' n = Some (Value.GVertex v) ->
-            In l (vlabels graph v) /\ exists r, In r table /\ r n = Some (Value.GVertex v).
+          r n = Some (Value.GVertex v) -> In r table' <->
+            (In l (vlabels graph v) /\ In r table).
 
       Axiom filter_edges_by_label_spec : forall n l e r,
         filter_by_label Edges n l graph table = Some table' ->
-          In r table -> elabel graph e = l -> r n = Some (Value.GEdge e) ->
-            (exists r', In r' table' /\ r' n = Some (Value.GEdge e)).
-
-      Axiom filter_edges_by_label_spec' : forall n l e r',
-        filter_by_label Edges n l graph table = Some table' ->
-          In r' table' -> r' n = Some (Value.GEdge e) ->
-            elabel graph e = l /\ exists r, In r table /\ r n = Some (Value.GEdge e).
+          r n = Some (Value.GEdge e) -> In r table' <->
+            (elabel graph e = l /\ In r table).
 
       (** expand_all specification *)
 
@@ -243,83 +233,58 @@ End ExecutionPlan.
 Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Definition scan_vertices (n : Pattern.name)
-                        (graph : PropertyGraph.t)
-                        : option BindingTable.t :=
+                           (graph : PropertyGraph.t) :
+    option BindingTable.t :=
     Some (map (fun v => n |-> Value.GVertex v) (vertices graph)).
 
-  Section filter_vertices_by_label.
+  Section filter_by_label.
+    Variable mode : FilterMode.t.
     Variable n : Pattern.name.
     Variable l : PropertyGraph.label.
     Variable graph : PropertyGraph.t.
+    Variable table : BindingTable.t.
 
-    Fixpoint filter_vertices_by_label (table : BindingTable.t)
-      : option BindingTable.t :=
-      match table with
-      | nil => Some nil
-      | r :: table =>
-        match r n, filter_vertices_by_label table with
-        | Some (Value.GVertex v), Some table' =>
-            if In_dec l (vlabels graph v)
-            then Some (r :: table') else Some table'
-        | _, _ => None
+    Definition filter_vertices_by_label :  option BindingTable.t :=
+      let f (r : Rcd.t) :=
+        match r n with
+        | Some (Value.GVertex v) => In_decb l (vlabels graph v)
+        | _ => false
         end
-      end.
-  End filter_vertices_by_label.
+      in Some (filter f table).
 
-  Section filter_edges_by_label.
-    Variable n : Pattern.name.
-    Variable l : PropertyGraph.label.
+    Definition filter_edges_by_label : option BindingTable.t :=
+      let f (r : Rcd.t) :=
+        match r n with
+        | Some (Value.GEdge e) => elabel graph e ==b l
+        | _ => false
+        end
+      in Some (filter f table).
+
+    Definition filter_by_label : option BindingTable.t :=
+      match mode with
+      | Vertices => filter_vertices_by_label
+      | Edges => filter_edges_by_label
+      end.
+  End filter_by_label.
+
+  Section expand.
+    Variable mode : ExpandMode.t.
+    Variable n_from n_edge n_to : Pattern.name.
+    Variable d : Pattern.direction.
     Variable graph : PropertyGraph.t.
+    Variable table : BindingTable.t.
 
-    Fixpoint filter_edges_by_label (table : BindingTable.t)
-      : option BindingTable.t :=
-      match table with
-      | nil => Some nil
-      | r :: table =>
-        match r n, filter_edges_by_label table with
-        | Some (Value.GEdge e), Some table' =>
-            if elabel graph e == l
-            then Some (r :: table') else Some table'
-        | _, _ => None
-        end
+    Definition expand_all : option BindingTable.t.
+    Admitted.
+
+    Definition expand_into : option BindingTable.t := expand_all.
+
+    Definition expand : option BindingTable.t :=
+      match mode with
+      | All => expand_all
+      | Into => expand_into
       end.
-  End filter_edges_by_label.
-
-  Definition filter_by_label (mode : FilterMode.t)
-                             (n : Pattern.name)
-                             (l : PropertyGraph.label)
-                             (graph : PropertyGraph.t)
-                             (table : BindingTable.t)
-                             : option BindingTable.t :=
-    match mode with
-    | Vertices => filter_vertices_by_label n l graph table
-    | Edges => filter_edges_by_label n l graph table
-    end.
-
-  Definition expand_all (n_from n_edge n_to : Pattern.name)
-                        (d : Pattern.direction)
-                        (graph : PropertyGraph.t)
-                        (table : BindingTable.t)
-                        : option BindingTable.t.
-  Admitted.
-
-  Definition expand_into (n_from n_edge n_to : Pattern.name)
-                         (d : Pattern.direction)
-                         (graph : PropertyGraph.t)
-                         (table : BindingTable.t)
-                         : option BindingTable.t :=
-    expand_all n_from n_edge n_to d graph table.
-
-  Definition expand (mode : ExpandMode.t)
-                    (n_from n_edge n_to : Pattern.name)
-                    (d : Pattern.direction)
-                    (graph : PropertyGraph.t)
-                    (table : BindingTable.t)
-                    : option BindingTable.t :=
-    match mode with
-    | All => expand_all n_from n_edge n_to d graph table
-    | Into => expand_into n_from n_edge n_to d graph table
-    end.
+  End expand.
 
   (** If the inputs are well-formed then the operation will return the result *)
 
@@ -329,18 +294,17 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     now eexists.
   Qed.
 
+  #[local]
+  Hint Unfold filter_by_label filter_vertices_by_label filter_edges_by_label : filter_by_label_db.
+
   Lemma filter_vertices_by_label_wf graph table ty n l
                                     (Hwf : PropertyGraph.wf graph)
                                     (Htype : BindingTable.of_type table ty)
                                     (Hty : ty n = Some Value.GVertexT) :
     exists table', filter_vertices_by_label n l graph table = Some table'.
   Proof.
+    autounfold with filter_by_label_db.
     induction table as [| r table IH]; ins; eauto.
-    assert (exists v, r n = Some (Value.GVertex v)) as [v Hval].
-    { apply Rcd.type_of_GVertexT; rewrite Htype; auto. now left. }
-    rewrite Hval.
-    destruct IH as [table' IH]; eauto.
-    rewrite IH. desf; eauto.
   Qed.
 
   Lemma filter_edges_by_label_wf graph table ty n l
@@ -349,12 +313,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                                  (Hty : ty n = Some Value.GEdgeT) :
     exists table', filter_edges_by_label n l graph table = Some table'.
   Proof.
+    autounfold with filter_by_label_db.
     induction table as [| r table IH]; ins; eauto.
-    assert (exists e, r n = Some (Value.GEdge e)) as [e Hval].
-    { apply Rcd.type_of_GEdgeT; rewrite Htype; auto; now left. }
-    rewrite Hval.
-    destruct IH as [table' IH]; eauto.
-    rewrite IH. desf; eauto.
   Qed.
 
   (** If the operation returned some table then the type of the table is correct *)
@@ -382,6 +342,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Proof.
     generalize dependent table'.
     destruct mode.
+    all: autounfold with filter_by_label_db.
     all: induction table; ins; desf; eauto.
   Qed.
 
@@ -389,8 +350,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Definition scan_vertices_spec graph table' n v 
                                 (Hres : scan_vertices n graph = Some table') :
-    (exists r, In r table' /\ r n = Some (Value.GVertex v)) <->
-      In v (vertices graph).
+    (exists r, In r table' /\ r n = Some (Value.GVertex v)) <-> In v (vertices graph).
   Proof.
     injection Hres as Hres. subst.
     split.
@@ -406,80 +366,28 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Lemma filter_vertices_by_label_spec graph table table' n l v r 
                                       (Hres : filter_by_label Vertices n l graph table = Some table')
-                                      (HIn_l : In l (vlabels graph v)) (HIn : In r table)
                                       (Hval : r n = Some (Value.GVertex v)) :
-    exists r', In r' table' /\ r' n = Some (Value.GVertex v).
+    In r table' <-> (In l (vlabels graph v) /\ In r table).
   Proof.
-    generalize dependent table'.
-    all: induction table as [| r0 table IH];
-           simpls; intros table' Hres; desf.
-
-    (* r = r0 *)
-    { exists r. split; eauto. now left. }
-
-    (* r <> r0 *)
-    all: edestruct IH as [r' [HIn' Hval']]; eauto.
-    eexists; split; eauto. now right.
+    autounfold with filter_by_label_db in Hres; desf.
+    rewrite <- In_decb_true_iff.
+    split; intros H.
+    1: apply filter_In in H.
+    2: apply filter_In; split.
+    all: desf.
   Qed.
 
   Lemma filter_edges_by_label_spec graph table table' n l e r 
                                    (Hres : filter_by_label Edges n l graph table = Some table')
-                                   (HIn_l : elabel graph e = l) (HIn : In r table)
                                    (Hval : r n = Some (Value.GEdge e)) :
-    exists r', In r' table' /\ r' n = Some (Value.GEdge e).
+    In r table' <-> (elabel graph e = l /\ In r table).
   Proof.
-    generalize dependent table'.
-    all: induction table as [| r0 table IH];
-           simpl in *; intros table' Hres; desf.
-
-    (* r = r0 *)
-    { exists r. split; [now left | assumption]. }
-
-    (* r <> r0 *)
-    all: edestruct IH as [r' [HIn' Hval']]; eauto.
-  (*   all: eexists; split; [ right; eassumption | assumption ]. *)
-  (* Qed. *)
-  Admitted.
-
-  Lemma filter_by_label_spec_v' graph table table' n l v r'
-                               (Hres : filter_by_label n l graph table = Some table')
-                               (HIn' : In r' table')
-                               (Hval' : r' n = Some (Value.GVertex v)) :
-    In l (vlabels graph v) /\ exists r, In r table /\ r n = Some (Value.GVertex v).
-  Proof.
-    generalize dependent table'.
-    induction table as [| r0 table IH];
-      simpl in *; intros table' Hres; desf.
-    all: split; try assumption.
-    all: unfold equiv in *; subst.
-
-    (* Solve goals of the form (In l _) *)
-    all: try match goal with
-             |- In _ _ =>
-                try destruct HIn';
-                try subst; try congruence;
-                edestruct IH; auto
-             end.
-
-    { destruct HIn'; subst. exists r'.
-      - split; [now left | assumption].
-      - edestruct IH as [? [? [? ?]]]; auto. eexists.
-       split; [right; eassumption | assumption]. }
-    all: try destruct HIn'; subst.
-    all: try congruence.
-    all: try edestruct IH as [? [? [? ?]]]; auto.
-    all: eexists; split; auto.
-    2: {}
-
-    (* r <> r0 *)
-    all: edestruct IH as [r' [HIn' Hval']]; eauto.
-    all: eexists; split; [ right; eassumption | assumption ].
+    autounfold with filter_by_label_db in Hres; desf.
+    rewrite <- equiv_decb_true_iff.
+    split; intros H.
+    1: apply filter_In in H.
+    2: apply filter_In; split.
+    all: desf.
   Qed.
-(* 
-  Lemma filter_by_label_spec_e graph table table' n l e
-                               (Hres : filter_by_label n l graph table = Some table') :
-      (exists r', In r' table' /\ r' n = Some (Value.GEdge e)) <->
-        (exists r, In r table /\ r n = Some (Value.GEdge e)) /\ elabel graph e = l.
-  Admitted. *)
 End ExecutionPlanImpl.
 
