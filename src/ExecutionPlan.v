@@ -94,13 +94,12 @@ Module ExecutionPlan.
         expand All n_from n_edge n_to d graph table = Some table' ->
           BindingTable.of_type table ty ->
             BindingTable.of_type table'
-              (n_edge |-> Value.GEdgeT; n_to |-> Value.GVertexT; ty).
+              (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
 
       Axiom expand_into_type : forall n_from n_edge n_to d,
         expand Into n_from n_edge n_to d graph table = Some table' ->
           BindingTable.of_type table ty ->
-            BindingTable.of_type table'
-              (n_edge |-> Value.GEdgeT; ty).
+            BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
 
       (** scan_vertices specification *)
 
@@ -144,7 +143,7 @@ Module ExecutionPlan.
     match plan with
     | ScanVertices n => n |-> Value.GVertexT
     | FilterByLabel mode n l plan => type_of plan
-    | Expand All n_from n_edge n_to d plan => n_edge |-> Value.GEdgeT; n_to |-> Value.GVertexT; type_of plan
+    | Expand All n_from n_edge n_to d plan => n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; type_of plan
     | Expand Into n_from n_edge n_to d plan => n_edge |-> Value.GEdgeT; type_of plan
     end.
 
@@ -267,6 +266,9 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       end.
   End filter_by_label.
 
+  #[local]
+  Hint Unfold filter_by_label filter_vertices_by_label filter_edges_by_label : filter_by_label_db.
+
   Section expand.
     Variable mode : ExpandMode.t.
     Variable n_from n_edge n_to : Pattern.name.
@@ -276,31 +278,28 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
     Definition expand_all_single (r : Rcd.t) : option BindingTable.t :=
       match r n_from, r n_to with
-      | Some (Value.GVertex v_from), None => Some
+      | Some (Value.GVertex v_from), None =>
+        Some (map (fun e => n_to   |-> Value.GVertex (e_to graph e);
+                           n_edge |-> Value.GEdge e)
           match d with
-          | Pattern.OUT  => map (fun e => n_edge |-> Value.GEdge e)
-                                (out_edges graph v_from)
-          | Pattern.IN   => map (fun e => n_edge |-> Value.GEdge e)
-                                (in_edges  graph v_from)
-          | Pattern.BOTH => map (fun e => n_edge |-> Value.GEdge e)
-                                (out_edges graph v_from ++
-                                 in_edges graph v_from)
-          end
+          | Pattern.OUT  => out_edges graph v_from
+          | Pattern.IN   => in_edges  graph v_from
+          | Pattern.BOTH => out_edges graph v_from ++
+                            in_edges  graph v_from
+          end)
       | _, _ => None
       end.
 
     Definition expand_into_single (r : Rcd.t) : option BindingTable.t :=
       match r n_from, r n_to with
-      | Some (Value.GVertex v_from), Some (Value.GVertex v_to) => Some
+      | Some (Value.GVertex v_from), Some (Value.GVertex v_to) =>
+          Some (map (fun e => n_edge |-> Value.GEdge e)
           match d with
-          | Pattern.OUT  => map (fun e => n_edge |-> Value.GEdge e)
-                                (edges_between graph v_from v_to)
-          | Pattern.IN   => map (fun e => n_edge |-> Value.GEdge e)
-                                (edges_between graph v_to   v_from)
-          | Pattern.BOTH => map (fun e => n_edge |-> Value.GEdge e)
-                                (edges_between graph v_from v_to ++
-                                  edges_between graph v_to   v_from)
-          end
+          | Pattern.OUT  => edges_between graph v_from v_to
+          | Pattern.IN   => edges_between graph v_to   v_from
+          | Pattern.BOTH => edges_between graph v_from v_to ++
+                            edges_between graph v_to   v_from
+          end)
       | _, _ => None
       end.
 
@@ -308,7 +307,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       option_map (@List.concat Rcd.t) (fold_option (map expand_single table)).
 
     Definition expand_all := expand_base expand_all_single.
-    
+
     Definition expand_into := expand_base expand_into_single.
 
     Definition expand : option BindingTable.t :=
@@ -318,18 +317,18 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       end.
   End expand.
 
+  #[local]
+  Hint Unfold expand expand_all expand_into expand_base expand_all_single expand_into_single : expand_db.
+
   (** If the inputs are well-formed then the operation will return the result *)
 
-  Lemma scan_vertices_wf graph n (Hwf : PropertyGraph.wf graph) :
+  Theorem scan_vertices_wf graph n (Hwf : PropertyGraph.wf graph) :
     exists table', scan_vertices n graph = Some table'.
   Proof.
     now eexists.
   Qed.
 
-  #[local]
-  Hint Unfold filter_by_label filter_vertices_by_label filter_edges_by_label : filter_by_label_db.
-
-  Lemma filter_vertices_by_label_wf graph table ty n l
+  Theorem filter_vertices_by_label_wf graph table ty n l
                                     (Hwf : PropertyGraph.wf graph)
                                     (Htype : BindingTable.of_type table ty)
                                     (Hty : ty n = Some Value.GVertexT) :
@@ -339,7 +338,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     induction table as [| r table IH]; ins; eauto.
   Qed.
 
-  Lemma filter_edges_by_label_wf graph table ty n l
+  Theorem filter_edges_by_label_wf graph table ty n l
                                  (Hwf : PropertyGraph.wf graph)
                                  (Htype : BindingTable.of_type table ty)
                                  (Hty : ty n = Some Value.GEdgeT) :
@@ -349,13 +348,58 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     induction table as [| r table IH]; ins; eauto.
   Qed.
 
+  Theorem expand_all_wf graph table ty n_from n_edge n_to d
+                  (Hwf : PropertyGraph.wf graph)
+                  (Htype : BindingTable.of_type table ty)
+                  (Hty_from : ty n_from = Some Value.GVertexT)
+                  (Hty_edge : ty n_edge = None)
+                  (Hty_to   : ty n_to   = None) :
+    exists table', expand All n_from n_edge n_to d graph table = Some table'.
+  Proof.
+    autounfold with expand_db.
+    
+    eenough (exists t, fold_option _ = Some t) as [t Hfold].
+    { rewrite Hfold. now eexists. }
+
+    apply fold_option_some; intros a HIn; simpls.
+    apply in_map_iff in HIn as [r [? ?]]; subst.
+
+    edestruct BindingTable.type_of_GVertexT as [v_from Hv_from]; try eassumption.
+    rewrite Hv_from.
+    erewrite BindingTable.type_of_None; try eassumption.
+    now eexists.
+  Qed.
+
+  Theorem expand_into_wf graph table ty n_from n_edge n_to d
+                  (Hwf : PropertyGraph.wf graph)
+                  (Htype : BindingTable.of_type table ty)
+                  (Hty_from : ty n_from = Some Value.GVertexT)
+                  (Hty_edge : ty n_edge = None)
+                  (Hty_to   : ty n_to   = Some Value.GVertexT) :
+    exists table', expand Into n_from n_edge n_to d graph table = Some table'.
+  Proof.
+    autounfold with expand_db.
+    
+    eenough (exists t, fold_option _ = Some t) as [t Hfold].
+    { rewrite Hfold. now eexists. }
+
+    apply fold_option_some; intros a HIn; simpls.
+    apply in_map_iff in HIn as [r [? ?]]; subst.
+
+    edestruct BindingTable.type_of_GVertexT with (k := n_from) as [v_from Hv_from],
+              BindingTable.type_of_GVertexT with (k := n_to) as [v_to Hv_to];
+              try eassumption.
+    rewrite Hv_from. rewrite Hv_to.
+    now eexists.
+  Qed.
+
   (** If the operation returned some table then the type of the table is correct *)
 
   #[local]
   Hint Unfold update t_update Pattern.name equiv_decb
     BindingTable.of_type Rcd.type_of : unfold_pat.
   
-  Lemma scan_vertices_type graph table' n 
+  Theorem scan_vertices_type graph table' n 
                            (Hres : scan_vertices n graph = Some table') :
     BindingTable.of_type table' (n |-> Value.GVertexT).
   Proof.
@@ -367,7 +411,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     desf.
   Qed.
   
-  Lemma filter_by_label_type graph table table' ty mode n l
+  Theorem filter_by_label_type graph table table' ty mode n l
                              (Hres : filter_by_label mode n l graph table = Some table')
                              (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' ty.
@@ -375,8 +419,24 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     generalize dependent table'.
     destruct mode.
     all: autounfold with filter_by_label_db.
-    all: induction table; ins; desf; eauto.
+    all: induction table; ins; desf; eauto with type_of_db.
   Qed.
+
+  Theorem expand_all_type graph table table' ty n_from n_edge n_to d
+                          (Hres : expand All n_from n_edge n_to d graph table = Some table')
+                          (Htype : BindingTable.of_type table ty) :
+    BindingTable.of_type table' (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
+  Proof.
+  Admitted.
+
+
+  Theorem expand_into_type graph table table' ty n_from n_edge n_to d
+                          (Hres : expand Into n_from n_edge n_to d graph table = Some table')
+                          (Htype : BindingTable.of_type table ty) :
+    BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
+  Proof.
+  Admitted.
+
 
   (** scan_vertices specification *)
 
@@ -396,7 +456,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   (** filter_by_label specification *)
 
-  Lemma filter_vertices_by_label_spec graph table table' n l v r 
+  Theorem filter_vertices_by_label_spec graph table table' n l v r 
                                       (Hres : filter_by_label Vertices n l graph table = Some table')
                                       (Hval : r n = Some (Value.GVertex v)) :
     In r table' <-> (In l (vlabels graph v) /\ In r table).
@@ -409,7 +469,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     all: desf.
   Qed.
 
-  Lemma filter_edges_by_label_spec graph table table' n l e r 
+  Theorem filter_edges_by_label_spec graph table table' n l e r 
                                    (Hres : filter_by_label Edges n l graph table = Some table')
                                    (Hval : r n = Some (Value.GEdge e)) :
     In r table' <-> (elabel graph e = l /\ In r table).

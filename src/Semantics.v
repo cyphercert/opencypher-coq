@@ -152,6 +152,16 @@ Module Rcd.
     exists e, r k = Some (Value.GEdge e).
   Proof. solve_type_of_T Value.type_of_GEdgeT. Qed.
 
+  Lemma type_of_None r k (Htype : type_of r k = None) :
+    r k = None.
+  Proof.
+    unfold type_of in Htype.
+    destruct (r k); now try discriminate.
+  Qed.
+
+  #[global]
+  Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
+
   (* Predicate that defines the domain of a record *)
   Definition in_dom (k : string) (r : t) :=
     exists v, r k = Some v.
@@ -194,45 +204,10 @@ Module BindingTable.
   Definition empty : t := nil.
   Definition add (r : Rcd.t) (T : t) := r :: T.
 
-  (* Binding table is well-formed iff all the records have the same type *)
-  Definition wf (table : t) := forall r1 r2,
-    In r1 table -> In r2 table -> Rcd.type_of r1 = Rcd.type_of r2.
-
   (* Predicate that defines the type of a table *)
   (* If a table if not-empty its type is defined *)
   Definition of_type (table : t) (ty : Rcd.T) :=
     forall r, In r table -> Rcd.type_of r = ty.
-
-  #[global]
-  Hint Unfold of_type : core.
-
-  (* The type of a well-formed table is the same as
-    the type of any of its records *)
-  Lemma wf_of_type (table : t) (Hwf : wf table) r (HIn : In r table) :
-    of_type table (Rcd.type_of r).
-  Proof.
-    intros r' HIn'.
-    unfold wf in Hwf. apply Hwf. apply HIn'. apply HIn.
-  Qed.
-
-  (* A type exists if the table is well-formed *)
-  Lemma of_type_exists (table : t) (Hwf : wf table) :
-    exists ty, of_type table ty.
-  Proof.
-    destruct table as [| r ?].
-    - exists Rcd.emptyT. intros r' HIn. inversion HIn.
-    - exists (Rcd.type_of r). apply wf_of_type. apply Hwf.
-      left. reflexivity.
-  Qed.
-
-  (* If a type exists, the table is well-formed *)
-  Lemma of_type_wf table ty (Htype : of_type table ty) : wf table.
-  Proof.
-    intros r1 r2 HIn1 HIn2.
-    transitivity ty; [| symmetry].
-    all: apply Htype.
-    all: assumption.
-  Qed.
 
   (* If a table is not empty, the type is unique *)
   Lemma of_type_unique (table : t) ty1 ty2 (Hneq : table <> nil)
@@ -273,32 +248,50 @@ Module BindingTable.
   Lemma empty_of_type ty : of_type empty ty.
   Proof. intros r HIn. inv HIn. Qed.
 
+  Section type_ofT.
+    Variable table : t.
+    Variable ty : Rcd.T.
+    Variable r : Rcd.t.
+    Variable k : Pattern.name.
+    Variable Htype : of_type table ty.
+    Variable HIn : In r table.
+
+    Lemma type_of_BoolT (Hty : ty k = Some Value.BoolT) :
+      exists b, r k = Some (Value.Bool b).
+    Proof using Htype HIn. apply Rcd.type_of_BoolT. rewrite Htype; assumption. Qed.
+
+    Lemma type_of_IntT (Hty : ty k = Some Value.IntT) :
+      exists i, r k = Some (Value.Int i).
+    Proof using Htype HIn. apply Rcd.type_of_IntT. rewrite Htype; assumption. Qed.
+
+    Lemma type_of_StrT (Hty : ty k = Some Value.StrT) :
+      exists s, r k = Some (Value.Str s).
+    Proof using Htype HIn. apply Rcd.type_of_StrT. rewrite Htype; assumption. Qed.
+
+    Lemma type_of_GVertexT (Hty : ty k = Some Value.GVertexT) :
+      exists v, r k = Some (Value.GVertex v).
+    Proof using Htype HIn. apply Rcd.type_of_GVertexT. rewrite Htype; assumption. Qed.
+
+    Lemma type_of_GEdgeT (Hty : ty k = Some Value.GEdgeT) :
+      exists e, r k = Some (Value.GEdge e).
+    Proof using Htype HIn. apply Rcd.type_of_GEdgeT. rewrite Htype; assumption. Qed.
+
+    Lemma type_of_None (Hty : ty k = None) :
+      r k = None.
+    Proof using Htype HIn. apply Rcd.type_of_None. rewrite Htype; assumption. Qed.
+  End type_ofT.
+
   #[global]
-  Hint Resolve of_type_cons of_type_cons_l of_type_cons_r empty_of_type : core.
+  Hint Unfold of_type : type_of_db.
 
-  (* The empty table is well-formed *)
-  Lemma empty_wf : wf empty.
-  Proof. intros r1 r2 HIn1 HIn2. inv HIn1. Qed.
+  #[global]
+  Hint Resolve of_type_cons of_type_cons_l of_type_cons_r empty_of_type : type_of_db.
 
-  (* Predicate that defines the domain of a table *)
-  Definition in_dom (k : string) (T : t) :=
-    match T with
-    | r :: _ => Rcd.in_dom k r
-    | nil => False
-    end.
+  #[global]
+  Hint Rewrite of_type_unique : type_of_db.
 
-  (* (* The domain of a well-formed table is the same as
-     the domain of any of its records *)
-  Lemma in_dom_wf : forall T r,
-    wf T -> In r T -> forall k, in_dom k T <-> Rcd.in_dom k r.
-  Proof.
-    intros T r Hwf HIn k.
-    destruct T as [| r1 ?].
-    - inversion HIn.
-    - apply Hwf.
-      + left. reflexivity.
-      + apply HIn.
-  Qed. *)
+  #[global]
+  Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
 End BindingTable.
 
 Module Path.
@@ -624,15 +617,14 @@ Module EvalQuerySpec.
     eval_query : PropertyGraph.t -> Query.t -> option BindingTable.t;
 
     match_clause_eval : forall g path pattern table r,
-      BindingTable.wf table ->
-        exists table', eval_clause g (Clause.MATCH pattern) table = Some table' /\
-          In r table' <->
-            Path.matches g r path pattern /\
-            Rcd.matches_pattern_dom r pattern /\
-            exists r1 r2,
-              r = Rcd.join r1 r2 /\ 
-              Rcd.disjoint r1 r2 /\
-              In r1 table;
+      exists table', eval_clause g (Clause.MATCH pattern) table = Some table' /\
+        In r table' <->
+          Path.matches g r path pattern /\
+          Rcd.matches_pattern_dom r pattern /\
+          exists r1 r2,
+            r = Rcd.join r1 r2 /\ 
+            Rcd.disjoint r1 r2 /\
+            In r1 table;
 
     query_eval : forall g q,
       Query.wf q ->
