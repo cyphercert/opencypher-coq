@@ -244,6 +244,14 @@ Module BindingTable.
     - now apply Htype_table.
   Qed.
 
+  Lemma of_type_concat (tables : list t) ty
+                       (Htype : forall table, In table tables -> of_type table ty) :
+    of_type (List.concat tables) ty.
+  Proof.
+    intros r HIn. apply in_concat in HIn. desf.
+    eapply Htype; eassumption.
+  Qed.
+
   (* The empty table is of any type *)
   Lemma empty_of_type ty : of_type empty ty.
   Proof. intros r HIn. inv HIn. Qed.

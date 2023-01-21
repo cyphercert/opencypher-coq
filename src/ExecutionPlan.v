@@ -280,7 +280,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       match r n_from, r n_to with
       | Some (Value.GVertex v_from), None =>
         Some (map (fun e => n_to   |-> Value.GVertex (e_to graph e);
-                           n_edge |-> Value.GEdge e)
+                           n_edge |-> Value.GEdge e; r)
           match d with
           | Pattern.OUT  => out_edges graph v_from
           | Pattern.IN   => in_edges  graph v_from
@@ -293,7 +293,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     Definition expand_into_single (r : Rcd.t) : option BindingTable.t :=
       match r n_from, r n_to with
       | Some (Value.GVertex v_from), Some (Value.GVertex v_to) =>
-          Some (map (fun e => n_edge |-> Value.GEdge e)
+          Some (map (fun e => n_edge |-> Value.GEdge e; r)
           match d with
           | Pattern.OUT  => edges_between graph v_from v_to
           | Pattern.IN   => edges_between graph v_to   v_from
@@ -303,22 +303,18 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       | _, _ => None
       end.
 
-    Definition expand_base (expand_single : Rcd.t -> option BindingTable.t) :=
-      option_map (@List.concat Rcd.t) (fold_option (map expand_single table)).
-
-    Definition expand_all := expand_base expand_all_single.
-
-    Definition expand_into := expand_base expand_into_single.
+    Definition expand_single (r : Rcd.t) : option BindingTable.t :=
+      match mode with
+      | All => expand_all_single r
+      | Into => expand_into_single r
+      end.
 
     Definition expand : option BindingTable.t :=
-      match mode with
-      | All => expand_all
-      | Into => expand_into
-      end.
+      option_map (@List.concat Rcd.t) (fold_option (map expand_single table)).
   End expand.
 
   #[local]
-  Hint Unfold expand expand_all expand_into expand_base expand_all_single expand_into_single : expand_db.
+  Hint Unfold expand expand_single expand_all_single expand_into_single : expand_db.
 
   (** If the inputs are well-formed then the operation will return the result *)
 
@@ -387,7 +383,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     apply in_map_iff in HIn as [r [? ?]]; subst.
 
     edestruct BindingTable.type_of_GVertexT with (k := n_from) as [v_from Hv_from],
-              BindingTable.type_of_GVertexT with (k := n_to) as [v_to Hv_to];
+              BindingTable.type_of_GVertexT with (k := n_to)   as [v_to   Hv_to];
               try eassumption.
     rewrite Hv_from. rewrite Hv_to.
     now eexists.
@@ -398,17 +394,26 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   #[local]
   Hint Unfold update t_update Pattern.name equiv_decb
     BindingTable.of_type Rcd.type_of : unfold_pat.
+
+  Ltac solve_type_of := now (
+    extensionality k;
+    autounfold with unfold_pat in *;
+    desf).
+
+  Ltac solve_type_of_extension r ty :=
+    eenough (Rcd.type_of r = ty);
+    [ solve_type_of | auto ].
   
   Theorem scan_vertices_type graph table' n 
                            (Hres : scan_vertices n graph = Some table') :
     BindingTable.of_type table' (n |-> Value.GVertexT).
   Proof.
     unfold scan_vertices in Hres.
-    autounfold with unfold_pat in *.
     injection Hres as Hres. subst. intros r' HIn.
     apply in_map_iff in HIn as [r [Heq HIn]].
-    subst. extensionality k.
-    desf.
+    subst.
+
+    solve_type_of.
   Qed.
   
   Theorem filter_by_label_type graph table table' ty mode n l
@@ -422,21 +427,46 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     all: induction table; ins; desf; eauto with type_of_db.
   Qed.
 
+  Ltac inj_subst :=
+    repeat match goal with
+    | [ H : Some ?x = Some ?y |- _ ] => injection H as H; try subst y; try subst x
+    end.
+
+  Theorem expand_type graph table table' mode ty n_from n_edge n_to d
+                          (Hres : expand mode n_from n_edge n_to d graph table = Some table')
+                          (Htype : BindingTable.of_type table ty) :
+    match mode with
+    | All => BindingTable.of_type table' (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty)
+    | Into => BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty)
+    end.
+  Proof.
+    autounfold with expand_db in *.
+
+    edestruct (fold_option _) as [tables' | ] eqn:Hfold; [ eauto | inv Hres ].
+    simpls; inj_subst.
+
+    destruct mode.
+    all: apply BindingTable.of_type_concat; intros table' HIn_tables'.
+    all: eassert (Hmap : In (Some table') (map _ table));
+         [ eapply fold_option_In; eassumption | clear Hfold; clear HIn_tables' ].
+
+    all: apply in_map_iff in Hmap as [r ?]; desf.
+    all: intros r' HIn'.
+    all: apply in_map_iff in HIn'; desf.
+    all: solve_type_of_extension r ty.
+  Qed.
+
   Theorem expand_all_type graph table table' ty n_from n_edge n_to d
                           (Hres : expand All n_from n_edge n_to d graph table = Some table')
                           (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
-  Proof.
-  Admitted.
-
+  Proof. eapply expand_type with (mode := All); eassumption. Qed.
 
   Theorem expand_into_type graph table table' ty n_from n_edge n_to d
                           (Hres : expand Into n_from n_edge n_to d graph table = Some table')
                           (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
-  Proof.
-  Admitted.
-
+  Proof. eapply expand_type with (mode := Into); eassumption. Qed.
 
   (** scan_vertices specification *)
 

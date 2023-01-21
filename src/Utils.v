@@ -175,3 +175,11 @@ Section filter_map.
 End filter_map.
 
 Arguments filter_map {A B} f xs.
+
+Lemma option_map_some (A B : Type) (f : A -> B) (a : option A) (y : B)
+                      (Hres : option_map f a = Some y) :
+  exists x, f x = y /\ a = Some x.
+Proof.
+  destruct a as [x |]; [exists x | inv Hres].
+  split; simpls; desf.
+Qed.
