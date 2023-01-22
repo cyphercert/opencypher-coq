@@ -201,6 +201,14 @@ Module ExecutionPlan.
   Module EvalPlan (S : Spec).
     Import S.
 
+    #[local]
+    Hint Resolve scan_vertices_type filter_by_label_type
+                expand_all_type expand_into_type : type_axioms.
+
+    #[local]
+    Hint Resolve scan_vertices_wf filter_vertices_by_label_wf filter_edges_by_label_wf
+                 expand_all_wf expand_into_wf : wf_axioms.
+
     Section eval.
       Variable graph : PropertyGraph.t.
       Fixpoint eval (plan : ExecutionPlan.t) :=
@@ -223,7 +231,7 @@ Module ExecutionPlan.
       all: destruct (eval graph plan); try discriminate.
 
       2: destruct mode.
-      all: eauto using filter_by_label_type, expand_all_type, expand_into_type.
+      all: eauto with type_axioms.
     Qed.
 
     Lemma type_of_types plan k :
@@ -243,9 +251,8 @@ Module ExecutionPlan.
       induction plan. all: simpl in *; desf; desf.
       { apply scan_vertices_wf... }
       all: destruct IHplan as [table IH]...
-      all: rewrite IH.
-      all: eauto using filter_vertices_by_label_wf, filter_edges_by_label_wf,
-                       expand_all_wf, expand_into_wf, eval_type_of.
+      all: rewrite IH; simpl.
+      all: eauto using eval_type_of with wf_axioms.
     Qed.
   End EvalPlan.
 End ExecutionPlan.
