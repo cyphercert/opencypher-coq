@@ -29,6 +29,24 @@ Module ExpandMode .
   .
 End ExpandMode.
 
+(* r' is expanded from r by traversing one edge *)
+Definition expansion_of (g : PropertyGraph.t) (r' r : Rcd.t)
+                        (mode : ExpandMode.t)
+                        (n_from n_edge n_to : Pattern.name)
+                        (d : Pattern.direction) :=
+  exists v_from e v_to,
+    << HIn_e : In e (edges g) >> /\
+    << Hdir : Path.matches_direction g v_from v_to e d >> /\
+    << Hval_from : r n_from = Some (Value.GVertex v_from) >> /\
+    match mode with
+    | ExpandMode.All =>
+      << Hval_to : r n_to = None >> /\
+      << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >>
+    | ExpandMode.Into =>
+      << Hval_to : r n_to = Some (Value.GVertex v_to) >> /\
+      << Hval' : r' = (n_edge |-> Value.GEdge e; r) >>
+    end.
+
 Import FilterMode.
 Import ExpandMode.
 
@@ -120,8 +138,16 @@ Module ExecutionPlan.
           r n = Some (Value.GEdge e) -> In r table' <->
             (elabel graph e = l /\ In r table).
 
-      (** expand_all specification *)
+      (** expand specification *)
 
+      Axiom expand_spec : forall r r' mode n_from n_edge n_to d,
+        expand mode n_from n_edge n_to d graph table = Some table' ->
+          expansion_of graph r' r mode n_from n_edge n_to d ->
+            In r table -> In r' table'.
+
+      Axiom expand_spec' : forall r' mode n_from n_edge n_to d,
+        expand mode n_from n_edge n_to d graph table = Some table' -> In r' table' ->
+            exists r, In r table /\ expansion_of graph r' r mode n_from n_edge n_to d.
     End axioms.
   End Spec.
 
@@ -279,8 +305,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     Definition expand_all_single (r : Rcd.t) : option BindingTable.t :=
       match r n_from, r n_to with
       | Some (Value.GVertex v_from), None =>
-        Some (map (fun e => n_to   |-> Value.GVertex (e_to graph e);
-                           n_edge |-> Value.GEdge e; r)
+        Some (map (fun '(e, v_to) => n_to   |-> Value.GVertex v_to;
+                                     n_edge |-> Value.GEdge e; r)
           match d with
           | Pattern.OUT  => out_edges graph v_from
           | Pattern.IN   => in_edges  graph v_from
@@ -432,6 +458,22 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     | [ H : Some ?x = Some ?y |- _ ] => injection H as H; try subst y; try subst x
     end.
 
+  Theorem expand_single_type graph r table' mode n_from n_edge n_to d
+                          (Hres : expand_single mode n_from n_edge n_to d graph r = Some table') :
+    match mode with
+    | All => BindingTable.of_type table'
+        (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; Rcd.type_of r)
+    | Into => BindingTable.of_type table'
+        (n_edge |-> Value.GEdgeT; Rcd.type_of r)
+    end.
+  Proof.
+    autounfold with expand_db in *.
+    desf.
+    all: intros r' HIn'.
+    all: apply in_map_iff in HIn'; desf.
+    all: solve_type_of_extension r (Rcd.type_of r).
+  Qed.
+
   Theorem expand_type graph table table' mode ty n_from n_edge n_to d
                           (Hres : expand mode n_from n_edge n_to d graph table = Some table')
                           (Htype : BindingTable.of_type table ty) :
@@ -440,7 +482,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     | Into => BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty)
     end.
   Proof.
-    autounfold with expand_db in *.
+    unfold expand in *.
 
     edestruct (fold_option _) as [tables' | ] eqn:Hfold; [ eauto | inv Hres ].
     simpls; inj_subst.
@@ -451,9 +493,9 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
          [ eapply fold_option_In; eassumption | clear Hfold; clear HIn_tables' ].
 
     all: apply in_map_iff in Hmap as [r ?]; desf.
-    all: intros r' HIn'.
-    all: apply in_map_iff in HIn'; desf.
-    all: solve_type_of_extension r ty.
+    all: assert (Rcd.type_of r = ty) as Hty by auto; subst.
+    { eapply expand_single_type with (mode := All); eassumption. }
+    { eapply expand_single_type with (mode := Into); eassumption. }
   Qed.
 
   Theorem expand_all_type graph table table' ty n_from n_edge n_to d
@@ -510,6 +552,90 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     1: apply filter_In in H.
     2: apply filter_In; split.
     all: desf.
+  Qed.
+  
+  (** expand specification *)
+
+  Theorem expand_single_spec graph table' r r' mode n_from n_edge n_to d
+    (Hres : expand_single mode n_from n_edge n_to d graph r = Some table') :
+      expansion_of graph r' r mode n_from n_edge n_to d <-> In r' table'.
+  Proof.
+    split; ins.
+    all: unfold expansion_of, Path.matches_direction in *.
+
+    - destruct mode; desf.
+      all: autounfold with expand_db in Hres.
+      all: rewrite Hval_from, Hval_to in Hres; desf.
+      all: apply in_map_iff.
+      all: try exists (e, v_to).
+      all: try exists e.
+      all: split; [ now reflexivity | ].
+      all: try apply in_or_app.
+      all: try rewrite -> in_edges_In.
+      all: try rewrite -> out_edges_In.
+      all: repeat rewrite -> edges_between_In.
+      all: unfold e_from, e_to; destruct (ends graph e); desf.
+      all: auto.
+      
+    - all: autounfold with expand_db in Hres.
+      destruct mode; desf.
+      all: match goal with
+           | [ H : In _ (map _ _) |- _ ] => apply in_map_iff in H; desf
+           end.
+      all: try match goal with
+           | [ H : In _ (_ ++ _) |- _ ] => apply in_app_or in H
+           end; desf.
+      all: match goal with
+           | [ H : In _ (out_edges _ _) |- _ ] => apply out_edges_In in H
+           | [ H : In _ (in_edges _ _) |- _ ] => apply in_edges_In in H
+           | [ H : In _ (edges_between _ _ _) |- _ ] => apply edges_between_In in H
+           end; desf.
+      all: eexists; eexists; eexists.
+      all: repeat split.
+      all: try assumption.
+
+      all: unfold e_from, e_to in *; edestruct (ends graph _); desf; simpls.
+      all: auto.
+  Qed.
+
+  Theorem expand_spec graph table table' r r' mode n_from n_edge n_to d
+      (Hres : expand mode n_from n_edge n_to d graph table = Some table')
+      (Hexp : expansion_of graph r' r mode n_from n_edge n_to d)
+      (HIn : In r table) : In r' table'.
+  Proof.
+    unfold expand in *.
+    edestruct (fold_option _) as [tables' | ] eqn:Hfold; [ eauto | inv Hres ].
+    simpls; inj_subst.
+
+    eassert (Hmap : In (_ r) (map _ table)).
+    { now eapply in_map. }
+
+    eassert (exists table', _ r = Some table') as [table' Hres].
+    { eapply fold_option_some_inv in Hfold as [table' Heq].
+      exists table'. all: eassumption. }
+
+    apply in_concat. exists table'. split.
+    { eapply fold_option_In. eassumption. unfold BindingTable.t in *.
+      now rewrite <- Hres. }
+    eapply expand_single_spec; eauto.
+  Qed.
+
+  Theorem expand_spec' graph table table' r' mode n_from n_edge n_to d
+    (Hres : expand mode n_from n_edge n_to d graph table = Some table')
+    (HIn : In r' table') :
+      exists r, In r table /\ expansion_of graph r' r mode n_from n_edge n_to d.
+  Proof.
+    unfold expand in *.
+    edestruct (fold_option _) as [tables' | ] eqn:?; [ eauto | inv Hres ].
+    simpls; inj_subst.
+
+    apply in_concat in HIn as [table' ?]; desf.
+    eassert (Hmap : In (Some table') (map _ table)).
+    { eapply fold_option_In; eassumption. }
+
+    apply in_map_iff in Hmap as [r ?]; desf.
+    exists r. split. { assumption. }
+    eapply expand_single_spec; eassumption.
   Qed.
 End ExecutionPlanImpl.
 

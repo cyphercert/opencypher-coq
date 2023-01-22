@@ -384,17 +384,6 @@ Module Path.
         matches (Path.hop p e v) (Pattern.hop pi pe pv)
     .
   End matches.
-  
-  (* r' is expanded from r by traversing one edge *)
-  Definition expansion_of (g : PropertyGraph.t) (r' r : Rcd.t)
-                          (n_from n_edge n_to : Pattern.name)
-                          (d : Pattern.direction) :=
-    exists v_from e v_to,
-      << HIn_e : In e (edges g) >> /\
-      << Hval_from : r n_from = Some (Value.GVertex v_from) >> /\
-      << Hval_to : r n_from = None \/ r n_from = Some (Value.GVertex v_to) >> /\
-      << Hdir : matches_direction g v_from v_to e d >> /\
-      << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >>.
 End Path.
 
 (* Notation "g , u , p '|=' pi" := (Path.matches g u p pi) (at level 80, p at next level, u at next level, pi at next level, no associativity) : type_scope. *)

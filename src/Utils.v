@@ -135,6 +135,18 @@ Proof.
   subst. simpl. rewrite IHxs. simpl. now eexists.
 Qed.
 
+Lemma fold_option_some_inv {A : Type} (xs : list (option A)) (xs' : list A) (a : option A)
+                           (Hres : fold_option xs = Some xs') (HIn : In a xs) :
+  exists a', a = Some a'.
+Proof.
+  generalize dependent xs'.
+  induction xs as [| x xs]; ins.
+  simpls. unfold option_bind in *.
+  desf. { now eexists. }
+
+  eapply IHxs; eauto.
+Qed.
+
 Lemma fold_option_In {A : Type} (xs : list (option A)) (xs' : list A) (a' : A) 
                      (H : fold_option xs = Some xs') :
   In (Some a') xs <-> In a' xs'.
@@ -175,6 +187,29 @@ Section filter_map.
 End filter_map.
 
 Arguments filter_map {A B} f xs.
+
+Lemma filter_map_In {A B : Type} (f : A -> option B) (xs : list A) (y : B) :
+  In y (filter_map f xs) <-> exists x, f x = Some y /\ In x xs.
+Proof.
+  unfold filter_map.
+  induction xs as [| x xs IHxs ]; simpls.
+  { split; ins; desf. }
+
+  split; ins.
+  - desf; simpls; desf.
+    all: try (eexists; split; eauto; now left).
+    all: try match goal with
+         | [ H : In _ _, IH : In _ _ -> _ |- _ ] => apply IH in H
+         end; desf; eauto.
+
+  - desf; simpls.
+    all: try now left.
+    all: try right.
+    all: match goal with
+         | [ IH : _ -> In _ _  |- _ ] => apply IH
+         end.
+    all: eexists; split; eauto.
+Qed.
 
 Lemma option_map_some (A B : Type) (f : A -> B) (a : option A) (y : B)
                       (Hres : option_map f a = Some y) :

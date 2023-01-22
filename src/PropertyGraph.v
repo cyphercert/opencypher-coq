@@ -6,7 +6,7 @@ Require Import Maps.
 Require Import Bool.
 Import ListNotations.
 
-
+From hahn Require Import HahnBase.
 
 Module Property.
 
@@ -88,14 +88,55 @@ Module PropertyGraph.
   Definition e_from (g : t) (e : edge) := fst (ends g e).
   Definition e_to   (g : t) (e : edge) := snd (ends g e).
 
-  Definition in_edges (g : t) (v : vertex) :=
-    filter (fun e => e_from g e ==b v) (edges g).
-  
   Definition out_edges (g : t) (v : vertex) :=
-    filter (fun e => e_to g e ==b v) (edges g).
+    filter_map (fun e => if e_from g e ==b v then Some (e, e_to g e) else None) (edges g).
+
+  Definition in_edges (g : t) (v : vertex) :=
+    filter_map (fun e => if e_to g e ==b v then Some (e, e_from g e) else None) (edges g).
 
   Definition edges_between (g : t) (from to : vertex) :=
     filter (fun e => (e_from g e ==b from) && (e_to g e ==b to)) (edges g).
+
+  Theorem out_in_between_edges_In g e v v' :
+    (In (e, v') (out_edges g v) <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v') /\
+    (In (e, v') (in_edges g v) <-> In e (edges g) /\ e_to g e = v /\ e_from g e = v') /\
+    (In e (edges_between g v v') <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v').
+  Proof.
+    split; [|split].
+    
+    all: unfold out_edges, in_edges, edges_between, e_from, e_to.
+    all: try rewrite filter_map_In.
+    all: try rewrite filter_In.
+    all: split; ins; desf.
+    all: try exists e.
+    all: try erewrite equiv_decb_true.
+    all: try match goal with 
+         | Heq : (_ && _ = true) |- _ => apply andb_true_iff in Heq; destruct Heq
+         end.
+    all: repeat match goal with 
+         | Heq : (_ = true) |- _ => apply equiv_decb_true' in Heq
+         end.
+    all: edestruct (ends g _); desf.
+    { rewrite andb_true_iff. rewrite equiv_decb_true_iff. auto. }
+  Qed.
+
+  Lemma out_edges_In g e v v' :
+    In (e, v') (out_edges g v) <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v'.
+  Proof.
+    edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
+  Qed.
+
+  Lemma in_edges_In g e v v' :
+    In (e, v') (in_edges g v) <-> In e (edges g) /\ e_to g e = v /\ e_from g e = v'.
+  Proof.
+    edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
+  Qed.
+
+  Lemma edges_between_In g e v v' :
+    In e (edges_between g v v') <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v'.
+  Proof.
+    edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
+  Qed.
 
   Record wf (g : t) := mk_wf {
     ends_In : forall v v' e,
