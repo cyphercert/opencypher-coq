@@ -223,9 +223,7 @@ Module ExecutionPlan.
       all: destruct (eval graph plan); try discriminate.
 
       2: destruct mode.
-      - eapply filter_by_label_type; eauto.
-      - eapply expand_all_type; eauto.
-      - eapply expand_into_type; eauto.
+      all: eauto using filter_by_label_type, expand_all_type, expand_into_type.
     Qed.
 
     Lemma type_of_types plan k :
@@ -246,11 +244,8 @@ Module ExecutionPlan.
       { apply scan_vertices_wf... }
       all: destruct IHplan as [table IH]...
       all: rewrite IH.
-      1: eapply filter_vertices_by_label_wf...
-      2: eapply filter_edges_by_label_wf...
-      3: eapply expand_all_wf...
-      4: eapply expand_into_wf...
-      all: eapply eval_type_of...
+      all: eauto using filter_vertices_by_label_wf, filter_edges_by_label_wf,
+                       expand_all_wf, expand_into_wf, eval_type_of.
     Qed.
   End EvalPlan.
 End ExecutionPlan.
@@ -576,7 +571,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       all: repeat rewrite -> edges_between_In.
       all: unfold e_from, e_to; destruct (ends graph e); desf.
       all: auto.
-      
+
     - all: autounfold with expand_db in Hres.
       destruct mode; desf.
       all: match goal with
