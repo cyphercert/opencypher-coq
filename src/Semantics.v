@@ -325,14 +325,11 @@ Module Path.
         matches_vlabels : << Hnil : Pattern.vlabels p = nil >> \/
           exists l, << HIn_pattern : In l (Pattern.vlabels p) >> /\
                     << HIn_graph : In l (PropertyGraph.vlabels g v) >>;
-        matches_vprops : forall prop (HIn : In prop (Pattern.vprops p)),
-          In prop (PropertyGraph.vprops g v);
       }.
 
     Record matches_pedge (e : edge) (p : pedge) : Prop := {
         matches_ename : r (Pattern.ename p) = Some (Value.GEdge e);
         matches_elabels : Pattern.elabels p = nil \/ In (PropertyGraph.elabel g e) (Pattern.elabels p);
-        matches_eprops : forall prop, In prop (Pattern.eprops p) -> In prop (PropertyGraph.eprops g e);
       }.
 
     Definition matches_direction (from to : vertex) (e : edge) (d : direction) : Prop :=
