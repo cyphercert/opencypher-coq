@@ -70,11 +70,11 @@ Definition property_graph1 : PropertyGraph.t :=
 
   Definition vertex_pattern1 : Pattern.pvertex :=
     {| Pattern.vlabels := ["USER"];
-       Pattern.vname   := None;
+       Pattern.vname   := "p";
        Pattern.vprops  := nil |}.
 
   Definition edge_pattern1 : Pattern.pedge := 
-    {| Pattern.ename   := None;
+    {| Pattern.ename   := "k";
        Pattern.elabels := nil;
        Pattern.eprops  := nil;
        Pattern.edir    := Pattern.BOTH |}.
@@ -101,12 +101,12 @@ Definition property_graph1 : PropertyGraph.t :=
   Proof. unfold evaluated. simpl. Qed.* * *)
 
   Definition vertex_pattern2 : Pattern.pvertex :=
-    {| Pattern.vname   := None;
+    {| Pattern.vname   := "t";
        Pattern.vlabels := ["HOST"];
        Pattern.vprops  := nil |}.
 
   Definition edge_pattern2 : Pattern.pedge :=
-    {| Pattern.ename   := None;
+    {| Pattern.ename   := "r";
        Pattern.elabels := ["FRIEND_OF"];
        Pattern.eprops  := nil;
        Pattern.edir    := Pattern.BOTH; |}.
@@ -129,7 +129,7 @@ Definition property_graph1 : PropertyGraph.t :=
   Definition num5 {length_nat: nat} : ord DataExamples.length_nat := @Ord DataExamples.length_nat 5 lt5.
 
   Definition edge_pattern3 : Pattern.pedge :=
-    {| Pattern.ename   := None;
+    {| Pattern.ename   := "e";
        Pattern.elabels := ["KNOWS"];
        Pattern.eprops  := nil;
        Pattern.edir    := Pattern.BOTH |}.
