@@ -322,14 +322,14 @@ Module Path.
 
     Record matches_pvertex (v : vertex) (p : pvertex) : Prop := {
         matches_vname : r (Pattern.vname p) = Some (Value.GVertex v);
-        matches_vlabels : << Hnil : Pattern.vlabels p = nil >> \/
-          exists l, << HIn_pattern : In l (Pattern.vlabels p) >> /\
-                    << HIn_graph : In l (PropertyGraph.vlabels g v) >>;
+        matches_vlabel : forall l, Pattern.vlabel p = Some l ->
+          In l (PropertyGraph.vlabels g v);
       }.
 
     Record matches_pedge (e : edge) (p : pedge) : Prop := {
         matches_ename : r (Pattern.ename p) = Some (Value.GEdge e);
-        matches_elabels : Pattern.elabels p = nil \/ In (PropertyGraph.elabel g e) (Pattern.elabels p);
+        matches_elabel : forall l, Pattern.elabel p = Some l ->
+          PropertyGraph.elabel g e = l;
       }.
 
     Definition matches_direction (from to : vertex) (e : edge) (d : direction) : Prop :=

@@ -37,7 +37,7 @@ Module Pattern.
 
   Record pvertex := {
       vname   : name;
-      vlabels : list PropertyGraph.label;
+      vlabel  : option PropertyGraph.label;
       vprops  : list (Property.name * Property.t);
     }.
 
@@ -54,7 +54,7 @@ Module Pattern.
 
   Record pedge := {
       ename   : name;
-      elabels : list PropertyGraph.label;
+      elabel  : option PropertyGraph.label;
       eprops  : list (Property.name * Property.t);
       edir    : direction;
     }.
