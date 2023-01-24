@@ -271,31 +271,30 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     Variable graph : PropertyGraph.t.
     Variable table : BindingTable.t.
 
-    Definition filter_vertices_by_label :  option BindingTable.t :=
-      let f (r : Rcd.t) :=
-        match r n with
-        | Some (Value.GVertex v) => In_decb l (vlabels graph v)
-        | _ => false
-        end
-      in Some (filter f table).
+    Definition vertex_has_label (r : Rcd.t) : bool :=
+      match r n with
+      | Some (Value.GVertex v) => In_decb l (vlabels graph v)
+      | _ => false
+      end.
 
-    Definition filter_edges_by_label : option BindingTable.t :=
-      let f (r : Rcd.t) :=
-        match r n with
-        | Some (Value.GEdge e) => elabel graph e ==b l
-        | _ => false
-        end
-      in Some (filter f table).
+    Definition edge_has_label (r : Rcd.t) : bool :=
+      match r n with
+      | Some (Value.GEdge e) => elabel graph e ==b l
+      | _ => false
+      end.
+
+    Definition has_label : Rcd.t -> bool :=
+      match mode with
+      | Vertices => vertex_has_label
+      | Edges => edge_has_label
+      end.
 
     Definition filter_by_label : option BindingTable.t :=
-      match mode with
-      | Vertices => filter_vertices_by_label
-      | Edges => filter_edges_by_label
-      end.
+      Some (filter has_label table).
   End filter_by_label.
 
   #[local]
-  Hint Unfold filter_by_label filter_vertices_by_label filter_edges_by_label : filter_by_label_db.
+  Hint Unfold filter_by_label has_label vertex_has_label edge_has_label : filter_by_label_db.
 
   Section expand.
     Variable mode : ExpandMode.t.
@@ -352,24 +351,62 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     now eexists.
   Qed.
 
+  Theorem filter_by_label_wf graph table ty mode n l
+                             (Hwf : PropertyGraph.wf graph)
+                             (Htype : BindingTable.of_type table ty)
+                             (Hty : match mode with
+                                    | Vertices => ty n = Some Value.GVertexT
+                                    | Edges    => ty n = Some Value.GEdgeT
+                                    end) :
+    exists table', filter_by_label mode n l graph table = Some table'.
+  Proof.
+    autounfold with filter_by_label_db.
+    all: induction table as [| r table IH]; ins; eauto.
+  Qed.
+
   Theorem filter_vertices_by_label_wf graph table ty n l
                                     (Hwf : PropertyGraph.wf graph)
                                     (Htype : BindingTable.of_type table ty)
                                     (Hty : ty n = Some Value.GVertexT) :
-    exists table', filter_vertices_by_label n l graph table = Some table'.
-  Proof.
-    autounfold with filter_by_label_db.
-    induction table as [| r table IH]; ins; eauto.
-  Qed.
+    exists table', filter_by_label Vertices n l graph table = Some table'.
+  Proof. eapply filter_by_label_wf with (mode := Vertices); eassumption. Qed.
 
   Theorem filter_edges_by_label_wf graph table ty n l
                                  (Hwf : PropertyGraph.wf graph)
                                  (Htype : BindingTable.of_type table ty)
                                  (Hty : ty n = Some Value.GEdgeT) :
-    exists table', filter_edges_by_label n l graph table = Some table'.
+    exists table', filter_by_label Edges n l graph table = Some table'.
+  Proof. eapply filter_by_label_wf with (mode := Edges); eassumption. Qed.
+
+  Theorem expand_wf graph table ty mode n_from n_edge n_to d
+                    (Hwf : PropertyGraph.wf graph)
+                    (Htype : BindingTable.of_type table ty)
+                    (Hty_from : ty n_from = Some Value.GVertexT)
+                    (Hty_edge : ty n_edge = None)
+                    (Hty_to   : match mode with
+                                | All => ty n_to = None
+                                | Into => ty n_to = Some Value.GVertexT 
+                                end) :
+    exists table', expand mode n_from n_edge n_to d graph table = Some table'.
   Proof.
-    autounfold with filter_by_label_db.
-    induction table as [| r table IH]; ins; eauto.
+    all: autounfold with expand_db.
+    
+    eenough (exists t, fold_option _ = Some t) as [t Hfold]
+      by (rewrite Hfold; now eexists).
+
+    apply fold_option_some; intros a HIn; simpls.
+    apply in_map_iff in HIn as [r [? ?]]; subst.
+
+    edestruct BindingTable.type_of_GVertexT with (k := n_from) as [v_from Hv_from];
+      try eassumption.
+    rewrite Hv_from.
+
+    destruct mode.
+    2: edestruct BindingTable.type_of_GVertexT with (k := n_to)   as [v_to   Hv_to];
+        try eassumption.
+    2: rewrite Hv_to.
+    1: erewrite BindingTable.type_of_None; try eassumption.
+    all: now eexists.
   Qed.
 
   Theorem expand_all_wf graph table ty n_from n_edge n_to d
@@ -379,20 +416,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                   (Hty_edge : ty n_edge = None)
                   (Hty_to   : ty n_to   = None) :
     exists table', expand All n_from n_edge n_to d graph table = Some table'.
-  Proof.
-    autounfold with expand_db.
-    
-    eenough (exists t, fold_option _ = Some t) as [t Hfold].
-    { rewrite Hfold. now eexists. }
-
-    apply fold_option_some; intros a HIn; simpls.
-    apply in_map_iff in HIn as [r [? ?]]; subst.
-
-    edestruct BindingTable.type_of_GVertexT as [v_from Hv_from]; try eassumption.
-    rewrite Hv_from.
-    erewrite BindingTable.type_of_None; try eassumption.
-    now eexists.
-  Qed.
+  Proof. eapply expand_wf with (mode := All); eassumption. Qed.
 
   Theorem expand_into_wf graph table ty n_from n_edge n_to d
                   (Hwf : PropertyGraph.wf graph)
@@ -401,21 +425,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                   (Hty_edge : ty n_edge = None)
                   (Hty_to   : ty n_to   = Some Value.GVertexT) :
     exists table', expand Into n_from n_edge n_to d graph table = Some table'.
-  Proof.
-    autounfold with expand_db.
-    
-    eenough (exists t, fold_option _ = Some t) as [t Hfold].
-    { rewrite Hfold. now eexists. }
-
-    apply fold_option_some; intros a HIn; simpls.
-    apply in_map_iff in HIn as [r [? ?]]; subst.
-
-    edestruct BindingTable.type_of_GVertexT with (k := n_from) as [v_from Hv_from],
-              BindingTable.type_of_GVertexT with (k := n_to)   as [v_to   Hv_to];
-              try eassumption.
-    rewrite Hv_from. rewrite Hv_to.
-    now eexists.
-  Qed.
+  Proof. eapply expand_wf with (mode := Into); eassumption. Qed.
 
   (** If the operation returned some table then the type of the table is correct *)
 
@@ -530,30 +540,58 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   (** filter_by_label specification *)
 
-  Theorem filter_vertices_by_label_spec graph table table' n l v r 
-                                      (Hres : filter_by_label Vertices n l graph table = Some table')
-                                      (Hval : r n = Some (Value.GVertex v)) :
-    In r table' <-> (In l (vlabels graph v) /\ In r table).
+  Theorem vertex_has_label_true_iff graph n l v r
+                                    (Hval : r n = Some (Value.GVertex v)) :
+    vertex_has_label n l graph r = true <-> In l (vlabels graph v).
   Proof.
-    autounfold with filter_by_label_db in Hres; desf.
-    rewrite <- In_decb_true_iff.
-    split; intros H.
-    1: apply filter_In in H.
-    2: apply filter_In; split.
-    all: desf.
+    unfold vertex_has_label.
+    rewrite Hval.
+    now rewrite <- In_decb_true_iff.
+  Qed.
+
+  Theorem edge_has_label_true_iff graph n l e r
+                                  (Hval : r n = Some (Value.GEdge e)) :
+    edge_has_label n l graph r = true <-> elabel graph e = l.
+  Proof.
+    unfold edge_has_label.
+    rewrite Hval.
+    now rewrite -> equiv_decb_true_iff.
+  Qed.
+
+  Theorem filter_by_label_spec graph table table' mode n l r 
+    (Hres : filter_by_label mode n l graph table = Some table') :
+      match mode with
+      | Vertices => forall v, r n = Some (Value.GVertex v) ->
+          In r table' <-> (In l (vlabels graph v) /\ In r table)
+      | Edges    => forall e, r n = Some (Value.GEdge e) ->
+          In r table' <-> (elabel graph e = l /\ In r table)
+      end.
+  Proof.
+    unfold filter_by_label, has_label in Hres.
+    inj_subst.
+    destruct mode; ins.
+    1: rewrite <- vertex_has_label_true_iff; try eassumption.
+    2: rewrite <- edge_has_label_true_iff;   try eassumption.
+    all: rewrite and_comm.
+    all: apply filter_In.
+  Qed.
+
+  Theorem filter_vertices_by_label_spec graph table table' n l v r 
+    (Hres : filter_by_label Vertices n l graph table = Some table')
+    (Hval : r n = Some (Value.GVertex v)) :
+      In r table' <-> (In l (vlabels graph v) /\ In r table).
+  Proof.
+    generalize dependent v.
+    eapply filter_by_label_spec with (mode := Vertices); eassumption.
   Qed.
 
   Theorem filter_edges_by_label_spec graph table table' n l e r 
-                                   (Hres : filter_by_label Edges n l graph table = Some table')
-                                   (Hval : r n = Some (Value.GEdge e)) :
-    In r table' <-> (elabel graph e = l /\ In r table).
+    (Hres : filter_by_label Edges n l graph table = Some table')
+    (Hval : r n = Some (Value.GEdge e)) :
+      In r table' <-> (elabel graph e = l /\ In r table).
   Proof.
-    autounfold with filter_by_label_db in Hres; desf.
-    rewrite <- equiv_decb_true_iff.
-    split; intros H.
-    1: apply filter_In in H.
-    2: apply filter_In; split.
-    all: desf.
+    generalize dependent e.
+    eapply filter_by_label_spec with (mode := Edges); eassumption.
   Qed.
   
   (** expand specification *)
