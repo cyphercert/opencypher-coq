@@ -1,6 +1,7 @@
 Require Import String.
 Require Import List.
 Import ListNotations.
+From hahn Require Import HahnBase.
 
 Require Import PropertyGraph.
 Require Import Maps.
@@ -100,7 +101,83 @@ Module Pattern.
     end.
 
   Definition wf (p : Pattern.t) :=
-    forall k, In k (dom_vertices p) -> In k (dom_edges p) -> False.
+    << Hcontra : forall k, In k (dom_vertices p) -> In k (dom_edges p) -> False >> /\
+    << Hdup : NoDup (dom_edges p) >>.
+
+  #[global]
+  Hint Constructors or and : pattern_wf_db.
+
+  #[global]
+  Hint Resolve NoDup_cons_l NoDup_cons_r conj : pattern_wf_db.
+
+  Ltac iauto := try solve [intuition (eauto with pattern_wf_db)].
+
+  Lemma hop_wf pi pe pv (Hwf : wf (Pattern.hop pi pe pv)) :
+    wf pi.
+  Proof.
+    unfold wf in *.
+    desf. split.
+    - intros k H1 H2. eapply Hcontra; simpls; eauto.
+    - iauto.
+  Qed.
+
+  Lemma wf__pe__dom_vertices pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    ~ In (Pattern.ename pe) (Pattern.dom_vertices pi).
+  Proof.
+    unfold Pattern.wf in *. desf.
+    intros ?; exfalso; eapply Hcontra; [ right | left ]; eauto.
+  Qed.
+
+  Lemma wf__pe__dom_edges pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    ~ In (Pattern.ename pe) (Pattern.dom_edges pi).
+  Proof.
+    unfold Pattern.wf in *. desf.
+    apply NoDup_cons_iff in Hdup as [? ?]; auto.
+  Qed.
+
+  Lemma wf__pv__dom_edges pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    ~ In (Pattern.vname pv) (Pattern.dom_edges pi).
+  Proof.
+    unfold Pattern.wf in *. desf.
+    intros ?; exfalso; eapply Hcontra; [ left | right ]; eauto.
+  Qed.
+
+  Lemma wf__pv_neq_pe pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    Pattern.vname pv =/= Pattern.ename pe.
+  Proof.
+    unfold Pattern.wf in *. desf.
+    intros ?; exfalso; eapply Hcontra; [ left | left ]; eauto.
+  Qed.
+
+  Lemma wf__pe_neq_pv pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    Pattern.ename pe =/= Pattern.vname pv.
+  Proof.
+    symmetry. eapply wf__pv_neq_pe; eassumption.
+  Qed.
+
+  Lemma wf__last_neq_pe pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    Pattern.vname (Pattern.last pi) =/= Pattern.ename pe.
+  Proof.
+    unfold Pattern.wf in *. desf.
+    destruct pi; simpls; intros ?; eauto.
+  Qed.
+
+  Lemma wf__pe_neq_last pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    Pattern.ename pe =/= Pattern.vname (Pattern.last pi).
+  Proof.
+    symmetry. eapply wf__last_neq_pe; eassumption.
+  Qed.
+
+  Lemma wf__last__dom_vertices pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+    In (Pattern.vname (Pattern.last pi)) (Pattern.dom_vertices pi).
+  Proof.
+    unfold Pattern.wf in *. desf.
+    destruct pi; now left.
+  Qed.
+
+  #[global]
+  Hint Resolve hop_wf wf__pe__dom_vertices wf__pe__dom_edges wf__pv__dom_edges
+       wf__pv_neq_pe wf__last_neq_pe wf__last__dom_vertices : pattern_wf_db.
 End Pattern.
 
 (** Query definition **)

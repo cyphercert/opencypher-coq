@@ -91,6 +91,13 @@ Proof.
   apply Hneq. symmetry. apply Heq.
 Qed.
 
+#[global]
+Instance unequiv_symmetric {A : Type} : Symmetric (fun (x y : A) => x =/= y).
+Proof.
+  intros x y Hneq Heq.
+  apply Hneq. symmetry. apply Heq.
+Qed.
+
 Fixpoint In_dec {A : Type} `{EqDec A eq} (a : A) (xs : list A) : {In a xs} + {~ In a xs}.
   refine (match xs with
           | nil => right _
@@ -217,4 +224,22 @@ Lemma option_map_some (A B : Type) (f : A -> B) (a : option A) (y : B)
 Proof.
   destruct a as [x |]; [exists x | inv Hres].
   split; simpls; desf.
+Qed.
+
+Lemma NoDup_cons_l (A : Type) (x : A) (xs : list A) (Hdup : NoDup (x :: xs)) :
+  ~ In x xs.
+Proof.
+  apply NoDup_cons_iff in Hdup. desf.
+Qed.
+
+Lemma NoDup_cons_r (A : Type) (x : A) (xs : list A) (Hdup : NoDup (x :: xs)) :
+  NoDup xs.
+Proof.
+  apply NoDup_cons_iff in Hdup. desf.
+Qed.
+
+Lemma NoDup_cons_contra (A : Type) (x : A) (xs : list A)
+                        (Hdup : NoDup (x :: xs)) (HIn : In x xs) : False.
+Proof.
+  eapply NoDup_cons_l; eassumption.
 Qed.

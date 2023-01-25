@@ -173,6 +173,17 @@ Module ExecutionPlan.
     | Expand Into n_from n_edge n_to d plan => n_edge |-> Value.GEdgeT; type_of plan
     end.
 
+  Lemma type_of_types plan k :
+    type_of plan k = Some Value.GVertexT \/
+    type_of plan k = Some Value.GEdgeT \/
+    type_of plan k = None.
+  Proof.
+    induction plan; simpl in *.
+    all: try unfold update, t_update, Pattern.name in *.
+    all: desf.
+    all: auto.
+  Qed.
+
   Fixpoint wf (plan : t) :=
     match plan with
     | ScanVertices n => True
@@ -232,17 +243,6 @@ Module ExecutionPlan.
 
       2: destruct mode.
       all: eauto with type_axioms.
-    Qed.
-
-    Lemma type_of_types plan k :
-      type_of plan k = Some Value.GVertexT \/
-      type_of plan k = Some Value.GEdgeT \/
-      type_of plan k = None.
-    Proof.
-      induction plan; simpl in *.
-      all: try unfold update, t_update, Pattern.name in *.
-      all: desf.
-      all: auto.
     Qed.
 
     Theorem eval_wf plan graph (Hwf : wf plan) (Hwf' : PropertyGraph.wf graph) :
@@ -428,19 +428,6 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Proof. eapply expand_wf with (mode := Into); eassumption. Qed.
 
   (** If the operation returned some table then the type of the table is correct *)
-
-  #[local]
-  Hint Unfold update t_update Pattern.name equiv_decb
-    BindingTable.of_type Rcd.type_of : unfold_pat.
-
-  Ltac solve_type_of := now (
-    extensionality k;
-    autounfold with unfold_pat in *;
-    desf).
-
-  Ltac solve_type_of_extension r ty :=
-    eenough (Rcd.type_of r = ty);
-    [ solve_type_of | auto ].
   
   Theorem scan_vertices_type graph table' n 
                            (Hres : scan_vertices n graph = Some table') :

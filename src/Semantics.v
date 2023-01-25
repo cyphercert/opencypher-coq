@@ -302,6 +302,19 @@ Module BindingTable.
   Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
 End BindingTable.
 
+#[global]
+Hint Unfold update t_update Pattern.name equiv_decb
+  BindingTable.of_type Rcd.type_of : unfold_pat.
+
+Ltac solve_type_of := now (
+  extensionality k;
+  autounfold with unfold_pat in *;
+  desf).
+
+Ltac solve_type_of_extension r ty :=
+  eenough (Rcd.type_of r = ty);
+  [ solve_type_of | auto ].
+
 Module Path.
 
   Inductive t :=
