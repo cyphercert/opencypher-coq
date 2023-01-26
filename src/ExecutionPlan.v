@@ -391,8 +391,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Proof.
     all: autounfold with expand_db.
     
-    eenough (exists t, fold_option _ = Some t) as [t Hfold]
-      by (rewrite Hfold; now eexists).
+    eenough (exists t, fold_option _ = Some t) as [t Hfold].
+    { rewrite Hfold. now eexists. }
 
     apply fold_option_some; intros a HIn; simpls.
     apply in_map_iff in HIn as [r [? ?]]; subst.
@@ -402,7 +402,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     rewrite Hv_from.
 
     destruct mode.
-    2: edestruct BindingTable.type_of_GVertexT with (k := n_to)   as [v_to   Hv_to];
+    2: edestruct BindingTable.type_of_GVertexT with (k := n_to) as [v_to Hv_to];
         try eassumption.
     2: rewrite Hv_to.
     1: erewrite BindingTable.type_of_None; try eassumption.
@@ -437,7 +437,6 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     injection Hres as Hres. subst. intros r' HIn.
     apply in_map_iff in HIn as [r [Heq HIn]].
     subst.
-
     solve_type_of.
   Qed.
   
@@ -454,7 +453,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Ltac inj_subst :=
     repeat match goal with
-    | [ H : Some ?x = Some ?y |- _ ] => injection H as H; try subst y; try subst x
+    | [ H : Some ?x = Some ?y |- _ ] =>
+        injection H as H; try subst y; try subst x
     end.
 
   Theorem expand_single_type graph r table' mode n_from n_edge n_to d
@@ -483,37 +483,44 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Proof.
     unfold expand in *.
 
-    edestruct (fold_option _) as [tables' | ] eqn:Hfold; [ eauto | inv Hres ].
+    edestruct (fold_option _) as [tables' | ] eqn:Hfold.
+    2: now inv Hres.
     simpls; inj_subst.
 
     destruct mode.
     all: apply BindingTable.of_type_concat; intros table' HIn_tables'.
     all: eassert (Hmap : In (Some table') (map _ table));
-         [ eapply fold_option_In; eassumption | clear Hfold; clear HIn_tables' ].
+         [ eapply fold_option_In; eassumption
+         | clear Hfold; clear HIn_tables' ].
 
     all: apply in_map_iff in Hmap as [r ?]; desf.
     all: assert (Rcd.type_of r = ty) as Hty by auto; subst.
     { eapply expand_single_type with (mode := All); eassumption. }
-    { eapply expand_single_type with (mode := Into); eassumption. }
+    eapply expand_single_type with (mode := Into); eassumption.
   Qed.
 
-  Theorem expand_all_type graph table table' ty n_from n_edge n_to d
-                          (Hres : expand All n_from n_edge n_to d graph table = Some table')
-                          (Htype : BindingTable.of_type table ty) :
-    BindingTable.of_type table' (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
+  Theorem expand_all_type
+    graph table table' ty n_from n_edge n_to d
+    (Hres : expand All n_from n_edge n_to d graph table = Some table')
+    (Htype : BindingTable.of_type table ty) :
+    BindingTable.of_type table'
+      (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
   Proof. eapply expand_type with (mode := All); eassumption. Qed.
 
-  Theorem expand_into_type graph table table' ty n_from n_edge n_to d
-                          (Hres : expand Into n_from n_edge n_to d graph table = Some table')
-                          (Htype : BindingTable.of_type table ty) :
+  Theorem expand_into_type
+    graph table table' ty n_from n_edge n_to d
+    (Hres : expand Into n_from n_edge n_to d graph table = Some table')
+    (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
   Proof. eapply expand_type with (mode := Into); eassumption. Qed.
 
   (** scan_vertices specification *)
 
-  Definition scan_vertices_spec graph table' n v 
-                                (Hres : scan_vertices n graph = Some table') :
-    (exists r, In r table' /\ r n = Some (Value.GVertex v)) <-> In v (vertices graph).
+  Definition scan_vertices_spec
+    graph table' n v 
+    (Hres : scan_vertices n graph = Some table') :
+    (exists r, In r table' /\ r n = Some (Value.GVertex v))
+      <-> In v (vertices graph).
   Proof.
     injection Hres as Hres. subst.
     split.
@@ -558,7 +565,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     inj_subst.
     destruct mode; ins.
     1: rewrite <- vertex_has_label_true_iff; try eassumption.
-    2: rewrite <- edge_has_label_true_iff;   try eassumption.
+    2: rewrite <-   edge_has_label_true_iff; try eassumption.
     all: rewrite and_comm.
     all: apply filter_In.
   Qed.
@@ -596,7 +603,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       all: apply in_map_iff.
       all: try exists (e, v_to).
       all: try exists e.
-      all: split; [ now reflexivity | ].
+      all: split; [ reflexivity | ].
       all: try apply in_or_app.
       all: try rewrite -> in_edges_In.
       all: try rewrite -> out_edges_In.
@@ -613,13 +620,15 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
            | [ H : In _ (_ ++ _) |- _ ] => apply in_app_or in H
            end; desf.
       all: match goal with
-           | [ H : In _ (out_edges _ _) |- _ ] => apply out_edges_In in H
-           | [ H : In _ (in_edges _ _) |- _ ] => apply in_edges_In in H
-           | [ H : In _ (edges_between _ _ _) |- _ ] => apply edges_between_In in H
+           | [ H : In _ (out_edges       _ _) |- _ ] =>
+               apply out_edges_In in H
+           | [ H : In _ (in_edges        _ _) |- _ ] =>
+               apply in_edges_In in H
+           | [ H : In _ (edges_between _ _ _) |- _ ] =>
+               apply edges_between_In in H
            end; desf.
-      all: eexists; eexists; eexists.
-      all: repeat split.
-      all: try assumption.
+      all: do 3 eexists.
+      all: splits; eauto.
 
       all: unfold e_from, e_to in *; edestruct (ends graph _); desf; simpls.
       all: auto.
@@ -631,29 +640,32 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       (HIn : In r table) : In r' table'.
   Proof.
     unfold expand in *.
-    edestruct (fold_option _) as [tables' | ] eqn:Hfold; [ eauto | inv Hres ].
+    edestruct (fold_option _) as [tables' | ] eqn:Hfold.
+    2: now inv Hres.
     simpls; inj_subst.
 
     eassert (Hmap : In (_ r) (map _ table)).
     { now eapply in_map. }
 
     eassert (exists table', _ r = Some table') as [table' Hres].
-    { eapply fold_option_some_inv in Hfold as [table' Heq].
-      exists table'. all: eassumption. }
+    { eapply fold_option_some_inv in Hfold as [table' Heq]; eauto. }
 
     apply in_concat. exists table'. split.
-    { eapply fold_option_In. eassumption. unfold BindingTable.t in *.
-      now rewrite <- Hres. }
-    eapply expand_single_spec; eauto.
+    2: now eapply expand_single_spec; eauto.
+    eapply fold_option_In; eauto.
+    unfold BindingTable.t in *.
+    now rewrite <- Hres.
   Qed.
 
   Theorem expand_spec' graph table table' r' mode n_from n_edge n_to d
     (Hres : expand mode n_from n_edge n_to d graph table = Some table')
     (HIn : In r' table') :
-      exists r, In r table /\ expansion_of graph r' r mode n_from n_edge n_to d.
+      exists r, In r table /\
+                expansion_of graph r' r mode n_from n_edge n_to d.
   Proof.
     unfold expand in *.
-    edestruct (fold_option _) as [tables' | ] eqn:?; [ eauto | inv Hres ].
+    edestruct (fold_option _) as [tables' | ] eqn:?.
+    2: now inv Hres.
     simpls; inj_subst.
 
     apply in_concat in HIn as [table' ?]; desf.
@@ -661,7 +673,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     { eapply fold_option_In; eassumption. }
 
     apply in_map_iff in Hmap as [r ?]; desf.
-    exists r. split. { assumption. }
+    exists r. split.
+    { assumption. }
     eapply expand_single_spec; eassumption.
   Qed.
 End ExecutionPlanImpl.

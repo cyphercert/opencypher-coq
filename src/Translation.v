@@ -69,7 +69,7 @@ Proof.
   all: unfold translate_pvertex.
   all: unfold translate_pedge.
 
-  { split; split; ins; desf; simpls.
+  { do 2 split; ins; desf; simpls.
     all: autounfold with unfold_pat in *.
     all: desf; simpls.
     all: eauto with pattern_wf_db.
@@ -91,7 +91,7 @@ Proof.
 
   all: autounfold with unfold_pat in *.
   all: desf; simpls.
-  all: try (left; now eauto with pattern_wf_db).
+  all: try now (left; eauto with pattern_wf_db).
   all: right; apply IHpi; [ split | ]; now eauto with pattern_wf_db.
 Qed.
 
@@ -125,7 +125,7 @@ Proof.
   ins. split.
   all: intros contra.
   1: apply translate_pattern__type_of_GVertexT in contra; try assumption.
-  2: apply translate_pattern__type_of_GEdgeT in contra; try assumption.
+  2: apply translate_pattern__type_of_GEdgeT   in contra; try assumption.
   all: congruence.
 Qed.
 
@@ -135,9 +135,8 @@ Proof.
   induction pi; simpls.
   2: assert (Pattern.wf pi) by (eapply Pattern.hop_wf; eassumption).
   all: unfold translate_pvertex, translate_pedge.
-  all: desf; simpls.
+  all: desf; simpls; splits; auto.
   all: normilize_bool.
-  all: repeat split.
   all: try apply translate_pattern__type_of_GVertexT; try assumption.
   all: try apply translate_pattern__type_of_None; try assumption.
   all: eauto with pattern_wf_db.
@@ -145,7 +144,6 @@ Proof.
   all: autounfold with unfold_pat in *.
   all: desf.
   all: unfold complement, equiv in *.
-  all: eauto with pattern_wf_db.
   all: try contradiction.
   all: try apply translate_pattern__type_of_GVertexT; try assumption.
   all: try (exfalso; simple eapply Pattern.wf__pe_neq_pv; eassumption).
@@ -165,8 +163,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec).
     (Hwf_g : PropertyGraph.wf graph) (Hwf : Pattern.wf pi) :
       exists table', eval_pattern graph pi = Some table'.
   Proof.
-    eapply eval_wf.
-    1: apply translate_pattern_wf.
-    all: assumption.
+    eapply eval_wf; eauto.
+    now apply translate_pattern_wf.
   Qed.
 End EvalQueryImpl.
