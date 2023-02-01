@@ -4,6 +4,7 @@ Require Export Coq.Strings.String.
 From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Lists.List.
 From Coq Require Import Classes.EquivDec.
+From hahn Require Import HahnBase.
 
 Require Import Utils.
 (**From Coq Require Import omega.Omega.**)
@@ -253,4 +254,74 @@ Proof.
   destruct (equiv_decbP n x) as [Heq | Hneq], (equiv_decbP m x) as [Heq' | Hneq'];
   try reflexivity.
   exfalso. apply H. rewrite Heq. rewrite <- Heq'. reflexivity.
+Qed.
+
+Definition disjoint {A : Type} (m1 m2 : partial_map A) : Prop := 
+  forall k, m1 k = None \/ m2 k = None.
+
+Definition join {A : Type} (m1 m2 : partial_map A) : partial_map A :=
+  fun k =>
+    match m1 k with
+    | Some val => Some val
+    | None     => m2 k
+    end.
+
+Lemma join_comm (A : Type) (m1 m2 : partial_map A) (Hdisj : disjoint m1 m2) :
+  (join m1 m2) = (join m2 m1).
+Proof.
+  extensionality k.
+  unfold join.
+  destruct Hdisj with k; desf.
+Qed.
+
+Lemma join_assoc (A : Type) (m1 m2 m3 : partial_map A) :
+  join m1 (join m2 m3) = join (join m1 m2) m3.
+Proof.
+  extensionality k.
+  unfold join.
+  desf.
+Qed.
+
+Lemma join_empty_r (A : Type) (m : partial_map A) :
+  join m empty = m.
+Proof.
+  extensionality k.
+  unfold join, empty, t_empty.
+  desf.
+Qed.
+
+Lemma join_empty_l (A : Type) (m : partial_map A) :
+  join empty m = m.
+Proof.
+  extensionality k.
+  unfold join, empty, t_empty.
+  desf.
+Qed.
+
+Lemma empty_disjoint_l (A : Type) (m : partial_map A) :
+  disjoint empty m.
+Proof.
+  unfold disjoint, empty, t_empty.
+  intros k. now left.
+Qed.
+
+Lemma empty_disjoint_r (A : Type) (m : partial_map A) :
+  disjoint m empty.
+Proof.
+  unfold disjoint, empty, t_empty.
+  intros k. now right.
+Qed.
+
+Lemma disjoint_comm (A : Type) (m1 m2 : partial_map A) (Hdisj : disjoint m1 m2) :
+  disjoint m2 m1.
+Proof.
+  unfold disjoint in *.
+  intros k.
+  destruct Hdisj with k; auto.
+Qed.
+
+Lemma disjoint_comm_iff (A : Type) (m1 m2 : partial_map A) :
+  disjoint m1 m2 <-> disjoint m2 m1.
+Proof.
+  split; apply disjoint_comm.
 Qed.

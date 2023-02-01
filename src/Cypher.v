@@ -100,6 +100,15 @@ Module Pattern.
     | start pv => nil
     end.
 
+  Lemma In_dom p x :
+    In x (dom p) <-> In x (dom_vertices p) \/ In x (dom_edges p).
+  Proof.
+    induction p; split; ins; desf; auto.
+    match goal with
+    | [ H : In _ _ -> In _ _ \/ In _ _ |- _ ] => destruct H; try assumption; auto
+    end.
+  Qed.
+
   Definition wf (p : Pattern.t) :=
     << Hcontra : forall k, In k (dom_vertices p) -> In k (dom_edges p) -> False >> /\
     << Hdup : NoDup (dom_edges p) >>.
@@ -108,9 +117,7 @@ Module Pattern.
   Hint Constructors or and : pattern_wf_db.
 
   #[global]
-  Hint Resolve NoDup_cons_l NoDup_cons_r conj : pattern_wf_db.
-
-  Ltac iauto := try solve [intuition (eauto with pattern_wf_db)].
+  Hint Resolve NoDup_cons_l NoDup_cons_r NoDup_cons_contra conj : pattern_wf_db.
 
   Lemma hop_wf pi pe pv (Hwf : wf (Pattern.hop pi pe pv)) :
     wf pi.
@@ -118,7 +125,20 @@ Module Pattern.
     unfold wf in *.
     desf. split.
     - intros k H1 H2. eapply Hcontra; simpls; eauto.
-    - iauto.
+    - eauto with pattern_wf_db.
+  Qed.
+
+  Lemma hop_wf_ind pi pe pv (Hwf : wf pi)
+    (Hneq : vname pv <> ename pe)
+    (HIn_vertices : ~ In (ename pe) (dom_vertices pi))
+    (HIn_edges : ~ In (ename pe) (dom_edges pi))
+    (HIn_edges' : ~ In (vname pv) (dom_edges pi)) :
+    wf (Pattern.hop pi pe pv).
+  Proof.
+    unfold wf in *. split; desf; unnw.
+    { intros k. ins. desf; eauto. }
+    simpls. apply NoDup_cons_iff.
+    split; auto.
   Qed.
 
   Lemma wf__pe__dom_vertices pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
@@ -168,16 +188,40 @@ Module Pattern.
     symmetry. eapply wf__last_neq_pe; eassumption.
   Qed.
 
-  Lemma wf__last__dom_vertices pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+  Lemma last__dom_vertices pi :
     In (Pattern.vname (Pattern.last pi)) (Pattern.dom_vertices pi).
   Proof.
-    unfold Pattern.wf in *. desf.
     destruct pi; now left.
   Qed.
 
+  Lemma start_wf pv : wf (Pattern.start pv).
+  Proof.
+    unfold Pattern.wf; simpls.
+    split.
+    { ins; auto. }
+    apply NoDup_nil.
+  Qed.
+
+  Ltac intros_wf_contra :=
+    generalize NoDup_cons_l; intros ?;
+    generalize wf__pe__dom_vertices; intros ?;
+    generalize wf__pe__dom_edges; intros ?;
+    generalize wf__pv__dom_edges; intros ?;
+    generalize wf__pv_neq_pe; intros ?;
+    generalize wf__pe_neq_pv; intros ?;
+    generalize wf__last_neq_pe; intros ?;
+    generalize wf__pe_neq_last; intros ?;
+    generalize last__dom_vertices; intros ?.
+
   #[global]
-  Hint Resolve hop_wf wf__pe__dom_vertices wf__pe__dom_edges wf__pv__dom_edges
-       wf__pv_neq_pe wf__last_neq_pe wf__last__dom_vertices : pattern_wf_db.
+  Hint Resolve hop_wf start_wf wf__pe__dom_vertices wf__pe__dom_edges wf__pv__dom_edges
+       wf__pv_neq_pe wf__last_neq_pe last__dom_vertices : pattern_wf_db.
+
+  Ltac solve_wf_contra := now (
+    intros_wf_contra;
+    unfold complement, equiv, not in *;
+    solve [ exfalso; eauto with pattern_wf_db | eauto with pattern_wf_db ]
+  ).
 End Pattern.
 
 (** Query definition **)
@@ -217,22 +261,11 @@ Module ProjectionExpr.
   Definition t := list proj.
 End ProjectionExpr.
 
-Module Clause.
-  Inductive t := 
-  | MATCH (pattern : Pattern.t)
-  .
-
-  (* For later extensions *)
-  Definition wf (clause : t) :=
-    match clause with
-    | MATCH pattern => Pattern.wf pattern
-    end.
-End Clause.
-
 Module Query.
   Record t := mk {
-    clause : Clause.t;
+    MATCH : Pattern.t;
+    WHERE : option QueryExpr.t;
   }.
 
-  Definition wf (query : t) := Clause.wf (clause query).
+  Definition wf (query : t) := Pattern.wf query.(MATCH).
 End Query.

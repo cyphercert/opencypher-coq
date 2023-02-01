@@ -243,3 +243,19 @@ Lemma NoDup_cons_contra (A : Type) (x : A) (xs : list A)
 Proof.
   eapply NoDup_cons_l; eassumption.
 Qed.
+
+Ltac normalize_bool :=
+  repeat match goal with
+  | [ H : negb _ = true |- _ ] => rewrite negb_true_iff in H
+  | [ H : negb _ <> true |- _ ] => rewrite negb_true_iff in H
+  | [ H : _ = false |- _ ] => rewrite <- not_true_iff_false in H
+  | [ H : _ <> false |- _ ] => rewrite -> not_false_iff_true in H
+  | [ H : (In_decb _ _) = true |- _ ] => rewrite -> In_decb_true_iff in H
+  | [ H : (In_decb _ _) <> true |- _ ] => rewrite -> In_decb_true_iff in H
+  end.
+
+Ltac inj_subst :=
+  repeat match goal with
+  | [ H : Some ?x = Some ?y |- _ ] =>
+      injection H as H; try subst y; try subst x
+  end.

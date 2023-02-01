@@ -30,22 +30,31 @@ Module ExpandMode .
 End ExpandMode.
 
 (* r' is expanded from r by traversing one edge *)
+Definition expansion_of' (g : PropertyGraph.t) (r' r : Rcd.t)
+                         (mode : ExpandMode.t)
+                         (v_from : vertex) (e : edge) (v_to : vertex)
+                         (n_from n_edge n_to : Pattern.name)
+                         (d : Pattern.direction) :=
+  << HIn_e : In e (edges g) >> /\
+  << Hdir : Path.matches_direction g v_from v_to e d >> /\
+  << Hval_from : r n_from = Some (Value.GVertex v_from) >> /\
+  << Hval_edge : r n_edge = None >> /\
+  match mode with
+  | ExpandMode.All =>
+    << Hval_to : r n_to = None >> /\
+    << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >>
+  | ExpandMode.Into =>
+    << Hval_to : r n_to = Some (Value.GVertex v_to) >> /\
+    << Hval' : r' = (n_edge |-> Value.GEdge e; r) >>
+  end.
+
+(* r' is expanded from r by traversing one edge *)
 Definition expansion_of (g : PropertyGraph.t) (r' r : Rcd.t)
                         (mode : ExpandMode.t)
                         (n_from n_edge n_to : Pattern.name)
                         (d : Pattern.direction) :=
   exists v_from e v_to,
-    << HIn_e : In e (edges g) >> /\
-    << Hdir : Path.matches_direction g v_from v_to e d >> /\
-    << Hval_from : r n_from = Some (Value.GVertex v_from) >> /\
-    match mode with
-    | ExpandMode.All =>
-      << Hval_to : r n_to = None >> /\
-      << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >>
-    | ExpandMode.Into =>
-      << Hval_to : r n_to = Some (Value.GVertex v_to) >> /\
-      << Hval' : r' = (n_edge |-> Value.GEdge e; r) >>
-    end.
+    expansion_of' g r' r mode v_from e v_to n_from n_edge n_to d.
 
 Import FilterMode.
 Import ExpandMode.
@@ -118,25 +127,62 @@ Module ExecutionPlan.
         expand Into n_from n_edge n_to d graph table = Some table' ->
           BindingTable.of_type table ty ->
             BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
+(* 
+      (** If the operation returned some table then the type of the input table must have been correct *)
+
+      Axiom filter_vertices_by_label_input_type : forall n l,
+        filter_by_label Vertices n l graph table = Some table' ->
+          BindingTable.of_type table ty ->
+            ty n = Some Value.GVertexT.
+
+      Axiom filter_edges_by_label_input_type : forall n l,
+        filter_by_label Edges n l graph table = Some table' ->
+          BindingTable.of_type table ty ->
+            ty n = Some Value.GEdgeT.
+
+      Axiom expand_all_input_type : forall n_from n_edge n_to d,
+        expand All n_from n_edge n_to d graph table = Some table' ->
+          BindingTable.of_type table ty ->
+            ty n_from = Some Value.GVertexT /\ ty n_edge = None /\ ty n_to = None.
+
+      Axiom expand_into_input_type : forall n_from n_edge n_to d,
+        expand Into n_from n_edge n_to d graph table = Some table' ->
+          BindingTable.of_type table ty ->
+            ty n_from = Some Value.GVertexT /\ ty n_edge = None /\ ty n_to = Some Value.GVertexT. *)
 
       (** scan_vertices specification *)
 
       Axiom scan_vertices_spec : forall n v,
         scan_vertices n graph = Some table' ->
-          (exists r, In r table' /\ r n = Some (Value.GVertex v)) <->
-              In v (vertices graph).
+          In v (vertices graph) ->
+            In (n |-> Value.GVertex v) table'.
+
+      Axiom scan_vertices_spec' : forall n r',
+        scan_vertices n graph = Some table' ->
+          In r' table' -> exists v,
+            r' = (n |-> Value.GVertex v) /\ In v (vertices graph).
 
       (** filter_by_label specification *)
 
       Axiom filter_vertices_by_label_spec : forall n l v r,
         filter_by_label Vertices n l graph table = Some table' ->
-          r n = Some (Value.GVertex v) -> In r table' <->
-            (In l (vlabels graph v) /\ In r table).
+          r n = Some (Value.GVertex v) -> In l (vlabels graph v) ->
+            In r table -> In r table'.
+      
+      Axiom filter_vertices_by_label_spec' : forall n l r',
+        filter_by_label Vertices n l graph table = Some table' ->
+           In r' table' -> In r' table /\
+            exists v, r' n = Some (Value.GVertex v) /\ In l (vlabels graph v).
 
       Axiom filter_edges_by_label_spec : forall n l e r,
         filter_by_label Edges n l graph table = Some table' ->
-          r n = Some (Value.GEdge e) -> In r table' <->
-            (elabel graph e = l /\ In r table).
+          r n = Some (Value.GEdge e) -> elabel graph e = l ->
+            In r table -> In r table'.
+
+      Axiom filter_edges_by_label_spec' : forall n l r',
+        filter_by_label Edges n l graph table = Some table' ->
+          In r' table' -> In r' table /\
+            exists e, r' n = Some (Value.GEdge e) /\ elabel graph e = l.
 
       (** expand specification *)
 
@@ -304,8 +350,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     Variable table : BindingTable.t.
 
     Definition expand_all_single (r : Rcd.t) : option BindingTable.t :=
-      match r n_from, r n_to with
-      | Some (Value.GVertex v_from), None =>
+      match r n_from, r n_edge, r n_to with
+      | Some (Value.GVertex v_from), None, None =>
         Some (map (fun '(e, v_to) => n_to   |-> Value.GVertex v_to;
                                      n_edge |-> Value.GEdge e; r)
           match d with
@@ -314,12 +360,12 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
           | Pattern.BOTH => out_edges graph v_from ++
                             in_edges  graph v_from
           end)
-      | _, _ => None
+      | _, _, _ => None
       end.
 
     Definition expand_into_single (r : Rcd.t) : option BindingTable.t :=
-      match r n_from, r n_to with
-      | Some (Value.GVertex v_from), Some (Value.GVertex v_to) =>
+      match r n_from, r n_edge, r n_to with
+      | Some (Value.GVertex v_from), None, Some (Value.GVertex v_to) =>
           Some (map (fun e => n_edge |-> Value.GEdge e; r)
           match d with
           | Pattern.OUT  => edges_between graph v_from v_to
@@ -327,7 +373,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
           | Pattern.BOTH => edges_between graph v_from v_to ++
                             edges_between graph v_to   v_from
           end)
-      | _, _ => None
+      | _, _, _ => None
       end.
 
     Definition expand_single (r : Rcd.t) : option BindingTable.t :=
@@ -405,7 +451,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     2: edestruct BindingTable.type_of_GVertexT with (k := n_to) as [v_to Hv_to];
         try eassumption.
     2: rewrite Hv_to.
-    1: erewrite BindingTable.type_of_None; try eassumption.
+    all: repeat erewrite BindingTable.type_of_None; try eassumption.
     all: now eexists.
   Qed.
 
@@ -450,12 +496,6 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     all: autounfold with filter_by_label_db.
     all: induction table; ins; desf; eauto with type_of_db.
   Qed.
-
-  Ltac inj_subst :=
-    repeat match goal with
-    | [ H : Some ?x = Some ?y |- _ ] =>
-        injection H as H; try subst y; try subst x
-    end.
 
   Theorem expand_single_type graph r table' mode n_from n_edge n_to d
                           (Hres : expand_single mode n_from n_edge n_to d graph r = Some table') :
@@ -516,76 +556,102 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   (** scan_vertices specification *)
 
-  Definition scan_vertices_spec
-    graph table' n v 
-    (Hres : scan_vertices n graph = Some table') :
-    (exists r, In r table' /\ r n = Some (Value.GVertex v))
-      <-> In v (vertices graph).
+  
+  Theorem scan_vertices_spec graph table' n v
+    (Hres : scan_vertices n graph = Some table')
+    (HIn : In v (vertices graph)) :
+      In (n |-> Value.GVertex v) table'.
   Proof.
-    injection Hres as Hres. subst.
-    split.
-    { intros [r [HIn Hval]].
-      apply in_map_iff in HIn as [v' [Heq HIn]]. subst.
-      rewrite update_eq in Hval. inv Hval. }
-    intros HIn. eexists. split.
-    apply in_map; eauto.
-    apply update_eq.
+    unfold scan_vertices in Hres.
+    inj_subst.
+    apply in_map_iff.
+    exists v. auto.
+  Qed.
+
+  Theorem scan_vertices_spec' graph table' n r'
+    (Hres : scan_vertices n graph = Some table')
+    (HIn : In r' table') :
+      exists v, r' = (n |-> Value.GVertex v) /\ In v (vertices graph).
+  Proof.
+    unfold scan_vertices in Hres.
+    inj_subst.
+    apply in_map_iff in HIn as [v [Heq HIn]].
+    subst. exists v. auto.
   Qed.
 
   (** filter_by_label specification *)
 
-  Theorem vertex_has_label_true_iff graph n l v r
-                                    (Hval : r n = Some (Value.GVertex v)) :
-    vertex_has_label n l graph r = true <-> In l (vlabels graph v).
+  Theorem vertex_has_label_true_iff graph n l r :
+    vertex_has_label n l graph r = true <->
+      exists v, r n = Some (Value.GVertex v) /\ In l (vlabels graph v).
   Proof.
-    unfold vertex_has_label.
-    rewrite Hval.
-    now rewrite <- In_decb_true_iff.
+    split; ins.
+    all: unfold vertex_has_label in *.
+    all: desf; normalize_bool.
+    { eexists. split; eauto. }
+    now rewrite -> In_decb_true_iff.
   Qed.
 
-  Theorem edge_has_label_true_iff graph n l e r
-                                  (Hval : r n = Some (Value.GEdge e)) :
-    edge_has_label n l graph r = true <-> elabel graph e = l.
+  Theorem edge_has_label_true_iff graph n l r :
+    edge_has_label n l graph r = true <->
+      exists e, r n = Some (Value.GEdge e) /\ elabel graph e = l.
   Proof.
-    unfold edge_has_label.
-    rewrite Hval.
+    split; ins.
+    all: unfold edge_has_label in *.
+    all: desf.
+    { eexists. split. { eauto. }
+      now rewrite <- equiv_decb_true_iff. }
     now rewrite -> equiv_decb_true_iff.
   Qed.
 
   Theorem filter_by_label_spec graph table table' mode n l r 
     (Hres : filter_by_label mode n l graph table = Some table') :
       match mode with
-      | Vertices => forall v, r n = Some (Value.GVertex v) ->
-          In r table' <-> (In l (vlabels graph v) /\ In r table)
-      | Edges    => forall e, r n = Some (Value.GEdge e) ->
-          In r table' <-> (elabel graph e = l /\ In r table)
+      | Vertices => In r table' <-> In r table /\
+          (exists v, r n = Some (Value.GVertex v) /\ In l (vlabels graph v))
+      | Edges    => In r table' <-> In r table /\
+          (exists e, r n = Some (Value.GEdge e) /\ elabel graph e = l)
       end.
   Proof.
     unfold filter_by_label, has_label in Hres.
     inj_subst.
     destruct mode; ins.
-    1: rewrite <- vertex_has_label_true_iff; try eassumption.
-    2: rewrite <-   edge_has_label_true_iff; try eassumption.
-    all: rewrite and_comm.
-    all: apply filter_In.
+    all: rewrite filter_In.
+    1: rewrite -> vertex_has_label_true_iff; try eassumption.
+    2: rewrite -> edge_has_label_true_iff; try eassumption.
+    all: reflexivity.
   Qed.
 
   Theorem filter_vertices_by_label_spec graph table table' n l v r 
     (Hres : filter_by_label Vertices n l graph table = Some table')
-    (Hval : r n = Some (Value.GVertex v)) :
-      In r table' <-> (In l (vlabels graph v) /\ In r table).
+    (Hval : r n = Some (Value.GVertex v)) (Hlabel : In l (vlabels graph v))
+    (HIn : In r table) : In r table'.
   Proof.
-    generalize dependent v.
-    eapply filter_by_label_spec with (mode := Vertices); eassumption.
+    rewrite -> filter_by_label_spec with (mode := Vertices); eauto.
+  Qed.
+  
+  Theorem filter_vertices_by_label_spec' graph table table' n l r' 
+    (Hres : filter_by_label Vertices n l graph table = Some table')
+    (HIn : In r' table') : In r' table /\
+        exists v, r' n = Some (Value.GVertex v) /\ In l (vlabels graph v).
+  Proof.
+    rewrite <- filter_by_label_spec with (mode := Vertices); eauto.
   Qed.
 
   Theorem filter_edges_by_label_spec graph table table' n l e r 
     (Hres : filter_by_label Edges n l graph table = Some table')
-    (Hval : r n = Some (Value.GEdge e)) :
-      In r table' <-> (elabel graph e = l /\ In r table).
+    (Hval : r n = Some (Value.GEdge e)) (Hlabel : elabel graph e = l)
+    (HIn : In r table) : In r table'.
   Proof.
-    generalize dependent e.
-    eapply filter_by_label_spec with (mode := Edges); eassumption.
+    rewrite -> filter_by_label_spec with (mode := Edges); eauto.
+  Qed.
+  
+  Theorem filter_edges_by_label_spec' graph table table' n l r' 
+    (Hres : filter_by_label Edges n l graph table = Some table')
+    (HIn : In r' table') : In r' table /\
+        exists e, r' n = Some (Value.GEdge e) /\ elabel graph e = l.
+  Proof.
+    rewrite <- filter_by_label_spec with (mode := Edges); eauto.
   Qed.
   
   (** expand specification *)
@@ -595,7 +661,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       expansion_of graph r' r mode n_from n_edge n_to d <-> In r' table'.
   Proof.
     split; ins.
-    all: unfold expansion_of, Path.matches_direction in *.
+    all: unfold expansion_of, expansion_of', Path.matches_direction in *.
 
     - destruct mode; desf.
       all: autounfold with expand_db in Hres.

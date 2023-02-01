@@ -166,34 +166,40 @@ Module Rcd.
   Definition in_dom (k : string) (r : t) :=
     exists v, r k = Some v.
 
-  Definition disjoint (r1 r2 : t) : Prop := 
-    forall k, r1 k = None \/ r2 k = None.
+  Lemma in_dom_iff k r :
+    in_dom k r <-> exists x, (type_of r) k = Some x.
+  Proof.
+    unfold in_dom, type_of.
+    split.
+    { intros [v H]. eexists. now rewrite H. }
+    { intros [x H]. destruct (r k); try inv H. now eexists. }
+  Qed.
 
   Definition matches_pattern_dom (r : t) (pattern : Pattern.t) :=
     forall k, in_dom k r <-> In k (Pattern.dom pattern).
 
   Section join.
-    Definition join (r1 r2 : t) : t := fun k =>
-      match r1 k with
-      | Some val => Some val
-      | None     => r2 k
-      end.
-
-    Lemma join_comm' : forall r1 r2,
-      disjoint r1 r2 -> forall k, (join r1 r2) k = (join r2 r1) k.
+    Lemma type_of_join r1 r2 :
+      type_of (join r1 r2) = join (type_of r1) (type_of r2).
     Proof.
-      intros r1 r2 H k.
-      unfold join.
-      destruct (H k); desf.
-    Qed.
-
-    Lemma join_comm : forall r1 r2,
-      disjoint r1 r2 -> join r1 r2 = join r2 r1.
-    Proof.
-      intros r1 r2 ?.
       extensionality k.
-      now apply join_comm'.
+      unfold join, type_of, option_map.
+      desf.
     Qed.
+
+    Lemma type_of_disjoint_iff r1 r2 :
+      disjoint (type_of r1) (type_of r2) <-> disjoint r1 r2.
+    Proof.
+      unfold disjoint, type_of, option_map.
+      split.
+      all: intros Hdisj k.
+      all: specialize Hdisj with k.
+      all: desf; auto.
+    Qed.
+
+    Lemma type_of_disjoint r1 r2 (Hdisj : disjoint r1 r2) :
+      disjoint (type_of r1) (type_of r2).
+    Proof. now apply type_of_disjoint_iff. Qed.
   End join.
 End Rcd.
 
@@ -306,6 +312,10 @@ End BindingTable.
 Hint Unfold update t_update Pattern.name equiv_decb
   BindingTable.of_type Rcd.type_of : unfold_pat.
 
+Ltac desf_unfold_pat :=
+  autounfold with unfold_pat in *; desf; simpls;
+  unfold complement, equiv in *; subst; auto.
+
 Ltac solve_type_of := now (
   extensionality k;
   autounfold with unfold_pat in *;
@@ -334,12 +344,14 @@ Module Path.
     Variable r : Rcd.t.
 
     Record matches_pvertex (v : vertex) (p : pvertex) : Prop := {
+        vertex_in_g : In v (PropertyGraph.vertices g);
         matches_vname : r (Pattern.vname p) = Some (Value.GVertex v);
         matches_vlabel : forall l, Pattern.vlabel p = Some l ->
           In l (PropertyGraph.vlabels g v);
       }.
 
     Record matches_pedge (e : edge) (p : pedge) : Prop := {
+        edge_in_g : In e (PropertyGraph.edges g);
         matches_ename : r (Pattern.ename p) = Some (Value.GEdge e);
         matches_elabel : forall l, Pattern.elabel p = Some l ->
           PropertyGraph.elabel g e = l;
@@ -618,23 +630,27 @@ Section QueryExpr.
   End eval_qexpr.
 End QueryExpr.
 
-Module EvalQuerySpec.
-  Record t := mk_spec {
-    eval_clause : PropertyGraph.t -> Clause.t -> BindingTable.t -> option BindingTable.t;
-    eval_query : PropertyGraph.t -> Query.t -> option BindingTable.t;
+Module EvalQuery.
+  Module Type Spec.
+    Parameter eval_match_clause : PropertyGraph.t -> Pattern.t -> option BindingTable.t.
 
-    match_clause_eval : forall g path pattern table r,
-      exists table', eval_clause g (Clause.MATCH pattern) table = Some table' /\
-        In r table' <->
-          Path.matches g r path pattern /\
-          Rcd.matches_pattern_dom r pattern /\
-          exists r1 r2,
-            r = Rcd.join r1 r2 /\ 
-            Rcd.disjoint r1 r2 /\
-            In r1 table;
+    Axiom match_clause_wf : forall graph pattern,
+      PropertyGraph.wf graph -> Pattern.wf pattern ->
+        exists table', eval_match_clause graph pattern = Some table'.
 
-    query_eval : forall g q,
-      Query.wf q ->
-        eval_query g q = eval_clause g (Query.clause q) (BindingTable.empty);
-  }.
-End EvalQuerySpec.
+    Axiom match_clause_dom : forall graph pattern table' r',
+      eval_match_clause graph pattern = Some table' ->
+        In r' table' -> Rcd.matches_pattern_dom r' pattern.
+
+    Axiom match_clause_spec : forall graph path pattern table' r',
+      eval_match_clause graph pattern = Some table' ->
+        Pattern.wf pattern -> Rcd.matches_pattern_dom r' pattern ->
+          Path.matches graph r' path pattern -> In r' table'.
+
+    Axiom match_clause_spec' : forall graph pattern table' r',
+      eval_match_clause graph pattern = Some table' ->
+        PropertyGraph.wf graph -> Pattern.wf pattern -> In r' table' ->
+          exists path, Path.matches graph r' path pattern /\
+            Rcd.matches_pattern_dom r' pattern.
+  End Spec.
+End EvalQuery.
