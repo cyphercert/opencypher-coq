@@ -34,7 +34,7 @@ End ExpandMode.
 Definition expansion_of' (g : PropertyGraph.t) (r' r : Rcd.t)
                          (mode : ExpandMode.t)
                          (v_from : vertex) (e : edge) (v_to : vertex)
-                         (n_from n_edge n_to : Pattern.name)
+                         (n_from n_edge n_to : Name.t)
                          (d : Pattern.direction) :=
   << HIn_e : In e (edges g) >> /\
   << Hdir : Path.matches_direction g v_from v_to e d >> /\
@@ -52,7 +52,7 @@ Definition expansion_of' (g : PropertyGraph.t) (r' r : Rcd.t)
 (* r' is expanded from r by traversing one edge *)
 Definition expansion_of (g : PropertyGraph.t) (r' r : Rcd.t)
                         (mode : ExpandMode.t)
-                        (n_from n_edge n_to : Pattern.name)
+                        (n_from n_edge n_to : Name.t)
                         (d : Pattern.direction) :=
   exists v_from e v_to,
     expansion_of' g r' r mode v_from e v_to n_from n_edge n_to d.
@@ -65,14 +65,14 @@ Module ExecutionPlan.
   Definition step1 := PropertyGraph.t -> BindingTable.t -> option BindingTable.t.
 
   Module Type Spec.
-    (* scan_vertices (n : Pattern.name) : step0 *)
-    Parameter scan_vertices : Pattern.name -> step0.
+    (* scan_vertices (n : Name.t) : step0 *)
+    Parameter scan_vertices : Name.t -> step0.
 
-    (* filter_by_label (mode : FilterMode.t) (n : Pattern.name) (l : label) : step1 *)
-    Parameter filter_by_label : FilterMode.t -> Pattern.name -> label -> step1.
+    (* filter_by_label (mode : FilterMode.t) (n : Name.t) (l : label) : step1 *)
+    Parameter filter_by_label : FilterMode.t -> Name.t -> label -> step1.
 
-    (* expand (mode : ExpandMode.t) (n_from n_edge n_to : Pattern.name) (d : Pattern.direction) : step1 *)
-    Parameter expand : ExpandMode.t -> Pattern.name -> Pattern.name -> Pattern.name -> Pattern.direction -> step1.
+    (* expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) : step1 *)
+    Parameter expand : ExpandMode.t -> Name.t -> Name.t -> Name.t -> Pattern.direction -> step1.
 
     Section axioms.
       Variable graph : PropertyGraph.t.
@@ -199,12 +199,12 @@ Module ExecutionPlan.
   End Spec.
 
   Inductive t :=
-  | ScanVertices (n : Pattern.name)
-  | FilterByLabel (mode : FilterMode.t) (n : Pattern.name) (l : label) (plan : t) 
-  | Expand (mode : ExpandMode.t) (n_from n_edge n_to : Pattern.name) (d : Pattern.direction) (plan : t)
+  | ScanVertices (n : Name.t)
+  | FilterByLabel (mode : FilterMode.t) (n : Name.t) (l : label) (plan : t) 
+  | Expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) (plan : t)
   .
 
-  Fixpoint dom (plan : t) : list Pattern.name := 
+  Fixpoint dom (plan : t) : list Name.t := 
     match plan with
     | ScanVertices n => [ n ]
     | FilterByLabel mode n l plan => dom plan
@@ -306,14 +306,14 @@ End ExecutionPlan.
 
 Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
-  Definition scan_vertices (n : Pattern.name)
+  Definition scan_vertices (n : Name.t)
                            (graph : PropertyGraph.t) :
     option BindingTable.t :=
     Some (map (fun v => n |-> Value.GVertex v) (vertices graph)).
 
   Section filter_by_label.
     Variable mode : FilterMode.t.
-    Variable n : Pattern.name.
+    Variable n : Name.t.
     Variable l : PropertyGraph.label.
     Variable graph : PropertyGraph.t.
     Variable table : BindingTable.t.
@@ -345,7 +345,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Section expand.
     Variable mode : ExpandMode.t.
-    Variable n_from n_edge n_to : Pattern.name.
+    Variable n_from n_edge n_to : Name.t.
     Variable d : Pattern.direction.
     Variable graph : PropertyGraph.t.
     Variable table : BindingTable.t.

@@ -100,8 +100,8 @@ End Value.
 
 (* Record / Assignment *)
 Module Rcd.
-  Definition t := PartialMap.t Pattern.name Value.t.
-  Definition T := PartialMap.t Pattern.name Value.T.
+  Definition t := PartialMap.t Name.t Value.t.
+  Definition T := PartialMap.t Name.t Value.T.
 
   Definition empty : t := fun _ => None.
   Definition emptyT : T := fun _ => None.
@@ -163,7 +163,7 @@ Module Rcd.
   Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
 
   (* Predicate that defines the domain of a record *)
-  Definition in_dom (k : string) (r : t) :=
+  Definition in_dom (k : Name.t) (r : t) :=
     exists v, r k = Some v.
 
   Lemma in_dom_iff k r :
@@ -266,7 +266,7 @@ Module BindingTable.
     Variable table : t.
     Variable ty : Rcd.T.
     Variable r : Rcd.t.
-    Variable k : Pattern.name.
+    Variable k : Name.t.
     Variable Htype : of_type table ty.
     Variable HIn : In r table.
 
@@ -309,7 +309,7 @@ Module BindingTable.
 End BindingTable.
 
 #[global]
-Hint Unfold PartialMap.update TotalMap.update Pattern.name equiv_decb
+Hint Unfold PartialMap.update TotalMap.update equiv_decb
   BindingTable.of_type Rcd.type_of : unfold_pat.
 
 Ltac desf_unfold_pat :=
@@ -426,7 +426,7 @@ Section QueryExpr.
         | gedge e => Some (GEdge e)
         end
 
-      | QEVar n => u n
+      | QEVar n => u (Name.explicit n)
 
       | QEProj a k => option_map Value.from_property
         match eval_qexpr a with

@@ -1,6 +1,7 @@
 Require Import String.
 Require Import List.
 Import ListNotations.
+From Coq Require Import Classes.EquivDec.
 From hahn Require Import HahnBase.
 
 Require Import PropertyGraph.
@@ -15,6 +16,38 @@ Import Property.
 
 (** (vertex and edge pattern alternate). We decided to store this query pattern in a special way. *)
 (** Pattern contains start vertex pattern and pairs (edge pattern, vertex pattern). **)
+
+Module Name.
+  Definition raw := string.
+
+  Inductive t :=
+  | explicit (n : raw)
+  | implicit (n : raw)
+  .
+
+  Definition unwrap (n : t) :=
+    match n with
+    | explicit n => n
+    | implicit n => n
+    end.
+
+  Definition eq_dec (n1 n2 : t) : {n1 = n2} + {n1 <> n2}.
+    refine (match n1, n2 with
+            | explicit n1, explicit n2 => if n1 == n2 then left _ else right _
+            | implicit n1, implicit n2 => if n1 == n2 then left _ else right _
+            | _,           _           => right _
+            end).
+    all: unfold complement, equiv in *; subst.
+    all: try reflexivity.
+    all: try (intro; discriminate).
+    all: injection as H; auto.
+  Defined.
+
+  #[global]
+  Program Instance eqdec : EqDec t eq := eq_dec.
+
+  Definition eqb (a b : t) : bool := a ==b b.
+End Name.
 
 Module Pattern.
 
@@ -34,10 +67,8 @@ Module Pattern.
 
   (** vprops  : list of pairs (key, value) stored in a vertex **)
 
-  Definition name := string.
-
   Record pvertex := {
-      vname   : name;
+      vname   : Name.t;
       vlabel  : option PropertyGraph.label;
       vprops  : list (Property.name * Property.t);
     }.
@@ -54,7 +85,7 @@ Module Pattern.
   (** edir    : direction condition **)
 
   Record pedge := {
-      ename   : name;
+      ename   : Name.t;
       elabel  : option PropertyGraph.label;
       eprops  : list (Property.name * Property.t);
       edir    : direction;
@@ -79,21 +110,21 @@ Module Pattern.
     end.
 
   (* Domain of the pattern, i.e. names of the variables *)
-  Fixpoint dom (p : Pattern.t) : list Pattern.name :=
+  Fixpoint dom (p : Pattern.t) : list Name.t :=
     match p with
     | hop p pe pv =>
       vname pv :: ename pe :: dom p
     | start pv => [vname pv]
     end.
 
-  Fixpoint dom_vertices (p : Pattern.t) : list Pattern.name :=
+  Fixpoint dom_vertices (p : Pattern.t) : list Name.t :=
     match p with
     | hop p pe pv =>
       vname pv :: dom_vertices p
     | start pv => [vname pv]
     end.
 
-  Fixpoint dom_edges (p : Pattern.t) : list Pattern.name :=
+  Fixpoint dom_edges (p : Pattern.t) : list Name.t :=
     match p with
     | hop p pe pv =>
       ename pe :: dom_edges p
@@ -229,7 +260,7 @@ End Pattern.
 Module QueryExpr.
   Inductive t : Type :=
   | QEGObj (go : PropertyGraph.gobj)
-  | QEVar  (n : Pattern.name)
+  | QEVar  (n : Name.raw)
   | QEProj (a : t) (k : Property.name)
 
   | QEEq (a1 a2 : t)
@@ -254,12 +285,6 @@ Module QueryExpr.
   | QEIsNotFalse (e : t)
   .
 End QueryExpr.
-
-Module ProjectionExpr.
-  Inductive proj := AS (from : string) (to : string).
-
-  Definition t := list proj.
-End ProjectionExpr.
 
 Module Query.
   Record t := mk {
