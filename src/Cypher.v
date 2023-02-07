@@ -117,11 +117,59 @@ Module Pattern.
     | start pv => [vname pv]
     end.
 
+  Fixpoint dom_vertices_explicit (p : Pattern.t) : list Name.raw :=
+    match p with
+    | hop p pe pv =>
+      match vname pv with
+      | Name.explicit nv => nv :: dom_vertices_explicit p
+      | _                => dom_vertices_explicit p
+      end
+    | start pv => 
+      match vname pv with
+      | Name.explicit nv => [nv]
+      | _                => []
+      end
+    end.
+
+  Fixpoint dom_vertices_implicit (p : Pattern.t) : list Name.raw :=
+    match p with
+    | hop p pe pv =>
+      match vname pv with
+      | Name.implicit nv => nv :: dom_vertices_implicit p
+      | _                => dom_vertices_implicit p
+      end
+    | start pv => 
+      match vname pv with
+      | Name.implicit nv => [nv]
+      | _                => []
+      end
+    end.
+
   Fixpoint dom_vertices (p : Pattern.t) : list Name.t :=
     match p with
     | hop p pe pv =>
       vname pv :: dom_vertices p
     | start pv => [vname pv]
+    end.
+
+  Fixpoint dom_edges_explicit (p : Pattern.t) : list Name.raw :=
+    match p with
+    | hop p pe pv =>
+      match ename pe with
+      | Name.explicit ne => ne :: dom_edges_explicit p
+      | _                => dom_edges_explicit p
+      end
+    | start pv => []
+    end.
+
+  Fixpoint dom_edges_implicit (p : Pattern.t) : list Name.raw :=
+    match p with
+    | hop p pe pv =>
+      match ename pe with
+      | Name.implicit ne => ne :: dom_edges_implicit p
+      | _                => dom_edges_implicit p
+      end
+    | start pv => []
     end.
 
   Fixpoint dom_edges (p : Pattern.t) : list Name.t :=
@@ -130,6 +178,38 @@ Module Pattern.
       ename pe :: dom_edges p
     | start pv => nil
     end.
+
+  Lemma In_dom_vertices_explicit p nv :
+    In nv (dom_vertices_explicit p) <->
+      In (Name.explicit nv) (dom_vertices p).
+  Proof.
+    induction p; split; ins.
+    all: desf; simpls; desf; auto.
+  Qed.
+
+  Lemma In_dom_vertices_implicit p nv :
+    In nv (dom_vertices_implicit p) <->
+      In (Name.implicit nv) (dom_vertices p).
+  Proof.
+    induction p; split; ins.
+    all: desf; simpls; desf; auto.
+  Qed.
+
+  Lemma In_dom_edges_explicit p ne :
+    In ne (dom_edges_explicit p) <->
+      In (Name.explicit ne) (dom_edges p).
+  Proof.
+    induction p; split; ins.
+    all: desf; simpls; desf; auto.
+  Qed.
+
+  Lemma In_dom_edges_implicit p ne :
+    In ne (dom_edges_implicit p) <->
+      In (Name.implicit ne) (dom_edges p).
+  Proof.
+    induction p; split; ins.
+    all: desf; simpls; desf; auto.
+  Qed.
 
   Lemma In_dom p x :
     In x (dom p) <-> In x (dom_vertices p) \/ In x (dom_edges p).
@@ -142,34 +222,51 @@ Module Pattern.
 
   Definition wf (p : Pattern.t) :=
     << Hcontra : forall k, In k (dom_vertices p) -> In k (dom_edges p) -> False >> /\
-    << Hdup : NoDup (dom_edges p) >>.
+    << Hdup_e : NoDup (dom_edges p) >> /\
+    << Hdup_v_imp : NoDup (dom_vertices_implicit p) >>.
 
   #[global]
   Hint Constructors or and : pattern_wf_db.
 
   #[global]
-  Hint Resolve NoDup_cons_l NoDup_cons_r NoDup_cons_contra conj : pattern_wf_db.
+  Hint Resolve NoDup_nil NoDup_cons NoDup_cons_l NoDup_cons_r NoDup_cons_contra conj : pattern_wf_db.
 
   Lemma hop_wf pi pe pv (Hwf : wf (Pattern.hop pi pe pv)) :
     wf pi.
   Proof.
     unfold wf in *.
-    desf. split.
-    - intros k H1 H2. eapply Hcontra; simpls; eauto.
-    - eauto with pattern_wf_db.
+    simpls; desf; splits.
+    all: eauto with pattern_wf_db. 
   Qed.
 
   Lemma hop_wf_ind pi pe pv (Hwf : wf pi)
     (Hneq : vname pv <> ename pe)
     (HIn_vertices : ~ In (ename pe) (dom_vertices pi))
+    (HIn_v_imp : forall n, vname pv = Name.implicit n ->
+      ~ In n (dom_vertices_implicit pi))
     (HIn_edges : ~ In (ename pe) (dom_edges pi))
     (HIn_edges' : ~ In (vname pv) (dom_edges pi)) :
-    wf (Pattern.hop pi pe pv).
+      wf (Pattern.hop pi pe pv).
   Proof.
     unfold wf in *. split; desf; unnw.
     { intros k. ins. desf; eauto. }
-    simpls. apply NoDup_cons_iff.
-    split; auto.
+    simpls; desf.
+    all: split.
+    all: try (apply NoDup_cons_iff; split).
+    all: auto.
+  Qed.
+
+  Lemma hop_wf__imp_pv pi pe pv n
+    (Heq: Pattern.vname pv = Name.implicit n)
+    (Hcontra: forall k : Name.t,
+                Name.implicit n = k \/ In k (Pattern.dom_vertices pi) ->
+                Pattern.ename pe = k \/ In k (Pattern.dom_edges pi) -> False)
+    (Hdup_e: NoDup (Pattern.ename pe :: Pattern.dom_edges pi))
+    (Hdup_v_imp: NoDup (n :: Pattern.dom_vertices_implicit pi)) :
+      Pattern.wf (Pattern.hop pi pe pv).
+  Proof.
+    unfold wf. splits; simpls.
+    all: rewrite Heq; auto.
   Qed.
 
   Lemma wf__pe__dom_vertices pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
@@ -183,7 +280,7 @@ Module Pattern.
     ~ In (Pattern.ename pe) (Pattern.dom_edges pi).
   Proof.
     unfold Pattern.wf in *. desf.
-    apply NoDup_cons_iff in Hdup as [? ?]; auto.
+    apply NoDup_cons_iff in Hdup_e as [? ?]; auto.
   Qed.
 
   Lemma wf__pv__dom_edges pi pe pv (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
@@ -219,6 +316,23 @@ Module Pattern.
     symmetry. eapply wf__last_neq_pe; eassumption.
   Qed.
 
+  Lemma wf__pv__dom_vertices pi pe pv n (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (Heq : Pattern.vname pv = Name.implicit n) :
+      ~ In (Pattern.vname pv) (Pattern.dom_vertices pi).
+  Proof.
+    unfold Pattern.wf in *. desf. simpls.
+    rewrite Heq in *. rewrite <- In_dom_vertices_implicit.
+    intros ?. eapply NoDup_cons_l; eauto.
+  Qed.
+
+  Lemma wf__imp_pv__dom_vertices pi pe pv n (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (Heq : Pattern.vname pv = Name.implicit n) :
+      ~ In (Name.implicit n) (Pattern.dom_vertices pi).
+  Proof.
+    rewrite <- Heq in *.
+    eauto using wf__pv__dom_vertices.
+  Qed.
+
   Lemma last__dom_vertices pi :
     In (Pattern.vname (Pattern.last pi)) (Pattern.dom_vertices pi).
   Proof.
@@ -230,7 +344,8 @@ Module Pattern.
     unfold Pattern.wf; simpls.
     split.
     { ins; auto. }
-    apply NoDup_nil.
+    desf; splits.
+    all: eauto with pattern_wf_db.
   Qed.
 
   Ltac intros_wf_contra :=
@@ -242,11 +357,15 @@ Module Pattern.
     generalize wf__pe_neq_pv; intros ?;
     generalize wf__last_neq_pe; intros ?;
     generalize wf__pe_neq_last; intros ?;
-    generalize last__dom_vertices; intros ?.
+    generalize last__dom_vertices; intros ?;
+    generalize wf__pv__dom_vertices; intros ?;
+    generalize wf__imp_pv__dom_vertices; intros ?.
 
   #[global]
-  Hint Resolve hop_wf start_wf wf__pe__dom_vertices wf__pe__dom_edges wf__pv__dom_edges
-       wf__pv_neq_pe wf__last_neq_pe last__dom_vertices : pattern_wf_db.
+  Hint Resolve hop_wf__imp_pv hop_wf start_wf
+      wf__pv__dom_vertices wf__imp_pv__dom_vertices
+      wf__pe__dom_vertices wf__pe__dom_edges wf__pv__dom_edges
+      wf__pv_neq_pe wf__last_neq_pe last__dom_vertices : pattern_wf_db.
 
   Ltac solve_wf_contra := now (
     intros_wf_contra;

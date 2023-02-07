@@ -77,13 +77,15 @@ Proof.
   all: try rewrite PartialMap.update_neq.
   all: try now apply PartialMap.update_eq.
   all: try rewrite PartialMap.update_neq.
-  all: try (apply IHpi; [ split | ]; now eauto with pattern_wf_db).
+  all: try (apply IHpi; [ splits | ]; now eauto with pattern_wf_db).
 
   all: try now (intros ?; subst; Pattern.solve_wf_contra).
+  all: try (exfalso; simple eapply Pattern.wf__imp_pv__dom_vertices; eauto;
+            simple eapply Pattern.hop_wf__imp_pv; eauto).
 
   all: desf_unfold_pat.
   all: try now (left; eauto with pattern_wf_db).
-  all: right; apply IHpi; [ split | ]; now eauto with pattern_wf_db.
+  all: right; apply IHpi; [ splits | ]; now eauto with pattern_wf_db.
 Qed.
 
 Corollary translate_pattern__type_of_GVertexT pi n (Hwf : Pattern.wf pi) :
