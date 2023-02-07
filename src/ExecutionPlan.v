@@ -13,6 +13,7 @@ Require Import Semantics.
 Require Import PropertyGraph.
 Require Import Maps.
 Require Import Utils.
+Import PartialMap.Notations.
 Import PropertyGraph.
 
 Module FilterMode.
@@ -225,7 +226,7 @@ Module ExecutionPlan.
     type_of plan k = None.
   Proof.
     induction plan; simpl in *.
-    all: try unfold update, t_update, Pattern.name in *.
+    all: autounfold with unfold_pat.
     all: desf.
     all: auto.
   Qed.
@@ -393,9 +394,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Theorem scan_vertices_wf graph n (Hwf : PropertyGraph.wf graph) :
     exists table', scan_vertices n graph = Some table'.
-  Proof.
-    now eexists.
-  Qed.
+  Proof. now eexists. Qed.
 
   Theorem filter_by_label_wf graph table ty mode n l
                              (Hwf : PropertyGraph.wf graph)

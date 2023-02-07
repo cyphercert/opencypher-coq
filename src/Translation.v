@@ -15,6 +15,8 @@ Require Import ExecutionPlan.
 Require Import Maps.
 Require Import Utils.
 
+Import PartialMap.Notations.
+Import TotalMap.Notations.
 Import PropertyGraph.
 Import ExecutionPlan.
 Import FilterMode.
@@ -71,10 +73,10 @@ Proof.
   all: desf_translate_pvertex_pedge.
   all: split; ins; desf.
 
-  all: try now apply update_eq.
-  all: try rewrite update_neq.
-  all: try now apply update_eq.
-  all: try rewrite update_neq.
+  all: try now apply PartialMap.update_eq.
+  all: try rewrite PartialMap.update_neq.
+  all: try now apply PartialMap.update_eq.
+  all: try rewrite PartialMap.update_neq.
   all: try (apply IHpi; [ split | ]; now eauto with pattern_wf_db).
 
   all: try now (intros ?; subst; Pattern.solve_wf_contra).
@@ -208,7 +210,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       all: induction pi; simpls; desf.
 
       all: desf_translate_pvertex_pedge.
-      all: try eauto using update_eq.
+      all: try eauto using PartialMap.update_eq.
       all: desf_unfold_pat.
 
       all: try apply IHpi.
@@ -223,7 +225,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Proof.
     extensionality k.
     desf_unfold_pat.
-    unfold empty, t_empty.
+    unfold PartialMap.empty, TotalMap.empty.
 
     unfold Rcd.matches_pattern_dom, Rcd.in_dom in *.
     specialize Hdom with k; simpls.
@@ -485,9 +487,9 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
             injection Hval_from; trivial).
     all: subst; auto.
 
-    all: try now rewrite update_eq.
-    all: try rewrite update_neq.
-    all: try now rewrite update_eq.
+    all: try now rewrite PartialMap.update_eq.
+    all: try rewrite PartialMap.update_neq.
+    all: try now rewrite PartialMap.update_eq.
     all: try assumption.
     all: try Pattern.solve_wf_contra.
 
@@ -535,7 +537,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     all: eauto using matches_pattern_dom_start'.
 
     all: try eapply Path.matches_nil, Path.Build_matches_pvertex; eauto.
-    all: try rewrite update_eq.
+    all: try rewrite PartialMap.update_eq.
     all: auto.
 
     all: ins.
@@ -544,13 +546,13 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
           | [H1 : ?x = ?y, H2 : ?x = ?z |- _ ] =>
               rewrite H1 in H2; inj_subst; subst
           | [H : (?x |-> ?y) ?x = Some ?z |- _ ] =>
-              rewrite update_eq in H; injection H as H; subst
+              rewrite PartialMap.update_eq in H; injection H as H; subst
           | [H : (?x |-> ?y; _) ?x = Some ?z |- _ ] =>
-              rewrite update_eq in H; injection H as H; subst
+              rewrite PartialMap.update_eq in H; injection H as H; subst
           | [H : (Pattern.ename _ |-> _; _) _ = Some (Value.GVertex _) |- _ ] =>
-              rewrite -> update_neq in H; [ | Pattern.solve_wf_contra ]
+              rewrite -> PartialMap.update_neq in H; [ | Pattern.solve_wf_contra ]
           | [H : (Pattern.vname _ |-> _; _) _ = Some (Value.GEdge _) |- _ ] =>
-              rewrite -> update_neq in H; [ | Pattern.solve_wf_contra ]
+              rewrite -> PartialMap.update_neq in H; [ | Pattern.solve_wf_contra ]
           end.
     all: auto.
   Qed.

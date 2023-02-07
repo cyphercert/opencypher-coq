@@ -13,6 +13,7 @@ Require Import Utils.
 Require Import Cypher.
 Require Import PropertyGraph.
 Import PropertyGraph.
+Import PartialMap.Notations.
 
 Module Value.
   Inductive t :=
@@ -84,11 +85,11 @@ Module Value.
       | GEdge a,          GEdge b          => if a == b then left _ else right _
       | _,                _                => right _
       end
-    );
-    try reflexivity; (* Solve Unknown = Unknown *)
-    try discriminate; (* Solve goals with different constructors *)
-    try f_equal; try assumption;  (* Solve goals when underlying values are equal *)
-    injection as H; contradiction. (* Solve goals when underlying values are not equal *)
+    ).
+    all: try reflexivity. (* Solve Unknown = Unknown *)
+    all: try discriminate. (* Solve goals with different constructors *)
+    all: try now f_equal.  (* Solve goals when underlying values are equal *)
+    all: injection as H; contradiction. (* Solve goals when underlying values are not equal *)
   Defined.
 
   #[global]
@@ -99,8 +100,8 @@ End Value.
 
 (* Record / Assignment *)
 Module Rcd.
-  Definition t := Pattern.name -> option Value.t.
-  Definition T := Pattern.name -> option Value.T.
+  Definition t := PartialMap.t Pattern.name Value.t.
+  Definition T := PartialMap.t Pattern.name Value.T.
 
   Definition empty : t := fun _ => None.
   Definition emptyT : T := fun _ => None.
@@ -110,7 +111,6 @@ Module Rcd.
 
   Lemma type_of_empty : type_of empty = emptyT.
   Proof. reflexivity. Qed.
-
   
   Lemma type_of_UnknownT r k (Htype : type_of r k = Some Value.UnknownT) : 
     r k = Some Value.Unknown.
@@ -180,25 +180,25 @@ Module Rcd.
 
   Section join.
     Lemma type_of_join r1 r2 :
-      type_of (join r1 r2) = join (type_of r1) (type_of r2).
+      type_of (PartialMap.join r1 r2) = PartialMap.join (type_of r1) (type_of r2).
     Proof.
       extensionality k.
-      unfold join, type_of, option_map.
+      unfold PartialMap.join, type_of, option_map.
       desf.
     Qed.
 
     Lemma type_of_disjoint_iff r1 r2 :
-      disjoint (type_of r1) (type_of r2) <-> disjoint r1 r2.
+      PartialMap.disjoint (type_of r1) (type_of r2) <-> PartialMap.disjoint r1 r2.
     Proof.
-      unfold disjoint, type_of, option_map.
+      unfold PartialMap.disjoint, type_of, option_map.
       split.
       all: intros Hdisj k.
       all: specialize Hdisj with k.
       all: desf; auto.
     Qed.
 
-    Lemma type_of_disjoint r1 r2 (Hdisj : disjoint r1 r2) :
-      disjoint (type_of r1) (type_of r2).
+    Lemma type_of_disjoint (r1 r2 : t) (Hdisj : PartialMap.disjoint r1 r2) :
+      PartialMap.disjoint (type_of r1) (type_of r2).
     Proof. now apply type_of_disjoint_iff. Qed.
   End join.
 End Rcd.
@@ -309,7 +309,7 @@ Module BindingTable.
 End BindingTable.
 
 #[global]
-Hint Unfold update t_update Pattern.name equiv_decb
+Hint Unfold PartialMap.update TotalMap.update Pattern.name equiv_decb
   BindingTable.of_type Rcd.type_of : unfold_pat.
 
 Ltac desf_unfold_pat :=
