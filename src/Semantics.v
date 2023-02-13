@@ -14,6 +14,7 @@ Require Import Cypher.
 Require Import PropertyGraph.
 Import PropertyGraph.
 Import PartialMap.Notations.
+Import TotalMap.Notations.
 
 Module Value.
   Inductive t :=
@@ -111,14 +112,27 @@ Module Rcd.
 
   Lemma type_of_empty : type_of empty = emptyT.
   Proof. reflexivity. Qed.
-  
-  Lemma type_of_UnknownT r k (Htype : type_of r k = Some Value.UnknownT) : 
-    r k = Some Value.Unknown.
+
+  Lemma type_of_t_update r k v :
+    type_of (k !-> v; r) = (k !-> option_map Value.type_of v; type_of r).
   Proof.
-    unfold type_of in Htype.
-    destruct (r k); try discriminate.
-    f_equal. apply Value.type_of_UnknownT.
-    now injection Htype as Htype.
+    extensionality k'.
+    unfold type_of, TotalMap.update, equiv_decb.
+    desf.
+  Qed.
+
+  Lemma type_of_update r k v :
+    type_of (k |-> v; r) = (k |-> Value.type_of v; type_of r).
+  Proof.
+    unfold PartialMap.update.
+    now rewrite type_of_t_update.
+  Qed.
+
+  Lemma type_of_singleton k v :
+    type_of (k |-> v) = (k |-> Value.type_of v).
+  Proof.
+    unfold PartialMap.update.
+    now rewrite type_of_t_update.
   Qed.
 
   Ltac solve_type_of_T f :=
@@ -131,6 +145,10 @@ Module Rcd.
         [ now injection Htype as Htype |
         eexists; f_equal; eassumption ]
     end.
+
+  Lemma type_of_UnknownT r k (Htype : type_of r k = Some Value.UnknownT) : 
+    r k = Some Value.Unknown.
+  Proof. solve_type_of_T Value.type_of_UnknownT. Qed.
     
   Lemma type_of_BoolT r k (Htype : type_of r k = Some Value.BoolT) :
     exists b, r k = Some (Value.Bool b).
@@ -162,21 +180,17 @@ Module Rcd.
   #[global]
   Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
 
-  (* Predicate that defines the domain of a record *)
-  Definition in_dom (k : Name.t) (r : t) :=
-    exists v, r k = Some v.
-
   Lemma in_dom_iff k r :
-    in_dom k r <-> exists x, (type_of r) k = Some x.
+    PartialMap.in_dom k r <-> PartialMap.in_dom k (type_of r).
   Proof.
-    unfold in_dom, type_of.
+    unfold PartialMap.in_dom, type_of.
     split.
     { intros [v H]. eexists. now rewrite H. }
     { intros [x H]. destruct (r k); try inv H. now eexists. }
   Qed.
 
   Definition matches_pattern_dom (r : t) (pattern : Pattern.t) :=
-    forall k, in_dom k r <-> In k (Pattern.dom pattern).
+    forall k, PartialMap.in_dom k r <-> In k (Pattern.dom pattern).
 
   Section join.
     Lemma type_of_join r1 r2 :
@@ -325,6 +339,156 @@ Ltac solve_type_of_extension r ty :=
   eenough (Rcd.type_of r = ty);
   [ solve_type_of | auto ].
 
+Module PatternT.
+  Definition T := Rcd.T.
+
+  Fixpoint type_of (pi : Pattern.t) : T :=
+    match pi with
+    | Pattern.start pv =>
+        (Pattern.vname pv |-> Value.GVertexT)
+    | Pattern.hop pi pe pv =>
+        (Pattern.vname pv |-> Value.GVertexT; Pattern.ename pe |-> Value.GEdgeT; type_of pi)
+    end.
+
+  Lemma type_of__dom_vertices (pi : Pattern.t) nv
+    (Hwf : Pattern.wf pi)
+    (HIn : In nv (Pattern.dom_vertices pi)) :
+      type_of pi nv = Some Value.GVertexT.
+  Proof.
+    induction pi; simpls.
+    all: desf.
+    all: try apply PartialMap.update_eq.
+
+    assert (Hwf0 := Hwf); destruct Hwf0; simpls.
+    desf_unfold_pat.
+    all: try (apply IHpi; eauto with pattern_wf_db).
+    all: exfalso; eapply Pattern.wf__pe__dom_vertices; eauto.
+  Qed.
+
+  Lemma type_of__dom_edges (pi : Pattern.t) ne
+    (Hwf : Pattern.wf pi)
+    (HIn : In ne (Pattern.dom_edges pi)) :
+      type_of pi ne = Some Value.GEdgeT.
+  Proof.
+    induction pi; simpls.
+    all: desf.
+    all: rewrite PartialMap.update_neq.
+    all: try apply PartialMap.update_eq.
+    all: try rewrite PartialMap.update_neq.
+    all: eauto with pattern_wf_db.
+    
+    { eapply Pattern.wf__pv_neq_pe; eassumption. }
+    all: intro; subst.
+    { eapply Pattern.wf__pe__dom_edges; eauto. }
+    { eapply Pattern.wf__pv__dom_edges; eauto. }
+  Qed.
+
+  Lemma dom_vertices__type_of (pi : Pattern.t) nv
+    (Hwf : Pattern.wf pi)
+    (Htype : type_of pi nv = Some Value.GVertexT) :
+      In nv (Pattern.dom_vertices pi).
+  Proof.
+    induction pi; simpls.
+    all: desf_unfold_pat.
+    all: eauto with pattern_wf_db.
+  Qed.
+
+  Lemma dom_edges__type_of (pi : Pattern.t) ne
+    (Hwf : Pattern.wf pi)
+    (Htype : type_of pi ne = Some Value.GEdgeT) :
+      In ne (Pattern.dom_edges pi).
+  Proof.
+    induction pi; simpls.
+    all: desf_unfold_pat.
+    all: eauto with pattern_wf_db.
+  Qed.
+
+  Theorem In_dom_vertices__iff (pi : Pattern.t) nv
+    (Hwf : Pattern.wf pi) :
+      In nv (Pattern.dom_vertices pi) <-> type_of pi nv = Some Value.GVertexT.
+  Proof.
+    split; eauto using type_of__dom_vertices, dom_vertices__type_of.
+  Qed.
+
+  Theorem In_dom_edges__iff (pi : Pattern.t) ne
+    (Hwf : Pattern.wf pi) :
+      In ne (Pattern.dom_edges pi) <-> type_of pi ne = Some Value.GEdgeT.
+  Proof.
+    split; eauto using type_of__dom_edges, dom_edges__type_of.
+  Qed.
+
+  Theorem type_of__types (pi : Pattern.t) k :
+      type_of pi k = Some Value.GVertexT \/
+      type_of pi k = Some Value.GEdgeT \/
+      type_of pi k = None.
+  Proof.
+    induction pi; simpls.
+    all: desf_unfold_pat.
+    all: eauto with pattern_wf_db.
+  Qed.
+
+  Theorem In_dom__iff (pi : Pattern.t) k
+    (Hwf : Pattern.wf pi) :
+      In k (Pattern.dom pi) <-> PartialMap.in_dom k (type_of pi).
+  Proof.
+    rewrite Pattern.In_dom.
+    rewrite In_dom_vertices__iff, In_dom_edges__iff; auto.
+    unfold PartialMap.in_dom.
+    split; ins.
+    all: desf; eauto.
+    edestruct type_of__types as [? | [? | ?]]; eauto.
+    congruence.
+  Qed.
+
+  Corollary not_In_dom__iff (pi : Pattern.t) k
+    (Hwf : Pattern.wf pi) :
+      ~ (In k (Pattern.dom pi)) <-> type_of pi k = None.
+  Proof.
+    rewrite In_dom__iff; auto.
+    now rewrite PartialMap.not_in_dom_iff.
+  Qed.
+
+  Corollary matches_pattern_dom__if (pi : Pattern.t) r
+    (Hwf : Pattern.wf pi)
+    (Htype : Rcd.type_of r = type_of pi) :
+      Rcd.matches_pattern_dom r pi.
+  Proof.
+    unfold Rcd.matches_pattern_dom; ins.
+    rewrite Rcd.in_dom_iff, Htype.
+    now rewrite In_dom__iff.
+  Qed.
+
+  Lemma wf__type_of_pe pi pe pv
+    (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
+      type_of pi (Pattern.ename pe) = None.
+  Proof.
+    rewrite <- not_In_dom__iff. 
+    all: eauto with pattern_wf_db.
+  Qed.
+
+  Lemma wf__type_of_pv__None pi pe pv
+    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (HIn : ~ In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
+      type_of pi (Pattern.vname pv) = None.
+  Proof.
+    rewrite <- not_In_dom__iff. 
+    all: eauto with pattern_wf_db.
+  Qed.
+
+  Lemma wf__type_of_pv__Some pi pe pv
+    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (HIn : In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
+      type_of pi (Pattern.vname pv) = Some Value.GVertexT.
+  Proof.
+    rewrite <- In_dom_vertices__iff. 
+    all: eauto with pattern_wf_db.
+  Qed.
+
+  #[global]
+  Hint Resolve wf__type_of_pe wf__type_of_pv__None wf__type_of_pv__Some : pattern_wf_db.
+
+End PatternT.
+
 Module Path.
 
   Inductive t :=
@@ -406,6 +570,55 @@ Module Path.
         matches (Path.hop p e v) (Pattern.hop pi pe pv)
     .
   End matches.
+
+  Lemma matches_in_dom graph path pi r' n
+    (Hmatch : matches graph r' path pi)
+    (HIn : In n (Pattern.dom pi)) :
+      exists x, r' n = Some x.
+  Proof.
+    induction Hmatch.
+    all: destruct Hpv; try destruct Hpe.
+    all: simpls; desf.
+    all: eauto.
+  Qed.
+
+  Lemma matches_in_dom_contra graph path pi r' n
+    (Hmatch : matches graph r' path pi)
+    (Hval : r' n = None) :
+      ~ In n (Pattern.dom pi).
+  Proof.
+    intro contra.
+    eapply matches_in_dom in contra; eauto.
+    desf.
+  Qed.
+
+  Lemma matches_last graph path pi r'
+    (Hmatch : matches graph r' path pi) :
+      r' (Pattern.vname (Pattern.last pi)) = Some (Value.GVertex (Path.last path)).
+  Proof.
+    destruct pi. 
+    all: inv Hmatch.
+    all: destruct Hpv; try destruct Hpe.
+    all: eauto.
+  Qed.
+
+  Lemma matches_exclude graph path pi r' n x
+    (Hmatch : matches graph r' path pi)
+    (HIn : ~ In n (Pattern.dom pi)) :
+      matches graph (n !-> x; r') path pi.
+  Proof.
+    induction Hmatch.
+    all: destruct Hpv; try destruct Hpe.
+    1: apply matches_nil.
+    2: apply matches_cons.
+    all: try apply IHHmatch.
+    all: try (intro; apply HIn; right; now right).
+    all: try apply Path.Build_matches_pvertex.
+    all: try apply Path.Build_matches_pedge.
+    all: auto.
+    all: desf_unfold_pat.
+    all: exfalso; auto.
+  Qed.
 End Path.
 
 (* Notation "g , u , p '|=' pi" := (Path.matches g u p pi) (at level 80, p at next level, u at next level, pi at next level, no associativity) : type_scope. *)
@@ -638,19 +851,20 @@ Module EvalQuery.
       PropertyGraph.wf graph -> Pattern.wf pattern ->
         exists table', eval_match_clause graph pattern = Some table'.
 
-    Axiom match_clause_dom : forall graph pattern table' r',
+    Axiom match_clause_type : forall graph pattern table' r',
       eval_match_clause graph pattern = Some table' ->
-        In r' table' -> Rcd.matches_pattern_dom r' pattern.
+        Pattern.wf pattern -> In r' table' ->
+          Rcd.type_of r' = PatternT.type_of pattern.
 
     Axiom match_clause_spec : forall graph path pattern table' r',
       eval_match_clause graph pattern = Some table' ->
-        Pattern.wf pattern -> Rcd.matches_pattern_dom r' pattern ->
+        Pattern.wf pattern -> Rcd.type_of r' = PatternT.type_of pattern ->
           Path.matches graph r' path pattern -> In r' table'.
 
     Axiom match_clause_spec' : forall graph pattern table' r',
       eval_match_clause graph pattern = Some table' ->
         PropertyGraph.wf graph -> Pattern.wf pattern -> In r' table' ->
           exists path, Path.matches graph r' path pattern /\
-            Rcd.matches_pattern_dom r' pattern.
+            Rcd.type_of r' = PatternT.type_of pattern.
   End Spec.
 End EvalQuery.

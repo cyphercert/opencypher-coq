@@ -8,6 +8,9 @@ From Coq Require Export Classes.EquivDec.
 From Coq Require Export Classes.RelationClasses.
 Import ListNotations.
 
+(* To override notation from Classes.EquivDec *)
+Notation "x <> y" := (not (eq x y)).
+
 Definition coerce_sumbool {A B : Prop} (x : {A} + {B}) : bool :=
   if x then true else false.
 
@@ -259,3 +262,30 @@ Ltac inj_subst :=
   | [ H : Some ?x = Some ?y |- _ ] =>
       injection H as H; try subst y; try subst x
   end.
+
+Tactic Notation "gen_dep" ident(a) :=
+  generalize dependent a.
+
+Tactic Notation "gen_dep" ident(a) ident(b) :=
+  generalize dependent a; gen_dep b.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) :=
+  generalize dependent a; gen_dep b c.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) :=
+  generalize dependent a; gen_dep b c d.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) :=
+  generalize dependent a; gen_dep b c d e.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) :=
+  generalize dependent a; gen_dep b c d e f.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) :=
+  generalize dependent a; gen_dep b c d e f g.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) :=
+  generalize dependent a; gen_dep b c d e f g h.
+
+Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) :=
+  generalize dependent a; gen_dep b c d e f g h i.

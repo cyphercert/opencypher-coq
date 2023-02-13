@@ -20,7 +20,7 @@ Module TotalMap.
     Context `{EqDec A eq}.
 
     Definition empty (v : B) : t A B :=
-      (fun _ => v).
+      fun _ => v.
 
     Definition update (m : t A B) (x : A) (v : B) :=
       fun x' => if x ==b x' then v else m x'.
@@ -186,6 +186,9 @@ Module PartialMap.
     Context {A B : Type}.
     Context `{EqDec A eq}.
 
+    Definition in_dom (x : A) (m : t A B) :=
+      exists v, m x = Some v.
+
     Definition disjoint (m1 m2 : t A B) : Prop := 
       forall k, m1 k = None \/ m2 k = None.
 
@@ -200,6 +203,24 @@ Module PartialMap.
   Section join_lemmas.
     Context (A B : Type).
     Context `{EqDec A eq}.
+
+    Lemma not_in_dom_iff (m : t A B) (x : A) :
+      ~ in_dom x m <-> m x = None.
+    Proof.
+      unfold in_dom.
+      destruct (m x).
+      all: split; ins.
+      { exfalso; eauto. }
+      intro; desf.
+    Qed.
+
+    Lemma disjoint_iff (m1 m2 : t A B) :
+      disjoint m1 m2 <-> (forall k, ~ in_dom k m1 \/ ~ in_dom k m2).
+    Proof.
+      unfold disjoint.
+      setoid_rewrite not_in_dom_iff.
+      reflexivity.
+    Qed.
 
     Lemma join_comm (m1 m2 : t A B) (Hdisj : disjoint m1 m2) :
       (join m1 m2) = (join m2 m1).

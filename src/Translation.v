@@ -57,44 +57,53 @@ Ltac desf_translate_pvertex_pedge :=
   desf; simpls;
   normalize_bool.
 
-Theorem translate_pattern__type_of pi n (Hwf : Pattern.wf pi) :
-  (In n (Pattern.dom_edges pi) <-> type_of (translate_pattern pi) n = Some Value.GEdgeT) /\
-  (In n (Pattern.dom_vertices pi) <-> type_of (translate_pattern pi) n = Some Value.GVertexT).
+Lemma type_of__rcd__pattern__cases pi r :
+  Rcd.type_of r = PatternT.type_of pi <->
+    (forall n, Rcd.type_of r n = Some Value.GVertexT <->
+      PatternT.type_of pi n = Some Value.GVertexT) /\
+    (forall n, Rcd.type_of r n = Some Value.GEdgeT <->
+      PatternT.type_of pi n = Some Value.GEdgeT) /\
+    (forall n, Rcd.type_of r n = None <->
+      PatternT.type_of pi n = None).
+Proof.
+  split.
+  { intros Heq; rewrite Heq.
+    splits; ins; auto. }
+  intros [Hv [He Hn]].
+  extensionality k.
+  edestruct PatternT.type_of__types as [Heq | [Heq | Heq]].
+  all: erewrite Heq.
+  { rewrite Hv; auto. }
+  { rewrite He; auto. }
+  { rewrite Hn; auto. }
+Qed.
+
+Theorem type_of__translate_pattern pi (Hwf : Pattern.wf pi) :
+  type_of (translate_pattern pi) = PatternT.type_of pi.
 Proof.
   all: induction pi; simpls.
-  all: unfold Pattern.wf in *.
-
-  { do 2 split; ins; desf; simpls.
-    all: desf_translate_pvertex_pedge.
-    all: desf_unfold_pat.
-    all: Pattern.solve_wf_contra. }
-
-  split.
   all: desf_translate_pvertex_pedge.
-  all: split; ins; desf.
-
-  all: try now apply PartialMap.update_eq.
-  all: try rewrite PartialMap.update_neq.
-  all: try now apply PartialMap.update_eq.
-  all: try rewrite PartialMap.update_neq.
-  all: try (apply IHpi; [ splits | ]; now eauto with pattern_wf_db).
-
-  all: try now (intros ?; subst; Pattern.solve_wf_contra).
-  all: try (exfalso; simple eapply Pattern.wf__imp_pv__dom_vertices; eauto;
-            simple eapply Pattern.hop_wf__imp_pv; eauto).
-
+  all: assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
+  all: extensionality n.
   all: desf_unfold_pat.
-  all: try now (left; eauto with pattern_wf_db).
-  all: right; apply IHpi; [ splits | ]; now eauto with pattern_wf_db.
+  all: try (exfalso; eapply Pattern.wf__pv_neq_pe; now eauto).
+  all: rewrite IHpi; auto.
+  all: rewrite <- PatternT.In_dom_vertices__iff; auto.
 Qed.
 
 Corollary translate_pattern__type_of_GVertexT pi n (Hwf : Pattern.wf pi) :
   (In n (Pattern.dom_vertices pi) <-> type_of (translate_pattern pi) n = Some Value.GVertexT).
-Proof. edestruct translate_pattern__type_of; eassumption. Qed.
+Proof.
+  rewrite type_of__translate_pattern; auto.
+  now rewrite PatternT.In_dom_vertices__iff.
+Qed.
 
 Corollary translate_pattern__type_of_GEdgeT pi n (Hwf : Pattern.wf pi) :
   (In n (Pattern.dom_edges pi) <-> type_of (translate_pattern pi) n = Some Value.GEdgeT).
-Proof. edestruct translate_pattern__type_of; eassumption. Qed.
+Proof. 
+  rewrite type_of__translate_pattern; auto.
+  now rewrite PatternT.In_dom_edges__iff.
+Qed.
 
 Theorem translate_pattern__type_of__types pi n :
   type_of (translate_pattern pi) n = Some Value.GVertexT \/
@@ -185,70 +194,35 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     all: eauto.
   Qed.
 
-  Theorem match_clause_dom graph pi table' r'
+  Theorem match_clause_type graph pi table' r'
     (Hres : eval_match_clause graph pi = Some table')
+    (Hwf : Pattern.wf pi)
     (HIn : In r' table') :
-      Rcd.matches_pattern_dom r' pi.
+      Rcd.type_of r' = PatternT.type_of pi.
   Proof.
-    intros k.
     unfold eval_match_clause in Hres.
-    rewrite Rcd.in_dom_iff, Pattern.In_dom.
-    erewrite match_clause_type_of; try eassumption.
-    clear Hres HIn.
-    split.
-
-    { intros [x Htype].
-      edestruct translate_pattern__type_of__types as [H | [H | H]].
-      all: erewrite H in Htype.
-      all: inv H.
-      all: induction pi; simpls.
-
-      all: desf_translate_pvertex_pedge.
-      all: desf_unfold_pat.
-
-      all: destruct IHpi; auto. }
-
-    { intros [HIn | HIn].
-      all: induction pi; simpls; desf.
-
-      all: desf_translate_pvertex_pedge.
-      all: try eauto using PartialMap.update_eq.
-      all: desf_unfold_pat.
-
-      all: try apply IHpi.
-      all: try now eexists.
-      all: congruence. }
+    apply eval_type_of in Hres.
+    rewrite type_of__translate_pattern in Hres; auto.
   Qed.
 
-  Lemma matches_pattern_dom_start r' pv v
-    (Hdom : Rcd.matches_pattern_dom r' (Pattern.start pv))
+  Lemma matches_pattern_type_start r' pv v
+    (Htype : Rcd.type_of r' = PatternT.type_of (Pattern.start pv))
     (Hval : r' (Pattern.vname pv) = Some (Value.GVertex v)) :
       r' = (Pattern.vname pv |-> Value.GVertex v).
   Proof.
-    extensionality k.
+    extensionality k; simpls.
+    apply (f_equal (fun f => f k)) in Htype.
     desf_unfold_pat.
-    unfold PartialMap.empty, TotalMap.empty.
-
-    unfold Rcd.matches_pattern_dom, Rcd.in_dom in *.
-    specialize Hdom with k; simpls.
-    destruct (r' k) eqn:Hval'; auto.
-
-    eassert (Hin : exists v, Some _ = Some v) by eauto.
-    rewrite Hdom in Hin.
-    desf.
+    now apply Rcd.type_of_None.
   Qed.
 
-  Lemma matches_pattern_dom_start' r' pv x
-    (Hval : r' = (Pattern.vname pv |-> x)) :
-      Rcd.matches_pattern_dom r' (Pattern.start pv).
+  Lemma matches_pattern_type_start' r' pv v
+    (Hval : r' = (Pattern.vname pv |-> Value.GVertex v)) :
+      Rcd.type_of r' = PatternT.type_of (Pattern.start pv).
   Proof.
-    unfold Rcd.matches_pattern_dom in *; ins.
-    split; ins; desf.
-    all: unfold Rcd.in_dom in *.
-    all: desf.
-    all: try eexists.
-    all: desf_unfold_pat.
-    exfalso; eauto.
+    extensionality k.
+    subst. simpl.
+    now rewrite Rcd.type_of_singleton.
   Qed.
 
   Definition expansion_of_by_hop' graph r' r mode v_from e v_to pi pe pv :=
@@ -259,127 +233,70 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     expansion_of graph r' r mode
       (Pattern.vname (Pattern.last pi)) (Pattern.ename pe) (Pattern.vname pv) (Pattern.edir pe).
 
-  Lemma matches_in_dom graph path pi r' n
-    (Hmatch : Path.matches graph r' path pi)
-    (HIn : In n (Pattern.dom pi)) :
-      exists x, r' n = Some x.
-  Proof.
-    induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: simpls; desf.
-    all: eauto.
-  Qed.
-
-  Lemma matches_in_dom_contra graph path pi r' n
-    (Hmatch : Path.matches graph r' path pi)
-    (Hval : r' n = None) :
-      ~ In n (Pattern.dom pi).
-  Proof.
-    intro contra.
-    eapply matches_in_dom in contra; eauto.
-    desf.
-  Qed.
-
-  Lemma matches_last graph path pi r'
-    (Hmatch : Path.matches graph r' path pi) :
-      r' (Pattern.vname (Pattern.last pi)) = Some (Value.GVertex (Path.last path)).
-  Proof.
-    destruct pi. 
-    all: inv Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: eauto.
-  Qed.
-
-  Lemma matches_exclude graph path pi r' n x
-    (Hmatch : Path.matches graph r' path pi)
-    (HIn : ~ In n (Pattern.dom pi)) :
-      Path.matches graph (n !-> x; r') path pi.
-  Proof.
-    induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    1: apply Path.matches_nil.
-    2: apply Path.matches_cons.
-    all: try apply IHHmatch.
-    all: try (intro; apply HIn; right; now right).
-    all: try apply Path.Build_matches_pvertex.
-    all: try apply Path.Build_matches_pedge.
-    all: auto.
-    all: desf_unfold_pat.
-    all: exfalso; auto.
-  Qed.
-
-  Lemma matches_pattern_dom_exclude_All pi pe pv r'
+  Lemma matches_pattern_type_exclude_All pi pe pv r'
     (Hwf : Pattern.wf (Pattern.hop pi pe pv))
-    (Hdom : Rcd.matches_pattern_dom r' (Pattern.hop pi pe pv))
+    (Htype : Rcd.type_of r' = PatternT.type_of (Pattern.hop pi pe pv))
     (HIn : ~ In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
-      Rcd.matches_pattern_dom (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r') pi.
+      Rcd.type_of (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r') =
+        PatternT.type_of pi.
   Proof.
-    unfold Rcd.matches_pattern_dom in *.
-    intros k. specialize Hdom with k.
-    split; intro H.
-    all: unfold Rcd.in_dom in *.
-    all: desf_unfold_pat.
-    { destruct Hdom as [? | [? | ?]]; eauto.
-      all: exfalso; eauto. }
-    all: rewrite Pattern.In_dom in *; desf.
-    all: try Pattern.solve_wf_contra.
+    assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
+    repeat rewrite Rcd.type_of_t_update; simpls.
+    rewrite Htype; clear Htype; unfold PartialMap.update.
+    extensionality k.
+    desf_unfold_pat.
+    { erewrite <- PatternT.wf__type_of_pe; eauto. }
+    { erewrite <- PatternT.wf__type_of_pv__None; eauto. }
   Qed.
 
-  Lemma matches_pattern_dom_exclude_Into pi pe pv r'
+  Lemma matches_pattern_type_exclude_Into pi pe pv r'
     (Hwf : Pattern.wf (Pattern.hop pi pe pv))
-    (Hdom : Rcd.matches_pattern_dom r' (Pattern.hop pi pe pv))
+    (Htype : Rcd.type_of r' = PatternT.type_of (Pattern.hop pi pe pv))
     (HIn : In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
-      Rcd.matches_pattern_dom (Pattern.ename pe !-> None; r') pi.
+      Rcd.type_of (Pattern.ename pe !-> None; r') = PatternT.type_of pi.
   Proof.
-    unfold Rcd.matches_pattern_dom in *.
-    intros k. specialize Hdom with k.
-    split; intro H.
-    all: unfold Rcd.in_dom in *.
-    all: desf_unfold_pat.
-    { destruct Hdom as [? | [? | ?]]; subst; eauto.
-      all: now (rewrite Pattern.In_dom; eauto). }
-    all: rewrite Pattern.In_dom in *; desf.
-    all: try Pattern.solve_wf_contra.
+    assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
+    rewrite Rcd.type_of_t_update; simpls.
+    rewrite Htype; clear Htype; unfold PartialMap.update.
+    extensionality k.
+    desf_unfold_pat.
+    { erewrite <- PatternT.wf__type_of_pe; eauto. }
+    { erewrite <- PatternT.wf__type_of_pv__Some; eauto. }
   Qed.
 
   Lemma matches_hop_All graph path e v pi pe pv r'
     (Hwf : Pattern.wf (Pattern.hop pi pe pv))
-    (Hdom : Rcd.matches_pattern_dom r' (Pattern.hop pi pe pv))
+    (Htype : Rcd.type_of r' = PatternT.type_of (Pattern.hop pi pe pv))
     (Hmatch : Path.matches graph r' (Path.hop path e v) (Pattern.hop pi pe pv))
     (HIn : ~ In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
       exists r, << Hexp : expansion_of_by_hop graph r' r All pi pe pv >> /\
                 << Hmatch' : Path.matches graph r path pi >> /\
-                << Hdom' : Rcd.matches_pattern_dom r pi >>.
+                << Htype' : Rcd.type_of r = PatternT.type_of pi >>.
   Proof.
     exists (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r').
     inv Hmatch.
     destruct Hpe, Hpv.
-    eauto.
     splits.
     { unfold expansion_of_by_hop, expansion_of, expansion_of'.
       do 3 eexists. splits; eauto.
-      
       all: try extensionality k.
       all: desf_unfold_pat.
       all: try Pattern.solve_wf_contra.
       { exfalso. apply HIn. rewrite e0. apply Pattern.last__dom_vertices. }
-      eauto using matches_last. }
-    { apply matches_exclude. apply matches_exclude.
-      { assumption. }
-      all: rewrite Pattern.In_dom.
-      all: intro; desf.
-      all: Pattern.solve_wf_contra. }
-    { apply matches_pattern_dom_exclude_All; eauto. }
+      eauto using Path.matches_last. }
+    { apply Path.matches_exclude. apply Path.matches_exclude.
+      all: eauto with pattern_wf_db. }
+    { apply matches_pattern_type_exclude_All; eauto. }
   Qed.
 
   Lemma matches_hop_Into graph path e v pi pe pv r'
     (Hwf : Pattern.wf (Pattern.hop pi pe pv))
-    (Hdom : Rcd.matches_pattern_dom r' (Pattern.hop pi pe pv))
+    (Htype : Rcd.type_of r' = PatternT.type_of (Pattern.hop pi pe pv))
     (Hmatch : Path.matches graph r' (Path.hop path e v) (Pattern.hop pi pe pv))
     (HIn : In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
       exists r, << Hexp : expansion_of_by_hop graph r' r Into pi pe pv >> /\
                 << Hmatch' : Path.matches graph r path pi >> /\
-                << Hdom' : Rcd.matches_pattern_dom r pi >>.
+                << Hdom' : Rcd.type_of r = PatternT.type_of pi >>.
   Proof.
     exists (Pattern.ename pe !-> None; r').
     inv Hmatch.
@@ -392,27 +309,20 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       all: try extensionality k.
       all: desf_unfold_pat.
       all: try Pattern.solve_wf_contra.
-      eauto using matches_last. }
-    { apply matches_exclude.
-      { assumption. }
-      all: rewrite Pattern.In_dom.
-      all: intro; desf.
-      all: Pattern.solve_wf_contra. }
-    { eapply matches_pattern_dom_exclude_Into; eauto. }
+      eauto using Path.matches_last. }
+    { apply Path.matches_exclude.
+      all: eauto with pattern_wf_db. }
+    { eapply matches_pattern_type_exclude_Into; eauto. }
   Qed.
 
   Theorem match_clause_spec graph path pi table' r'
     (Hres : eval_match_clause graph pi = Some table')
     (Hwf : Pattern.wf pi)
-    (Hdom : Rcd.matches_pattern_dom r' pi)
+    (Htype : Rcd.type_of r' = PatternT.type_of pi)
     (Hmatch : Path.matches graph r' path pi) :
       In r' table'.
   Proof.
-    generalize dependent Hdom.
-    generalize dependent Hres.
-    generalize dependent r'.
-    generalize dependent table'.
-    generalize dependent path.
+    gen_dep Htype Hres r' table' path.
     induction pi; ins.
     all: destruct path; inv Hmatch.
     all: destruct Hpv.
@@ -422,7 +332,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       1: eapply filter_vertices_by_label_spec; try eassumption.
       all: auto.
       all: assert (r' = (Pattern.vname pv |-> Value.GVertex v))
-            by (eauto using matches_pattern_dom_start); subst.
+            by (eauto using matches_pattern_type_start); subst.
       all: eauto using scan_vertices_spec. }
 
     all: desf_match_result Hres.
@@ -448,21 +358,23 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     all: eauto with pattern_wf_db.
   Qed.
 
-  Lemma matches_pattern_dom_hop graph mode r r' pi pe pv
-    (* (Hwf : Pattern.wf pi) *)
-    (Hdom : Rcd.matches_pattern_dom r pi)
+  Lemma matches_pattern_type_hop graph mode r r' pi pe pv
+    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (Htype : Rcd.type_of r = PatternT.type_of pi)
     (Hexp : expansion_of_by_hop graph r' r mode pi pe pv) :
-      Rcd.matches_pattern_dom r' (Pattern.hop pi pe pv).
+      Rcd.type_of r' = PatternT.type_of (Pattern.hop pi pe pv).
   Proof.
     unfold expansion_of_by_hop, expansion_of, expansion_of' in Hexp.
-    unfold Rcd.matches_pattern_dom, Rcd.in_dom in *.
+    unfold Rcd.matches_pattern_dom, PartialMap.in_dom in *.
     ins; desf; desf.
-    all: split; ins; desf.
-    all: desf_unfold_pat.
-    all: try rewrite <- Hdom.
-    all: eauto.
-    all: try now (exfalso; eauto).
-    all: try now rewrite -> Hdom.
+    all: repeat rewrite Rcd.type_of_update; simpls.
+    all: rewrite <- Htype.
+    { reflexivity. }
+
+    extensionality k.
+    desf_unfold_pat.
+    { exfalso; eapply Pattern.wf__pv_neq_pe; eauto. }
+    now rewrite Hval_to.
   Qed.
 
   Lemma matches_expansion_of graph mode r r' path v_from e v_to pi pe pv
@@ -477,23 +389,20 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     apply Path.matches_cons.
     all: unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
     all: desf; desf.
-    all: try apply matches_exclude.
-    all: try apply matches_exclude.
-    all: eauto using matches_in_dom_contra.
+    all: try apply Path.matches_exclude.
+    all: try apply Path.matches_exclude.
+    all: eauto using Path.matches_in_dom_contra.
     all: try apply Path.Build_matches_pedge.
     all: try apply Path.Build_matches_pvertex.
     all: auto.
 
     all: assert (Path.last path = v_from)
-          by (erewrite matches_last in Hval_from; eauto;
+          by (erewrite Path.matches_last in Hval_from; eauto;
             injection Hval_from; trivial).
     all: subst; auto.
 
-    all: try now rewrite PartialMap.update_eq.
-    all: try rewrite PartialMap.update_neq.
-    all: try now rewrite PartialMap.update_eq.
-    all: try assumption.
-    all: try Pattern.solve_wf_contra.
+    all: desf_unfold_pat.
+    all: try (exfalso; eapply Pattern.wf__pv_neq_pe; now eauto).
 
     all: unfold Path.matches_direction in Hdir.
     all: desf; desf.
@@ -506,11 +415,9 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Hwf : Pattern.wf pi)
     (HIn : In r' table') :
       exists path, Path.matches graph r' path pi /\
-        Rcd.matches_pattern_dom r' pi.
+        Rcd.type_of r' = PatternT.type_of pi.
   Proof.
-    generalize dependent Hres.
-    generalize dependent r'.
-    generalize dependent table'.
+    gen_dep Hres r' table'.
     induction pi; ins.
     all: desf_match_result Hres.
     all: repeat match goal with
@@ -534,9 +441,9 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     5-12: eexists (Path.hop path _ _); splits.
 
     all: try eapply matches_expansion_of; eauto.
-    all: try eapply matches_pattern_dom_hop.
+    all: try eapply matches_pattern_type_hop.
     all: try unfold expansion_of_by_hop, expansion_of.
-    all: eauto using matches_pattern_dom_start'.
+    all: eauto using matches_pattern_type_start'.
 
     all: try eapply Path.matches_nil, Path.Build_matches_pvertex; eauto.
     all: try rewrite PartialMap.update_eq.
@@ -544,18 +451,6 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
 
     all: ins.
     all: try unfold expansion_of' in *; desf.
-    all: repeat match goal with
-          | [H1 : ?x = ?y, H2 : ?x = ?z |- _ ] =>
-              rewrite H1 in H2; inj_subst; subst
-          | [H : (?x |-> ?y) ?x = Some ?z |- _ ] =>
-              rewrite PartialMap.update_eq in H; injection H as H; subst
-          | [H : (?x |-> ?y; _) ?x = Some ?z |- _ ] =>
-              rewrite PartialMap.update_eq in H; injection H as H; subst
-          | [H : (Pattern.ename _ |-> _; _) _ = Some (Value.GVertex _) |- _ ] =>
-              rewrite -> PartialMap.update_neq in H; [ | Pattern.solve_wf_contra ]
-          | [H : (Pattern.vname _ |-> _; _) _ = Some (Value.GEdge _) |- _ ] =>
-              rewrite -> PartialMap.update_neq in H; [ | Pattern.solve_wf_contra ]
-          end.
-    all: auto.
+    all: desf_unfold_pat.
   Qed.
 End EvalQueryImpl.
