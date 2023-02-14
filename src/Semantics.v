@@ -359,10 +359,9 @@ Module PatternT.
     all: desf.
     all: try apply PartialMap.update_eq.
 
-    assert (Hwf0 := Hwf); destruct Hwf0; simpls.
     desf_unfold_pat.
-    all: try (apply IHpi; eauto with pattern_wf_db).
-    all: exfalso; eapply Pattern.wf__pe__dom_vertices; eauto.
+    { exfalso; eapply Pattern.wf__pe__dom_vertices; eauto. }
+    eauto with pattern_wf_db.
   Qed.
 
   Lemma type_of__dom_edges (pi : Pattern.t) ne
@@ -377,7 +376,6 @@ Module PatternT.
     all: try rewrite PartialMap.update_neq.
     all: eauto with pattern_wf_db.
     
-    { eapply Pattern.wf__pv_neq_pe; eassumption. }
     all: intro; subst.
     { eapply Pattern.wf__pe__dom_edges; eauto. }
     { eapply Pattern.wf__pv__dom_edges; eauto. }
@@ -485,7 +483,7 @@ Module PatternT.
   Qed.
 
   #[global]
-  Hint Resolve wf__type_of_pe wf__type_of_pv__None wf__type_of_pv__Some : pattern_wf_db.
+  Hint Resolve wf__type_of_pe wf__type_of_pv__None wf__type_of_pv__Some : patternT_wf_db.
 
 End PatternT.
 
@@ -528,33 +526,30 @@ Module Path.
         | BOTH => ends g e = (from, to) \/ ends g e = (to, from)
         end.
 
+    Definition ends_match_decb (e : edge) (from to : vertex) : bool :=
+      ends g e ==b (from, to).
+
+    Definition matches_direction_decb (from to : vertex) (e : edge) (d : direction) : bool :=
+        match d with
+        | OUT   => ends_match_decb e from to
+        | IN    => ends_match_decb e to from
+        | BOTH  => ends_match_decb e from to || ends_match_decb e to from
+        end.
+
     Definition matches_direction_dec (from to : vertex) (e : edge) (d : direction) :
       {matches_direction from to e d} + {~ matches_direction from to e d}.
     Proof.
       refine (
-        match d with
-        | OUT  => if (e_from g e == from) then
-                    if (e_to g e == to)
-                    then left _ else right _
-                  else right _
-        | IN   => if (e_from g e == to) then
-                    if (e_to g e == from)
-                    then left _ else right _
-                  else right _
-        | BOTH => if (e_from g e == from) then
-                    if (e_to g e == to)
-                    then left _ else right _
-                  else
-                    if (e_from g e == to) then
-                      if (e_to g e == from)
-                      then left _ else right _
-                    else right _
-        end
+        if matches_direction_decb from to e d == true
+        then left _ else right _
       ).
-      all: unfold matches_direction, equiv, e_from, e_to in *.
-      all: destruct (ends g e) as [from' to']; simpls.
-      all: try by desf.
-      all: try by intro; desf.
+      all: unfold matches_direction_decb, matches_direction,
+                  ends_match_decb, equiv, complement in *.
+      all: desf.
+      all: try rewrite -> orb_true_iff in e0.
+      all: try rewrite -> orb_true_iff in c.
+      all: repeat rewrite -> equiv_decb_true_iff in e0.
+      all: repeat rewrite -> equiv_decb_true_iff in c.
       all: auto.
     Defined.
 
@@ -574,8 +569,9 @@ Module Path.
   Lemma matches_in_dom graph path pi r' n
     (Hmatch : matches graph r' path pi)
     (HIn : In n (Pattern.dom pi)) :
-      exists x, r' n = Some x.
+      PartialMap.in_dom n r'.
   Proof.
+    unfold PartialMap.in_dom.
     induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
     all: simpls; desf.
@@ -589,6 +585,7 @@ Module Path.
   Proof.
     intro contra.
     eapply matches_in_dom in contra; eauto.
+    unfold PartialMap.in_dom in contra.
     desf.
   Qed.
 

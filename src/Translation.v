@@ -149,12 +149,12 @@ Proof.
   all: try apply translate_pattern__type_of_None; try assumption.
   all: eauto with pattern_wf_db.
 
-  all: autounfold with unfold_pat in *.
-  all: desf.
-  all: unfold complement, equiv in *.
+  all: desf_unfold_pat.
   all: try contradiction.
   all: try apply translate_pattern__type_of_GVertexT; try assumption.
-  all: Pattern.solve_wf_contra.
+  all: try intro; exfalso.
+  all: try (eapply Pattern.wf__pv_neq_pe; now eauto).
+  all: try (eapply Pattern.wf__last_neq_pe; now eauto).
 Qed.
 
 Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
@@ -281,7 +281,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       do 3 eexists. splits; eauto.
       all: try extensionality k.
       all: desf_unfold_pat.
-      all: try Pattern.solve_wf_contra.
+      all: try (exfalso; eapply Pattern.wf__pe_neq_last; now eauto).
       { exfalso. apply HIn. rewrite e0. apply Pattern.last__dom_vertices. }
       eauto using Path.matches_last. }
     { apply Path.matches_exclude. apply Path.matches_exclude.
@@ -308,7 +308,8 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       
       all: try extensionality k.
       all: desf_unfold_pat.
-      all: try Pattern.solve_wf_contra.
+      all: try (exfalso; eapply Pattern.wf__pe_neq_last; now eauto).
+      all: try (exfalso; eapply Pattern.wf__pe_neq_pv; now eauto).
       eauto using Path.matches_last. }
     { apply Path.matches_exclude.
       all: eauto with pattern_wf_db. }
