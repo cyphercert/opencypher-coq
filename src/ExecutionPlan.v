@@ -75,6 +75,8 @@ Module ExecutionPlan.
     (* expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) : step1 *)
     Parameter expand : ExpandMode.t -> Name.t -> Name.t -> Name.t -> Pattern.direction -> step1.
 
+    Parameter return_all : step1.
+
     Section axioms.
       Variable graph : PropertyGraph.t.
       Variable table : BindingTable.t.
@@ -107,6 +109,8 @@ Module ExecutionPlan.
           ty n_from = Some Value.GVertexT -> ty n_edge = None -> ty n_to = Some Value.GVertexT ->
             exists table', expand Into n_from n_edge n_to d graph table = Some table'.
 
+      Axiom return_all_wf :
+        exists table', return_all graph table = Some table'.
 
       (** If the operation returned some table then the type of the table is correct *)
 
@@ -129,28 +133,11 @@ Module ExecutionPlan.
         expand Into n_from n_edge n_to d graph table = Some table' ->
           BindingTable.of_type table ty ->
             BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
-(* 
-      (** If the operation returned some table then the type of the input table must have been correct *)
 
-      Axiom filter_vertices_by_label_input_type : forall n l,
-        filter_by_label Vertices n l graph table = Some table' ->
+      Axiom return_all_type :
+        return_all graph table = Some table' ->
           BindingTable.of_type table ty ->
-            ty n = Some Value.GVertexT.
-
-      Axiom filter_edges_by_label_input_type : forall n l,
-        filter_by_label Edges n l graph table = Some table' ->
-          BindingTable.of_type table ty ->
-            ty n = Some Value.GEdgeT.
-
-      Axiom expand_all_input_type : forall n_from n_edge n_to d,
-        expand All n_from n_edge n_to d graph table = Some table' ->
-          BindingTable.of_type table ty ->
-            ty n_from = Some Value.GVertexT /\ ty n_edge = None /\ ty n_to = None.
-
-      Axiom expand_into_input_type : forall n_from n_edge n_to d,
-        expand Into n_from n_edge n_to d graph table = Some table' ->
-          BindingTable.of_type table ty ->
-            ty n_from = Some Value.GVertexT /\ ty n_edge = None /\ ty n_to = Some Value.GVertexT. *)
+            BindingTable.of_type table' (Rcd.explicit_projT ty).
 
       (** scan_vertices specification *)
 
@@ -196,6 +183,16 @@ Module ExecutionPlan.
       Axiom expand_spec' : forall r' mode n_from n_edge n_to d,
         expand mode n_from n_edge n_to d graph table = Some table' -> In r' table' ->
             exists r, In r table /\ expansion_of graph r' r mode n_from n_edge n_to d.
+
+      (** return_all specification *)
+
+      Axiom return_all_spec : forall r,
+        return_all graph table = Some table' ->
+          In r table -> In (Rcd.explicit_proj r) table'.
+
+      Axiom return_all_spec' : forall r',
+        return_all graph table = Some table' ->
+          In r' table' -> exists r, In r table /\ r' = Rcd.explicit_proj r.
     End axioms.
   End Spec.
 
@@ -203,15 +200,8 @@ Module ExecutionPlan.
   | ScanVertices (n : Name.t)
   | FilterByLabel (mode : FilterMode.t) (n : Name.t) (l : label) (plan : t) 
   | Expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) (plan : t)
+  | FilterAll (plan : t)
   .
-
-  Fixpoint dom (plan : t) : list Name.t := 
-    match plan with
-    | ScanVertices n => [ n ]
-    | FilterByLabel mode n l plan => dom plan
-    | Expand All n_from n_edge n_to d plan => n_edge :: n_to :: dom plan
-    | Expand Into n_from n_edge n_to d plan => n_edge :: dom plan
-    end.
 
   Fixpoint type_of (plan : t) : BindingTable.T :=
     match plan with
@@ -219,6 +209,7 @@ Module ExecutionPlan.
     | FilterByLabel mode n l plan => type_of plan
     | Expand All n_from n_edge n_to d plan => n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; type_of plan
     | Expand Into n_from n_edge n_to d plan => n_edge |-> Value.GEdgeT; type_of plan
+    | FilterAll plan => Rcd.explicit_projT (type_of plan)
     end.
 
   Lemma type_of_types plan k :
@@ -227,6 +218,7 @@ Module ExecutionPlan.
     type_of plan k = None.
   Proof.
     induction plan; simpl in *.
+    all: unfold Rcd.explicit_projT.
     all: autounfold with unfold_pat.
     all: desf.
     all: auto.
@@ -255,6 +247,8 @@ Module ExecutionPlan.
       << Hneq_from : n_from =/= n_edge >> /\
       << Hneq_to : n_to =/= n_edge >> /\
       << Hwf : wf plan >>
+    | FilterAll plan =>
+      << Hwf : wf plan >>
     end.
 
   Module EvalPlan (S : Spec).
@@ -262,11 +256,11 @@ Module ExecutionPlan.
 
     #[local]
     Hint Resolve scan_vertices_type filter_by_label_type
-                expand_all_type expand_into_type : type_axioms.
+                expand_all_type expand_into_type return_all_type : type_axioms.
 
     #[local]
     Hint Resolve scan_vertices_wf filter_vertices_by_label_wf filter_edges_by_label_wf
-                 expand_all_wf expand_into_wf : wf_axioms.
+                 expand_all_wf expand_into_wf return_all_wf : wf_axioms.
 
     Section eval.
       Variable graph : PropertyGraph.t.
@@ -277,6 +271,7 @@ Module ExecutionPlan.
           eval plan >>= filter_by_label mode n l graph
         | Expand mode n_from n_edge n_to d plan => 
           eval plan >>= expand mode n_from n_edge n_to d graph
+        | FilterAll plan => eval plan >>= return_all graph
         end.
     End eval.
 
@@ -391,6 +386,9 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   #[local]
   Hint Unfold expand expand_single expand_all_single expand_into_single : expand_db.
 
+  Definition return_all (graph : PropertyGraph.t) (table : BindingTable.t) :=
+    Some (map Rcd.explicit_proj table).
+
   (** If the inputs are well-formed then the operation will return the result *)
 
   Theorem scan_vertices_wf graph n (Hwf : PropertyGraph.wf graph) :
@@ -473,6 +471,10 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     exists table', expand Into n_from n_edge n_to d graph table = Some table'.
   Proof. eapply expand_wf with (mode := Into); eassumption. Qed.
 
+  Theorem return_all_wf graph table :
+    exists table', return_all graph table = Some table'.
+  Proof. now eexists. Qed.
+
   (** If the operation returned some table then the type of the table is correct *)
   
   Theorem scan_vertices_type graph table' n 
@@ -553,6 +555,19 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
   Proof. eapply expand_type with (mode := Into); eassumption. Qed.
+
+  Theorem return_all_type graph table table' ty
+                          (Hres : return_all graph table = Some table')
+                          (Htype : BindingTable.of_type table ty) :
+    BindingTable.of_type table' (Rcd.explicit_projT ty).
+  Proof.
+    intros r' HIn.
+    unfold return_all in Hres.
+    injection Hres as ?; subst.
+    apply in_map_iff in HIn as [r [? HIn]]; subst.
+    rewrite Rcd.type_of_explicit_proj.
+    now rewrite Htype with r.
+  Qed.
 
   (** scan_vertices specification *)
 
@@ -742,6 +757,30 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     exists r. split.
     { assumption. }
     eapply expand_single_spec; eassumption.
+  Qed.
+
+  (* return_all specification *)
+
+  Theorem return_all_spec graph table table' r
+    (Hres : return_all graph table = Some table')
+    (HIn : In r table) :
+      In (Rcd.explicit_proj r) table'.
+  Proof.
+    unfold return_all in *.
+    injection Hres as ?; subst.
+    eapply in_map in HIn.
+    eassumption.
+  Qed.
+
+  Theorem return_all_spec' graph table table' r'
+    (Hres : return_all graph table = Some table')
+    (HIn : In r' table') :
+      exists r, In r table /\ r' = Rcd.explicit_proj r.
+  Proof.
+    unfold return_all in *.
+    injection Hres as ?; subst.
+    apply in_map_iff in HIn as [r ?]; desf.
+    eauto.
   Qed.
 End ExecutionPlanImpl.
 

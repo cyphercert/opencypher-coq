@@ -189,9 +189,6 @@ Module Rcd.
     { intros [x H]. destruct (r k); try inv H. now eexists. }
   Qed.
 
-  Definition matches_pattern_dom (r : t) (pattern : Pattern.t) :=
-    forall k, PartialMap.in_dom k r <-> In k (Pattern.dom pattern).
-
   Section join.
     Lemma type_of_join r1 r2 :
       type_of (PartialMap.join r1 r2) = PartialMap.join (type_of r1) (type_of r2).
@@ -215,6 +212,26 @@ Module Rcd.
       PartialMap.disjoint (type_of r1) (type_of r2).
     Proof. now apply type_of_disjoint_iff. Qed.
   End join.
+
+  Definition explicit_proj (r : t) : t := fun k =>
+    match k with
+    | Name.explicit _ => r k
+    | _ => None
+    end.
+
+  Definition explicit_projT (r : T) : T := fun k =>
+    match k with
+    | Name.explicit _ => r k
+    | _ => None
+    end.
+
+  Lemma type_of_explicit_proj r :
+    type_of (explicit_proj r) = explicit_projT (type_of r).
+  Proof.
+    extensionality k.
+    unfold explicit_proj, explicit_projT.
+    desf.
+  Qed.
 End Rcd.
 
 Module BindingTable.

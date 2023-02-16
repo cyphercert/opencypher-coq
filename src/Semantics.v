@@ -161,16 +161,6 @@ Module PatternT.
     now rewrite PartialMap.not_in_dom_iff.
   Qed.
 
-  Corollary matches_pattern_dom__if (pi : Pattern.t) r
-    (Hwf : Pattern.wf pi)
-    (Htype : Rcd.type_of r = type_of Full pi) :
-      Rcd.matches_pattern_dom r pi.
-  Proof.
-    unfold Rcd.matches_pattern_dom; ins.
-    rewrite Rcd.in_dom_iff, Htype.
-    now rewrite In_dom__iff.
-  Qed.
-
   Lemma wf__type_of_pe pi pe pv
     (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
       type_of Full pi (Pattern.ename pe) = None.
