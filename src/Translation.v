@@ -10,6 +10,7 @@ From Coq Require Import Classes.RelationClasses.
 
 Require Import Cypher.
 Require Import Semantics.
+Require Import BindingTable.
 Require Import PropertyGraph.
 Require Import ExecutionPlan.
 Require Import Maps.
@@ -57,27 +58,6 @@ Ltac desf_translate_pvertex_pedge :=
   unfold translate_pvertex, translate_pedge in *;
   desf; simpls;
   normalize_bool.
-
-Lemma type_of__rcd__pattern__cases mode pi r :
-  Rcd.type_of r = PatternT.type_of mode pi <->
-    (forall n, Rcd.type_of r n = Some Value.GVertexT <->
-      PatternT.type_of mode pi n = Some Value.GVertexT) /\
-    (forall n, Rcd.type_of r n = Some Value.GEdgeT <->
-      PatternT.type_of mode pi n = Some Value.GEdgeT) /\
-    (forall n, Rcd.type_of r n = None <->
-      PatternT.type_of mode pi n = None).
-Proof.
-  split.
-  { intros Heq; rewrite Heq.
-    splits; ins; auto. }
-  intros [Hv [He Hn]].
-  extensionality k.
-  edestruct PatternT.type_of__types as [Heq | [Heq | Heq]].
-  all: erewrite Heq.
-  { rewrite Hv; auto. }
-  { rewrite He; auto. }
-  { rewrite Hn; auto. }
-Qed.
 
 Theorem type_of__translate_pattern pi (Hwf : Pattern.wf pi) :
   type_of (translate_pattern pi) = PatternT.type_of Full pi.

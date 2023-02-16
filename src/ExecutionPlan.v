@@ -10,6 +10,7 @@ From Coq Require Import Classes.RelationClasses.
 
 Require Import Cypher.
 Require Import Semantics.
+Require Import BindingTable.
 Require Import PropertyGraph.
 Require Import Maps.
 Require Import Utils.
