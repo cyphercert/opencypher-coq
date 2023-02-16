@@ -200,7 +200,7 @@ Module ExecutionPlan.
   | ScanVertices (n : Name.t)
   | FilterByLabel (mode : FilterMode.t) (n : Name.t) (l : label) (plan : t) 
   | Expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) (plan : t)
-  | FilterAll (plan : t)
+  | ReturnAll (plan : t)
   .
 
   Fixpoint type_of (plan : t) : BindingTable.T :=
@@ -209,7 +209,7 @@ Module ExecutionPlan.
     | FilterByLabel mode n l plan => type_of plan
     | Expand All n_from n_edge n_to d plan => n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; type_of plan
     | Expand Into n_from n_edge n_to d plan => n_edge |-> Value.GEdgeT; type_of plan
-    | FilterAll plan => Rcd.explicit_projT (type_of plan)
+    | ReturnAll plan => Rcd.explicit_projT (type_of plan)
     end.
 
   Lemma type_of_types plan k :
@@ -247,7 +247,7 @@ Module ExecutionPlan.
       << Hneq_from : n_from =/= n_edge >> /\
       << Hneq_to : n_to =/= n_edge >> /\
       << Hwf : wf plan >>
-    | FilterAll plan =>
+    | ReturnAll plan =>
       << Hwf : wf plan >>
     end.
 
@@ -271,7 +271,7 @@ Module ExecutionPlan.
           eval plan >>= filter_by_label mode n l graph
         | Expand mode n_from n_edge n_to d plan => 
           eval plan >>= expand mode n_from n_edge n_to d graph
-        | FilterAll plan => eval plan >>= return_all graph
+        | ReturnAll plan => eval plan >>= return_all graph
         end.
     End eval.
 
