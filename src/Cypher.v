@@ -32,15 +32,11 @@ Module Name.
     end.
 
   Definition eq_dec (n1 n2 : t) : {n1 = n2} + {n1 <> n2}.
-    refine (match n1, n2 with
-            | explicit n1, explicit n2 => if n1 == n2 then left _ else right _
-            | implicit n1, implicit n2 => if n1 == n2 then left _ else right _
-            | _,           _           => right _
-            end).
-    all: unfold complement, equiv in *; subst.
-    all: try reflexivity.
-    all: try (intro; discriminate).
-    all: injection as H; auto.
+    destruct n1 as [n1 | n1], n2 as [n2 | n2].
+    all: destruct (equiv_decbP n1 n2).
+    all: subst.
+    all: try now left.
+    all: right; congruence.
   Defined.
 
   #[global]
@@ -117,6 +113,46 @@ Module Pattern.
     | start pv => [vname pv]
     end.
 
+  Fixpoint dom_explicit (p : Pattern.t) : list Name.raw :=
+    match p with
+    | hop p pe pv =>
+      match vname pv, ename pe with
+      | Name.explicit nv, Name.explicit ne =>
+          nv :: ne :: dom_explicit p
+      | Name.implicit _,  Name.explicit ne =>
+          ne :: dom_explicit p
+      | Name.explicit nv, Name.implicit _  =>
+          nv :: dom_explicit p
+      | Name.implicit _,  Name.implicit _  =>
+          dom_explicit p
+      end
+    | start pv =>
+      match vname pv with
+      | Name.explicit nv => [nv]
+      | _                => []
+      end
+    end.
+
+  Fixpoint dom_implicit (p : Pattern.t) : list Name.raw :=
+    match p with
+    | hop p pe pv =>
+      match vname pv, ename pe with
+      | Name.implicit nv, Name.implicit ne =>
+          nv :: ne :: dom_implicit p
+      | Name.explicit _,  Name.implicit ne =>
+          ne :: dom_implicit p
+      | Name.implicit nv, Name.explicit _  =>
+          nv :: dom_implicit p
+      | Name.explicit _,  Name.explicit _  =>
+          dom_implicit p
+      end
+    | start pv =>
+      match vname pv with
+      | Name.implicit nv => [nv]
+      | _                => []
+      end
+    end.
+
   Fixpoint dom_vertices_explicit (p : Pattern.t) : list Name.raw :=
     match p with
     | hop p pe pv =>
@@ -178,6 +214,22 @@ Module Pattern.
       ename pe :: dom_edges p
     | start pv => nil
     end.
+
+  Lemma In_dom_explicit p n :
+    In n (dom_explicit p) <->
+      In (Name.explicit n) (dom p).
+  Proof.
+    induction p; split; ins.
+    all: desf; simpls; desf; auto.
+  Qed.
+
+  Lemma In_dom_implicit p n :
+    In n (dom_implicit p) <->
+      In (Name.implicit n) (dom p).
+  Proof.
+    induction p; split; ins.
+    all: desf; simpls; desf; auto.
+  Qed.
 
   Lemma In_dom_vertices_explicit p nv :
     In nv (dom_vertices_explicit p) <->
