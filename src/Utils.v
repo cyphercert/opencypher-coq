@@ -118,6 +118,15 @@ Defined.
 
 Definition In_decb {A : Type} `{EqDec A eq} (a : A) (xs : list A) : bool := In_dec a xs.
 
+Theorem In_decbP {A : Type} `{EqDec A eq} (a : A) (xs : list A) :
+  reflect (In a xs) (In_decb a xs).
+Proof.
+  unfold In_decb.
+  destruct (In_dec a xs).
+  { now apply ReflectT. }
+  { now apply ReflectF. }
+Qed.
+
 Lemma In_decb_true_iff : forall {A : Type} `{EqDec A eq} (a : A) (xs : list A),
   In_decb a xs = true <-> In a xs.
 Proof.
