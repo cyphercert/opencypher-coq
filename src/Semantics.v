@@ -71,12 +71,12 @@ Module PatternT.
       type_of Full pi nv = Some Value.GVertexT.
   Proof.
     induction pi; simpls.
+    all: inv Hwf.
     all: desf.
     all: try apply PartialMap.update_eq.
 
     desf_unfold_pat.
-    { exfalso; eapply Pattern.wf__pe__dom_vertices; eauto. }
-    eauto with pattern_wf_db.
+    contradiction.
   Qed.
 
   Lemma type_of_explicit__dom_vertices (pi : Pattern.t) nv
@@ -85,13 +85,12 @@ Module PatternT.
       type_of Explicit pi (Name.explicit nv) = Some Value.GVertexT.
   Proof.
     induction pi; simpls.
+    all: inv Hwf.
     all: desf; simpls; desf.
     all: try apply PartialMap.update_eq.
 
     all: desf_unfold_pat.
-    all: eauto with pattern_wf_db.
-    all: exfalso; eapply Pattern.wf__pe__dom_vertices; eauto.
-    all: now rewrite Heq0, e.
+    all: congruence.
   Qed.
 
   Lemma type_of__dom_edges (pi : Pattern.t) ne
@@ -100,15 +99,15 @@ Module PatternT.
       type_of Full pi ne = Some Value.GEdgeT.
   Proof.
     induction pi; simpls.
+    all: inv Hwf.
     all: desf.
     all: rewrite PartialMap.update_neq.
     all: try apply PartialMap.update_eq.
     all: try rewrite PartialMap.update_neq.
-    all: eauto with pattern_wf_db.
+    all: auto.
     
     all: intro; subst.
-    { eapply Pattern.wf__pe__dom_edges; eauto. }
-    { eapply Pattern.wf__pv__dom_edges; eauto. }
+    all: contradiction.
   Qed.
 
   Lemma type_of_explicit__dom_edges (pi : Pattern.t) ne
@@ -117,19 +116,16 @@ Module PatternT.
       type_of Explicit pi (Name.explicit ne) = Some Value.GEdgeT.
   Proof.
     induction pi; simpls.
+    all: inv Hwf.
     all: desf.
     all: try apply PartialMap.update_eq.
     all: try rewrite PartialMap.update_neq.
     all: try apply PartialMap.update_eq.
     all: try rewrite PartialMap.update_neq.
-    all: eauto with pattern_wf_db.
+    all: auto.
     
     all: intro; subst.
-    { eapply Pattern.wf__pv_neq_pe; eauto. now rewrite Heq, H, Heq0. }
-    { eapply Pattern.wf__pe__dom_edges; eauto. now rewrite Heq0, H. }
-    { eapply Pattern.wf__pv__dom_edges; eauto. now rewrite Heq, H. }
-    { eapply Pattern.wf__pv__dom_edges; eauto. now rewrite Heq, H. }
-    { eapply Pattern.wf__pe__dom_edges; eauto. now rewrite Heq0, H. }
+    all: congruence.
   Qed.
 
   Lemma dom_vertices__type_of mode pi nv
@@ -138,8 +134,8 @@ Module PatternT.
       In nv (Pattern.dom_vertices pi).
   Proof.
     induction pi, mode; simpls.
+    all: inv Hwf.
     all: desf_unfold_pat.
-    all: eauto with pattern_wf_db.
   Qed.
 
   Lemma dom_edges__type_of mode pi ne
@@ -148,8 +144,8 @@ Module PatternT.
       In ne (Pattern.dom_edges pi).
   Proof.
     induction pi, mode; simpls.
+    all: inv Hwf.
     all: desf_unfold_pat.
-    all: eauto with pattern_wf_db.
   Qed.
 
   Theorem In_dom_vertices__iff (pi : Pattern.t) nv
@@ -257,35 +253,6 @@ Module PatternT.
     now rewrite PartialMap.not_in_dom_iff.
   Qed.
 
-  Lemma wf__type_of_pe mode pi pe pv
-    (Hwf : Pattern.wf (Pattern.hop pi pe pv)) :
-      type_of mode pi (Pattern.ename pe) = None.
-  Proof.
-    apply not_In_dom.
-    all: eauto with pattern_wf_db.
-  Qed.
-
-  Lemma wf__type_of_pv__None mode pi pe pv
-    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
-    (HIn : ~ In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
-      type_of mode pi (Pattern.vname pv) = None.
-  Proof.
-    apply not_In_dom.
-    all: eauto with pattern_wf_db.
-  Qed.
-
-  Lemma wf__type_of_pv__Some mode pi pe pv
-    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
-    (HIn : In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
-      type_of mode pi (Pattern.vname pv) = Some Value.GVertexT.
-  Proof.
-    assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
-    destruct mode, (Pattern.vname pv) eqn:Heq.
-    all: try (exfalso; eapply Pattern.wf__imp_pv__dom_vertices; now eauto).
-    { now rewrite <- In_dom_vertices_explicit__iff. }
-    { now rewrite <- In_dom_vertices__iff. }
-  Qed.
-
   Lemma type_of_None pi n
     (Htype : type_of Full pi n = None) :
       type_of Explicit pi n = None.
@@ -300,9 +267,6 @@ Module PatternT.
     induction pi; simpls.
     all: desf_unfold_pat.
   Qed.
-
-  #[global]
-  Hint Resolve wf__type_of_pe wf__type_of_pv__None wf__type_of_pv__Some : patternT_wf_db.
 
   Definition imp_name_unique (pi : Pattern.t) (n : Name.t) : Prop :=
     match n with
@@ -327,7 +291,8 @@ Module PatternT.
       rewrite Pattern.In_dom_vertices_implicit.
       apply Pattern.not_In_dom_vertices.
       rewrite not_In_dom__iff; desf. }
-    { now rewrite not_In_dom__iff. }
+    { rewrite In_dom_edges__iff. { intro; congruence. } assumption. }
+    { rewrite In_dom_vertices__iff. { intro; desf; congruence. } assumption. }
     { rewrite In_dom_edges__iff; auto.
       intros; destruct Htype_pv; congruence. }
   Qed.
@@ -342,7 +307,8 @@ Module PatternT.
       intros [contra | contra].
       { eapply HIn_pv_imp; eauto. }
       now apply HIn_pv. }
-    { rewrite <- not_In_dom__iff; auto. }
+    { rewrite <- not_In_dom__iff, Pattern.In_dom; auto.
+      unfold not in *. ins; desf; auto. }
     { edestruct type_of__types as [Hty | [Hty | Hty]]; eauto.
       exfalso. apply HIn_pv.
       rewrite In_dom_edges__iff; auto. }
@@ -669,6 +635,7 @@ Module Path.
   Proof.
     gen_dep path r'.
     induction pi; intros; inv Hmatch; clear Hmatch.
+    all: inv Hwf.
     { simpls.
       exists (Pattern.vname pv |-> Value.GVertex v).
       all: splits.
@@ -688,7 +655,6 @@ Module Path.
       all: desf_unfold_pat; desf.
     }
 
-    assert (Hwf' := Hwf). inv Hwf'.
     destruct Htype_pv as [Htype_pv | Htype_pv].
     1: set (r'0 := (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r')).
     2: set (r'0 := (Pattern.ename pe !-> None; r')).
