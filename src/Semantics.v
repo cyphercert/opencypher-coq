@@ -182,6 +182,12 @@ Module PatternT.
     split; eauto using type_of_explicit__dom_edges, dom_edges__type_of.
   Qed.
 
+  Lemma last__dom_vertices pi :
+    type_of Full pi (Pattern.vname (Pattern.last pi)) = Some Value.GVertexT.
+  Proof.
+    destruct pi; simpl; apply PartialMap.update_eq.
+  Qed.
+
   Theorem type_of_explicit__implicit (pi : Pattern.t) n :
     type_of Explicit pi (Name.implicit n) = None.
   Proof.
@@ -280,8 +286,93 @@ Module PatternT.
     { now rewrite <- In_dom_vertices__iff. }
   Qed.
 
+  Lemma type_of_None pi n
+    (Htype : type_of Full pi n = None) :
+      type_of Explicit pi n = None.
+  Proof.
+    induction pi; simpls.
+    all: desf_unfold_pat.
+  Qed.
+
+  Lemma type_of_explicit_full pi n :
+    type_of Explicit pi (Name.explicit n) = type_of Full pi (Name.explicit n).
+  Proof.
+    induction pi; simpls.
+    all: desf_unfold_pat.
+  Qed.
+
   #[global]
   Hint Resolve wf__type_of_pe wf__type_of_pv__None wf__type_of_pv__Some : patternT_wf_db.
+
+  Definition imp_name_unique (pi : Pattern.t) (n : Name.t) : Prop :=
+    match n with
+    | Name.implicit n => type_of Full pi (Name.implicit n) = None
+    | Name.explicit _ => True
+    end.
+
+  Inductive wfT : Pattern.t -> Prop :=
+  | wfT_start pv : wfT (Pattern.start pv)
+  | wfT_hop pi pe pv (Hwf : wfT pi)
+      (Hpv_neq_pe : Pattern.vname pv <> Pattern.ename pe)
+      (Htype_pv_imp : imp_name_unique pi (Pattern.vname pv))
+      (Htype_pe : type_of Full pi (Pattern.ename pe) = None)
+      (Htype_pv : type_of Full pi (Pattern.vname pv) = None \/
+                type_of Full pi (Pattern.vname pv) = Some Value.GVertexT) :
+        wfT (Pattern.hop pi pe pv).
+
+  Lemma wfT_wf pi (Hwf : wfT pi) : Pattern.wf pi.
+  Proof.
+    induction Hwf; constructor; auto.
+    { ins. unfold imp_name_unique in *.
+      rewrite Pattern.In_dom_vertices_implicit.
+      apply Pattern.not_In_dom_vertices.
+      rewrite not_In_dom__iff; desf. }
+    { now rewrite not_In_dom__iff. }
+    { rewrite In_dom_edges__iff; auto.
+      intros; destruct Htype_pv; congruence. }
+  Qed.
+
+  Lemma wf_wfT pi (Hwf : Pattern.wf pi) : wfT pi.
+  Proof.
+    induction Hwf; constructor; auto.
+    { ins; unfold imp_name_unique in *; desf.
+      rewrite <- not_In_dom__iff; auto.
+      rewrite Pattern.In_dom.
+      rewrite <- Pattern.In_dom_vertices_implicit.
+      intros [contra | contra].
+      { eapply HIn_pv_imp; eauto. }
+      now apply HIn_pv. }
+    { rewrite <- not_In_dom__iff; auto. }
+    { edestruct type_of__types as [Hty | [Hty | Hty]]; eauto.
+      exfalso. apply HIn_pv.
+      rewrite In_dom_edges__iff; auto. }
+  Qed.
+
+  Theorem wf_wfT_iff pi : Pattern.wf pi <-> wfT pi.
+  Proof.
+    split; auto using wfT_wf, wf_wfT.
+  Qed.
+
+  Lemma last_neq_pe pi pe pv
+    (Hwf : wfT (Pattern.hop pi pe pv)) :
+      Pattern.vname (Pattern.last pi) <> Pattern.ename pe.
+  Proof.
+    pose proof last__dom_vertices as H.
+    specialize (H pi).
+    inv Hwf.
+    intro contra; congruence.
+  Qed.
+
+  Lemma last_neq_pv pi pe pv
+    (Hwf : wfT (Pattern.hop pi pe pv))
+    (HIn : PatternT.type_of Full pi (Pattern.vname pv) = None) :
+      Pattern.vname (Pattern.last pi) <> Pattern.vname pv.
+  Proof.
+    pose proof last__dom_vertices as H.
+    specialize (H pi).
+    inv Hwf.
+    intro contra; congruence.
+  Qed.
 
   Lemma explicit_projT_type_of mode pi :
     Rcd.explicit_projT (type_of mode pi) = type_of Explicit pi.
@@ -295,41 +386,35 @@ Module PatternT.
   Qed.
 
   Theorem matches_pattern_type_exclude_All mode pi pe pv r'
-    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (Hwf : wfT (Pattern.hop pi pe pv))
     (Htype : Rcd.type_of r' = PatternT.type_of mode (Pattern.hop pi pe pv))
-    (HIn : ~ In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
+    (HIn : PatternT.type_of Full pi (Pattern.vname pv) = None) :
       Rcd.type_of (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r') =
         PatternT.type_of mode pi.
   Proof.
-    assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
+    inv Hwf.
     repeat rewrite Rcd.type_of_t_update; simpls.
-    rewrite Htype; clear Htype; unfold PartialMap.update.
+    rewrite Htype; clear Htype.
     destruct mode; simpls.
     all: extensionality k.
     all: desf_unfold_pat.
-    { erewrite PatternT.wf__type_of_pe with (mode := Explicit); eauto. }
-    { erewrite PatternT.wf__type_of_pv__None with (mode := Explicit); eauto. }
-    { erewrite PatternT.wf__type_of_pe with (mode := Full); eauto. }
-    { erewrite PatternT.wf__type_of_pv__None with (mode := Full); eauto. }
+    all: now rewrite type_of_None.
   Qed.
 
   Lemma matches_pattern_type_exclude_Into mode pi pe pv r'
-    (Hwf : Pattern.wf (Pattern.hop pi pe pv))
+    (Hwf : wfT (Pattern.hop pi pe pv))
     (Htype : Rcd.type_of r' = PatternT.type_of mode (Pattern.hop pi pe pv))
-    (HIn : In (Pattern.vname pv) (Pattern.dom_vertices pi)) :
+    (HIn : PatternT.type_of Full pi (Pattern.vname pv) = Some Value.GVertexT) :
       Rcd.type_of (Pattern.ename pe !-> None; r') = PatternT.type_of mode pi.
   Proof.
-    assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
+    inv Hwf.
     rewrite Rcd.type_of_t_update; simpls.
     rewrite Htype; clear Htype; unfold PartialMap.update.
     destruct mode; simpls.
     all: extensionality k.
     all: desf_unfold_pat.
-    { erewrite PatternT.wf__type_of_pe with (mode := Explicit); eauto. }
-    1-2: rewrite <- Heq0 in *.
-    1-2: now (erewrite PatternT.wf__type_of_pv__Some with (mode := Explicit); eauto).
-    { erewrite PatternT.wf__type_of_pe with (mode := Full); eauto. }
-    { erewrite PatternT.wf__type_of_pv__Some with (mode := Full); eauto. }
+    all: try now rewrite type_of_None.
+    all: now rewrite type_of_explicit_full.
   Qed.
 End PatternT.
 
@@ -464,53 +549,42 @@ Module Path.
     all: try now apply matches_pedge__full_explicit.
   Qed.
 
-  Theorem matches_full_in_dom graph path pi r' n
-    (Hmatch : matches Full graph r' path pi)
-    (HIn : In n (Pattern.dom pi)) :
-      PartialMap.in_dom n r'.
+  Theorem matches_in_dom_vertex mode graph path pi r' n
+    (Hmatch : matches mode graph r' path pi)
+    (HIn : PatternT.type_of mode pi n = Some Value.GVertexT) :
+      exists v, r' n = Some (Value.GVertex v).
   Proof.
-    unfold PartialMap.in_dom.
-    induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: unfold matches_name in *.
-    all: simpls; desf.
-    all: eauto.
-  Qed.
-
-  Theorem matches_explicit_in_dom graph path pi r' n
-    (Hmatch : matches Explicit graph r' path pi)
-    (HIn : In (Name.explicit n) (Pattern.dom pi)) :
-      PartialMap.in_dom (Name.explicit n) r'.
-  Proof.
-    unfold PartialMap.in_dom.
-    induction Hmatch.
+    destruct mode.
+    all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
     all: autounfold with matches_name_db in *.
-    all: simpls; desf.
+    all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
 
-  Theorem matches_full_in_dom_contra graph path pi r' n
-    (Hmatch : matches Full graph r' path pi)
-    (Hval : r' n = None) :
-      ~ In n (Pattern.dom pi).
+  Theorem matches_in_dom_edge mode graph path pi r' n
+    (Hmatch : matches mode graph r' path pi)
+    (HIn : PatternT.type_of mode pi n = Some Value.GEdgeT) :
+      exists e, r' n = Some (Value.GEdge e).
   Proof.
-    intro contra.
-    eapply matches_full_in_dom in contra; eauto.
-    unfold PartialMap.in_dom in contra.
-    desf.
+    destruct mode.
+    all: induction Hmatch.
+    all: destruct Hpv; try destruct Hpe.
+    all: autounfold with matches_name_db in *.
+    all: simpls; desf_unfold_pat; desf.
+    all: eauto.
   Qed.
 
-  Theorem matches_explicit_in_dom_contra graph path pi r' n
-    (Hmatch : matches Explicit graph r' path pi)
-    (Hval : r' (Name.explicit n) = None) :
-      ~ In n (Pattern.dom_explicit pi).
+  Theorem matches_full_in_dom_contra mode graph path pi r' n
+    (Hmatch : matches mode graph r' path pi)
+    (Hval : r' n = None) :
+      PatternT.type_of mode pi n = None.
   Proof.
-    intro contra.
-    rewrite Pattern.In_dom_explicit in contra.
-    eapply matches_explicit_in_dom in contra; eauto.
-    unfold PartialMap.in_dom in contra.
-    desf.
+    destruct mode.
+    all: induction Hmatch.
+    all: destruct Hpv; try destruct Hpe.
+    all: autounfold with matches_name_db in *.
+    all: simpls; desf_unfold_pat; desf.
   Qed.
 
   Theorem matches_full_last graph path pi r'
@@ -527,7 +601,7 @@ Module Path.
 
   Theorem matches_exclude mode graph path pi r' n x
     (Hmatch : matches mode graph r' path pi)
-    (HIn : ~ In n (Pattern.dom pi)) :
+    (HIn : PatternT.type_of Full pi n = None) :
       matches mode graph (n !-> x; r') path pi.
   Proof.
     destruct mode.
@@ -535,8 +609,7 @@ Module Path.
     all: destruct Hpv; try destruct Hpe.
     all: constructor; auto.
     all: try apply IHHmatch.
-    all: try (intro; apply HIn; right; now right).
-    all: constructor; auto.
+    all: try constructor; auto.
     all: autounfold with matches_name_db in *.
     all: desf; ins.
     all: desf_unfold_pat.
@@ -573,20 +646,20 @@ Module Path.
   Theorem matches_two_records graph path pi r1 r2 n
     (Hmatch1 : matches Explicit graph r1 path pi)
     (Hmatch2 : matches Explicit graph r2 path pi)
-    (HIn1 : In (Name.explicit n) (Pattern.dom pi)) :
+    (HIn1 : PatternT.type_of Explicit pi (Name.explicit n) <> None) :
       r1 (Name.explicit n) = r2 (Name.explicit n).
   Proof.
     induction Hmatch1; inv Hmatch2.
     all: destruct Hpv; try destruct Hpe.
     all: destruct Hpv0; try destruct Hpe0.
     all: autounfold with matches_name_db in *.
-    all: simpls; desf; auto.
+    all: simpls; desf_unfold_pat; desf; auto.
     all: try now rewrite matches_vname0, matches_vname1.
     all: try now rewrite matches_ename0, matches_ename1.
   Qed.
 
   Theorem matches_explicit_exists_proj graph path pi r'
-    (Hwf : Pattern.wf pi)
+    (Hwf : PatternT.wfT pi)
     (Hmatch : matches Explicit graph r' path pi)
     (Htype  : Rcd.type_of r' = PatternT.type_of Explicit pi) :
       exists r,
@@ -615,52 +688,47 @@ Module Path.
       all: desf_unfold_pat; desf.
     }
 
-    assert (Hwf': Pattern.wf pi) by (eauto with pattern_wf_db).
-    destruct (In_decbP (Pattern.vname pv) (Pattern.dom_vertices pi)).
-    1: set (r'0 := (Pattern.ename pe !-> None; r')).
-    2: set (r'0 := (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r')).
+    assert (Hwf' := Hwf). inv Hwf'.
+    destruct Htype_pv as [Htype_pv | Htype_pv].
+    1: set (r'0 := (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r')).
+    2: set (r'0 := (Pattern.ename pe !-> None; r')).
     all: specialize IHpi with (r' := r'0); subst r'0.
     all: edestruct IHpi as [r ?]; eauto; clear IHpi; desf.
     all: try erewrite PatternT.matches_pattern_type_exclude_All.
     all: try erewrite PatternT.matches_pattern_type_exclude_Into.
     all: repeat apply matches_exclude.
-    all: eauto with pattern_wf_db.
+    all: eauto.
 
-    1: exists (Pattern.ename pe |-> Value.GEdge e; r).
-    2: exists (Pattern.vname pv |-> Value.GVertex v;
+    1: exists (Pattern.vname pv |-> Value.GVertex v;
                Pattern.ename pe |-> Value.GEdge e; r).
+    2: exists (Pattern.ename pe |-> Value.GEdge e; r).
     all: splits.
     all: try constructor; try constructor.
 
     all: destruct Hpv, Hpe.
     all: repeat apply matches_exclude.
-    all: eauto with pattern_wf_db.
+    all: eauto.
 
     all: autounfold with matches_name_db in *.
     all: try apply PartialMap.update_eq.
     all: try rewrite PartialMap.update_neq.
     all: try rewrite PartialMap.update_eq.
 
-    all: try (eapply Pattern.wf__pe_neq_pv; now eauto).
-    all: try (eapply Pattern.wf__pv_neq_pe; now eauto).
-    
+    all: eauto.
+
     all: repeat rewrite Rcd.type_of_update.
     all: try rewrite Htype'; clear Htype'.
     all: try extensionality k.
     all: try apply (f_equal (fun f => f k)) in Htype.
     all: try apply (f_equal (fun f => f k)) in Hproj.
+    all: try apply (f_equal (fun f => f (Pattern.vname pv))) in Htype.
+    all: try apply (f_equal (fun f => f (Pattern.vname pv))) in Hproj.
     all: unfold Rcd.type_of, option_map in Htype.
     all: unfold Rcd.explicit_proj in *; simpls.
+    all: unfold PatternT.imp_name_unique in *.
     all: desf_unfold_pat; desf.
 
-    all: try (exfalso; eapply Pattern.wf__imp_pv__dom_vertices; now eauto).
-    all: try (rewrite PatternT.type_of_explicit__implicit in Htype; discriminate).
-
-    all: try (erewrite <- PatternT.In_dom_vertices__iff; auto).
-    
-    all: erewrite matches_two_records; eauto.
-    all: try eapply matches_explicit; eauto.
-    all: rewrite Pattern.In_dom; auto.
+    all: try (rewrite PatternT.type_of_None in Htype; auto; discriminate).
   Qed.
 End Path.
 
@@ -891,22 +959,22 @@ Module EvalQuery.
     Parameter eval_match_clause : PropertyGraph.t -> Pattern.t -> option BindingTable.t.
 
     Axiom match_clause_wf : forall graph pattern,
-      PropertyGraph.wf graph -> Pattern.wf pattern ->
+      PropertyGraph.wf graph -> PatternT.wfT pattern ->
         exists table', eval_match_clause graph pattern = Some table'.
 
     Axiom match_clause_type : forall graph pattern table',
       eval_match_clause graph pattern = Some table' ->
-        Pattern.wf pattern ->
+        PatternT.wfT pattern ->
           BindingTable.of_type table' (PatternT.type_of Explicit pattern).
 
     Axiom match_clause_spec : forall graph path pattern table' r',
       eval_match_clause graph pattern = Some table' ->
-        Pattern.wf pattern -> Rcd.type_of r' = PatternT.type_of Explicit pattern ->
+        PatternT.wfT pattern -> Rcd.type_of r' = PatternT.type_of Explicit pattern ->
           Path.matches Explicit graph r' path pattern -> In r' table'.
 
     Axiom match_clause_spec' : forall graph pattern table' r',
       eval_match_clause graph pattern = Some table' ->
-        PropertyGraph.wf graph -> Pattern.wf pattern -> In r' table' ->
+        PropertyGraph.wf graph -> PatternT.wfT pattern -> In r' table' ->
           exists path, Path.matches Explicit graph r' path pattern.
   End Spec.
 End EvalQuery.

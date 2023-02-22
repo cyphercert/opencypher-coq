@@ -93,8 +93,29 @@ Module Value.
     all: injection as H; contradiction. (* Solve goals when underlying values are not equal *)
   Defined.
 
+  Definition eq_type_dec (a b : T) : {a = b} + {a <> b}.
+    destruct a, b.
+    all: try now left.
+    all: now right.
+  Defined.
+
+  Definition eq_opt_type_dec (a b : option T) : {a = b} + {a <> b}.
+    destruct a, b.
+    all: try now left.
+    all: try now right.
+    edestruct eq_type_dec.
+    { left. f_equal. eassumption. }
+    right. congruence.
+  Defined.
+
   #[global]
   Program Instance value_eqdec : EqDec t eq := eq_value_dec.
+
+  #[global]
+  Program Instance type_eqdec : EqDec T eq := eq_type_dec.
+
+  #[global]
+  Program Instance opt_type_eqdec : EqDec (option T) eq := eq_opt_type_dec.
 
   Definition eqb (a b : t) : bool := a ==b b.
 End Value.

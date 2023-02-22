@@ -272,6 +272,22 @@ Module Pattern.
     end.
   Qed.
 
+  Lemma not_In_dom_vertices p nv
+    (HIn : ~ In nv (dom p)) :
+      ~ In nv (dom_vertices p).
+  Proof.
+    intros contra. apply HIn.
+    apply In_dom. now left.
+  Qed.
+
+  Lemma not_In_dom_edges p ne
+    (HIn : ~ In ne (dom p)) :
+      ~ In ne (dom_edges p).
+  Proof.
+    intros contra. apply HIn.
+    apply In_dom. now right.
+  Qed.
+
   Inductive wf : Pattern.t -> Prop :=
   | wf_start pv : wf (start pv)
   | wf_hop pi pe pv (Hwf : wf pi)
