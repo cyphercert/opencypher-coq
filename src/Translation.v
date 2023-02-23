@@ -303,12 +303,10 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     apply Path.matches_cons.
     all: unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
     all: desf; desf.
-    all: try apply Path.matches_exclude.
-    all: try apply Path.matches_exclude.
+    all: repeat apply Path.matches_exclude.
     all: eauto using Path.matches_full_in_dom_contra.
-    all: try constructor.
+    all: try constructor; auto.
     all: autounfold with matches_name_db in *.
-    all: auto.
 
     all: assert (Path.last path = v_from)
           by (erewrite Path.matches_full_last in Hval_from; eauto;
