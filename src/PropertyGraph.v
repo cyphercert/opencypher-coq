@@ -101,7 +101,7 @@ Module PropertyGraph.
     (In (e, v') (out_edges g v) <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v') /\
     (In (e, v') (in_edges g v) <-> In e (edges g) /\ e_to g e = v /\ e_from g e = v') /\
     (In e (edges_between g v v') <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v').
-  Proof.
+  Proof using.
     split; [|split].
     
     all: unfold out_edges, in_edges, edges_between, e_from, e_to.
@@ -122,19 +122,19 @@ Module PropertyGraph.
 
   Lemma out_edges_In g e v v' :
     In (e, v') (out_edges g v) <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v'.
-  Proof.
+  Proof using.
     edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
   Qed.
 
   Lemma in_edges_In g e v v' :
     In (e, v') (in_edges g v) <-> In e (edges g) /\ e_to g e = v /\ e_from g e = v'.
-  Proof.
+  Proof using.
     edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
   Qed.
 
   Lemma edges_between_In g e v v' :
     In e (edges_between g v v') <-> In e (edges g) /\ e_from g e = v /\ e_to g e = v'.
-  Proof.
+  Proof using.
     edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
   Qed.
 

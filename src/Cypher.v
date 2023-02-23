@@ -218,7 +218,7 @@ Module Pattern.
   Lemma In_dom_explicit p n :
     In n (dom_explicit p) <->
       In (Name.explicit n) (dom p).
-  Proof.
+  Proof using.
     induction p; split; ins.
     all: desf; simpls; desf; auto.
   Qed.
@@ -226,7 +226,7 @@ Module Pattern.
   Lemma In_dom_implicit p n :
     In n (dom_implicit p) <->
       In (Name.implicit n) (dom p).
-  Proof.
+  Proof using.
     induction p; split; ins.
     all: desf; simpls; desf; auto.
   Qed.
@@ -234,7 +234,7 @@ Module Pattern.
   Lemma In_dom_vertices_explicit p nv :
     In nv (dom_vertices_explicit p) <->
       In (Name.explicit nv) (dom_vertices p).
-  Proof.
+  Proof using.
     induction p; split; ins.
     all: desf; simpls; desf; auto.
   Qed.
@@ -242,7 +242,7 @@ Module Pattern.
   Lemma In_dom_vertices_implicit p nv :
     In nv (dom_vertices_implicit p) <->
       In (Name.implicit nv) (dom_vertices p).
-  Proof.
+  Proof using.
     induction p; split; ins.
     all: desf; simpls; desf; auto.
   Qed.
@@ -250,7 +250,7 @@ Module Pattern.
   Lemma In_dom_edges_explicit p ne :
     In ne (dom_edges_explicit p) <->
       In (Name.explicit ne) (dom_edges p).
-  Proof.
+  Proof using.
     induction p; split; ins.
     all: desf; simpls; desf; auto.
   Qed.
@@ -258,14 +258,14 @@ Module Pattern.
   Lemma In_dom_edges_implicit p ne :
     In ne (dom_edges_implicit p) <->
       In (Name.implicit ne) (dom_edges p).
-  Proof.
+  Proof using.
     induction p; split; ins.
     all: desf; simpls; desf; auto.
   Qed.
 
   Lemma In_dom p x :
     In x (dom p) <-> In x (dom_vertices p) \/ In x (dom_edges p).
-  Proof.
+  Proof using.
     induction p; split; ins; desf; auto.
     match goal with
     | [ H : In _ _ -> In _ _ \/ In _ _ |- _ ] => destruct H; try assumption; auto
@@ -275,7 +275,7 @@ Module Pattern.
   Lemma not_In_dom_vertices p nv
     (HIn : ~ In nv (dom p)) :
       ~ In nv (dom_vertices p).
-  Proof.
+  Proof using.
     intros contra. apply HIn.
     apply In_dom. now left.
   Qed.
@@ -283,7 +283,7 @@ Module Pattern.
   Lemma not_In_dom_edges p ne
     (HIn : ~ In ne (dom p)) :
       ~ In ne (dom_edges p).
-  Proof.
+  Proof using.
     intros contra. apply HIn.
     apply In_dom. now right.
   Qed.

@@ -69,7 +69,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (HIn : In nv (Pattern.dom_vertices pi)) :
       type_of Full pi nv = Some Value.GVertexT.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: inv Hwf.
     all: desf.
@@ -83,7 +83,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (HIn : In (Name.explicit nv) (Pattern.dom_vertices pi)) :
       type_of Explicit pi (Name.explicit nv) = Some Value.GVertexT.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: inv Hwf.
     all: desf; simpls; desf.
@@ -97,7 +97,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (HIn : In ne (Pattern.dom_edges pi)) :
       type_of Full pi ne = Some Value.GEdgeT.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: inv Hwf.
     all: desf.
@@ -114,7 +114,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (HIn : In (Name.explicit ne) (Pattern.dom_edges pi)) :
       type_of Explicit pi (Name.explicit ne) = Some Value.GEdgeT.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: inv Hwf.
     all: desf.
@@ -132,7 +132,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (Htype : type_of mode pi nv = Some Value.GVertexT) :
       In nv (Pattern.dom_vertices pi).
-  Proof.
+  Proof using.
     induction pi, mode; simpls.
     all: inv Hwf.
     all: desf_unfold_pat.
@@ -142,7 +142,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (Htype : type_of mode pi ne = Some Value.GEdgeT) :
       In ne (Pattern.dom_edges pi).
-  Proof.
+  Proof using.
     induction pi, mode; simpls.
     all: inv Hwf.
     all: desf_unfold_pat.
@@ -151,14 +151,14 @@ Module PatternT.
   Theorem In_dom_vertices__iff (pi : Pattern.t) nv
     (Hwf : Pattern.wf pi) :
       In nv (Pattern.dom_vertices pi) <-> type_of Full pi nv = Some Value.GVertexT.
-  Proof.
+  Proof using.
     split; eauto using type_of__dom_vertices, dom_vertices__type_of.
   Qed.
 
   Theorem In_dom_edges__iff (pi : Pattern.t) ne
     (Hwf : Pattern.wf pi) :
       In ne (Pattern.dom_edges pi) <-> type_of Full pi ne = Some Value.GEdgeT.
-  Proof.
+  Proof using.
     split; eauto using type_of__dom_edges, dom_edges__type_of.
   Qed.
 
@@ -166,7 +166,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi) :
       In (Name.explicit nv) (Pattern.dom_vertices pi) <->
         type_of Explicit pi (Name.explicit nv) = Some Value.GVertexT.
-  Proof.
+  Proof using.
     split; eauto using type_of_explicit__dom_vertices, dom_vertices__type_of.
   Qed.
 
@@ -174,19 +174,19 @@ Module PatternT.
     (Hwf : Pattern.wf pi) :
       In (Name.explicit ne) (Pattern.dom_edges pi) <->
         type_of Explicit pi (Name.explicit ne) = Some Value.GEdgeT.
-  Proof.
+  Proof using.
     split; eauto using type_of_explicit__dom_edges, dom_edges__type_of.
   Qed.
 
   Lemma last__dom_vertices pi :
     type_of Full pi (Pattern.vname (Pattern.last pi)) = Some Value.GVertexT.
-  Proof.
+  Proof using.
     destruct pi; simpl; apply PartialMap.update_eq.
   Qed.
 
   Theorem type_of_explicit__implicit (pi : Pattern.t) n :
     type_of Explicit pi (Name.implicit n) = None.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: desf; simpls; desf.
     all: repeat rewrite PartialMap.update_neq.
@@ -198,7 +198,7 @@ Module PatternT.
       type_of mode pi k = Some Value.GVertexT \/
       type_of mode pi k = Some Value.GEdgeT \/
       type_of mode pi k = None.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: destruct mode; simpls.
     all: desf_unfold_pat.
@@ -207,7 +207,7 @@ Module PatternT.
   Theorem In_dom__iff (pi : Pattern.t) k
     (Hwf : Pattern.wf pi) :
       In k (Pattern.dom pi) <-> PartialMap.in_dom k (type_of Full pi).
-  Proof.
+  Proof using.
     rewrite Pattern.In_dom.
     rewrite In_dom_vertices__iff, In_dom_edges__iff; auto.
     unfold PartialMap.in_dom.
@@ -222,7 +222,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (Hdom : PartialMap.in_dom k (type_of mode pi)) :
       In k (Pattern.dom pi).
-  Proof.
+  Proof using.
     unfold PartialMap.in_dom in *.
     destruct Hdom as [v Htype].
     rewrite Pattern.In_dom.
@@ -240,7 +240,7 @@ Module PatternT.
     (Hwf : Pattern.wf pi)
     (HIn : ~ (In k (Pattern.dom pi))) :
       type_of mode pi k = None.
-  Proof.
+  Proof using.
     rewrite <- PartialMap.not_in_dom_iff.
     ins; eauto using In_dom.
   Qed.
@@ -248,7 +248,7 @@ Module PatternT.
   Theorem not_In_dom__iff (pi : Pattern.t) k
     (Hwf : Pattern.wf pi) :
       ~ (In k (Pattern.dom pi)) <-> type_of Full pi k = None.
-  Proof.
+  Proof using.
     rewrite In_dom__iff; auto.
     now rewrite PartialMap.not_in_dom_iff.
   Qed.
@@ -256,14 +256,14 @@ Module PatternT.
   Lemma type_of_None pi n
     (Htype : type_of Full pi n = None) :
       type_of Explicit pi n = None.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: desf_unfold_pat.
   Qed.
 
   Lemma type_of_explicit_full pi n :
     type_of Explicit pi (Name.explicit n) = type_of Full pi (Name.explicit n).
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: desf_unfold_pat.
   Qed.
@@ -285,44 +285,44 @@ Module PatternT.
         wfT (Pattern.hop pi pe pv).
 
   Lemma wfT_wf pi (Hwf : wfT pi) : Pattern.wf pi.
-  Proof.
+  Proof using.
     induction Hwf; constructor; auto.
     { ins. unfold imp_name_unique in *.
       rewrite Pattern.In_dom_vertices_implicit.
       apply Pattern.not_In_dom_vertices.
       rewrite not_In_dom__iff; desf. }
-    { rewrite In_dom_edges__iff. { intro; congruence. } assumption. }
-    { rewrite In_dom_vertices__iff. { intro; desf; congruence. } assumption. }
+    { rewrite In_dom_edges__iff; auto. intro; congruence. }
+    { rewrite In_dom_vertices__iff; auto. intro; desf; congruence. }
     { rewrite In_dom_edges__iff; auto.
       intros; destruct Htype_pv; congruence. }
   Qed.
 
   Lemma wf_wfT pi (Hwf : Pattern.wf pi) : wfT pi.
-  Proof.
+  Proof using.
     induction Hwf; constructor; auto.
-    { ins; unfold imp_name_unique in *; desf.
-      rewrite <- not_In_dom__iff; auto.
-      rewrite Pattern.In_dom.
-      rewrite <- Pattern.In_dom_vertices_implicit.
-      intros [contra | contra].
-      { eapply HIn_pv_imp; eauto. }
-      now apply HIn_pv. }
-    { rewrite <- not_In_dom__iff, Pattern.In_dom; auto.
-      unfold not in *. ins; desf; auto. }
-    { edestruct type_of__types as [Hty | [Hty | Hty]]; eauto.
-      exfalso. apply HIn_pv.
-      rewrite In_dom_edges__iff; auto. }
+    3: { edestruct type_of__types as [Hty | [Hty | Hty]]; eauto.
+         exfalso. apply HIn_pv.
+         rewrite In_dom_edges__iff; auto. }
+    2: { rewrite <- not_In_dom__iff, Pattern.In_dom; auto.
+         unfold not in *. ins; desf; auto. }
+    ins; unfold imp_name_unique in *; desf.
+    rewrite <- not_In_dom__iff; auto.
+    rewrite Pattern.In_dom.
+    rewrite <- Pattern.In_dom_vertices_implicit.
+    intros [contra | contra].
+    { eapply HIn_pv_imp; eauto. }
+    now apply HIn_pv.
   Qed.
 
   Theorem wf_wfT_iff pi : Pattern.wf pi <-> wfT pi.
-  Proof.
+  Proof using.
     split; auto using wfT_wf, wf_wfT.
   Qed.
 
   Lemma last_neq_pe pi pe pv
     (Hwf : wfT (Pattern.hop pi pe pv)) :
       Pattern.vname (Pattern.last pi) <> Pattern.ename pe.
-  Proof.
+  Proof using.
     pose proof last__dom_vertices as H.
     specialize (H pi).
     inv Hwf.
@@ -333,7 +333,7 @@ Module PatternT.
     (Hwf : wfT (Pattern.hop pi pe pv))
     (HIn : PatternT.type_of Full pi (Pattern.vname pv) = None) :
       Pattern.vname (Pattern.last pi) <> Pattern.vname pv.
-  Proof.
+  Proof using.
     pose proof last__dom_vertices as H.
     specialize (H pi).
     inv Hwf.
@@ -342,7 +342,7 @@ Module PatternT.
 
   Lemma explicit_projT_type_of mode pi :
     Rcd.explicit_projT (type_of mode pi) = type_of Explicit pi.
-  Proof.
+  Proof using.
     destruct mode.
     all: induction pi; simpls.
     all: unfold Rcd.explicit_projT in *.
@@ -357,7 +357,7 @@ Module PatternT.
     (HIn : PatternT.type_of Full pi (Pattern.vname pv) = None) :
       Rcd.type_of (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r') =
         PatternT.type_of mode pi.
-  Proof.
+  Proof using.
     inv Hwf.
     repeat rewrite Rcd.type_of_t_update; simpls.
     rewrite Htype; clear Htype.
@@ -372,7 +372,7 @@ Module PatternT.
     (Htype : Rcd.type_of r' = PatternT.type_of mode (Pattern.hop pi pe pv))
     (HIn : PatternT.type_of Full pi (Pattern.vname pv) = Some Value.GVertexT) :
       Rcd.type_of (Pattern.ename pe !-> None; r') = PatternT.type_of mode pi.
-  Proof.
+  Proof using.
     inv Hwf.
     rewrite Rcd.type_of_t_update; simpls.
     rewrite Htype; clear Htype; unfold PartialMap.update.
@@ -450,7 +450,7 @@ Module Path.
 
     Definition matches_direction_dec (from to : vertex) (e : edge) (d : direction) :
       {matches_direction from to e d} + {~ matches_direction from to e d}.
-    Proof.
+    Proof using.
       refine (
         if matches_direction_decb from to e d == true
         then left _ else right _
@@ -484,7 +484,7 @@ Module Path.
   Theorem matches_name__full_explicit r n v
     (Hmatch : matches_name Full r n v) :
       matches_name Explicit r n v.
-  Proof.
+  Proof using.
     autounfold with matches_name_db.
     destruct n; auto.
   Qed.
@@ -492,7 +492,7 @@ Module Path.
   Theorem matches_pvertex__full_explicit graph r v pv
     (Hmatch : matches_pvertex Full graph r v pv) :
       matches_pvertex Explicit graph r v pv.
-  Proof.
+  Proof using.
     destruct Hmatch; constructor; auto.
     now apply matches_name__full_explicit.
   Qed.
@@ -500,7 +500,7 @@ Module Path.
   Theorem matches_pedge__full_explicit graph r e pe
     (Hmatch : matches_pedge Full graph r e pe) :
       matches_pedge Explicit graph r e pe.
-  Proof.
+  Proof using.
     destruct Hmatch; constructor; auto.
     now apply matches_name__full_explicit.
   Qed.
@@ -508,7 +508,7 @@ Module Path.
   Theorem matches__full_explicit graph path pi r
     (Hmatch : matches Full graph r path pi) :
       matches Explicit graph r path pi.
-  Proof.
+  Proof using.
     induction Hmatch.
     all: constructor; auto.
     all: try now apply matches_pvertex__full_explicit.
@@ -519,7 +519,7 @@ Module Path.
     (Hmatch : matches mode graph r' path pi)
     (HIn : PatternT.type_of mode pi n = Some Value.GVertexT) :
       exists v, r' n = Some (Value.GVertex v).
-  Proof.
+  Proof using.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
@@ -532,7 +532,7 @@ Module Path.
     (Hmatch : matches mode graph r' path pi)
     (HIn : PatternT.type_of mode pi n = Some Value.GEdgeT) :
       exists e, r' n = Some (Value.GEdge e).
-  Proof.
+  Proof using.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
@@ -545,7 +545,7 @@ Module Path.
     (Hmatch : matches mode graph r' path pi)
     (Hval : r' n = None) :
       PatternT.type_of mode pi n = None.
-  Proof.
+  Proof using.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
@@ -556,7 +556,7 @@ Module Path.
   Theorem matches_full_last graph path pi r'
     (Hmatch : matches Full graph r' path pi) :
       r' (Pattern.vname (Pattern.last pi)) = Some (Value.GVertex (Path.last path)).
-  Proof.
+  Proof using.
     destruct pi. 
     all: inv Hmatch.
     all: destruct Hpv; try destruct Hpe.
@@ -569,7 +569,7 @@ Module Path.
     (Hmatch : matches mode graph r' path pi)
     (HIn : PatternT.type_of Full pi n = None) :
       matches mode graph (n !-> x; r') path pi.
-  Proof.
+  Proof using.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
@@ -585,7 +585,7 @@ Module Path.
   Theorem matches_explicit_proj mode graph path pi r
     (Hmatch : matches mode graph r path pi) :
       matches Explicit graph (Rcd.explicit_proj r) path pi.
-  Proof.
+  Proof using.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
@@ -598,7 +598,7 @@ Module Path.
   Theorem matches_explicit mode graph path pi r
     (Hmatch : matches mode graph r path pi) :
       matches Explicit graph r path pi.
-  Proof.
+  Proof using.
     destruct mode.
     { assumption. }
     induction Hmatch.
@@ -614,7 +614,7 @@ Module Path.
     (Hmatch2 : matches Explicit graph r2 path pi)
     (HIn1 : PatternT.type_of Explicit pi (Name.explicit n) <> None) :
       r1 (Name.explicit n) = r2 (Name.explicit n).
-  Proof.
+  Proof using.
     induction Hmatch1; inv Hmatch2.
     all: destruct Hpv; try destruct Hpe.
     all: destruct Hpv0; try destruct Hpe0.
@@ -632,7 +632,7 @@ Module Path.
         << Hproj : r' = Rcd.explicit_proj r >> /\
         << Hmatch' : matches Full graph r path pi >> /\
         << Htype' : Rcd.type_of r = PatternT.type_of Full pi >>.
-  Proof.
+  Proof using.
     gen_dep path r'.
     induction pi; intros; inv Hmatch; clear Hmatch.
     all: inv Hwf.

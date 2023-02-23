@@ -47,27 +47,27 @@ Module Value.
 
   Lemma type_of_UnknownT v (H : type_of v = UnknownT) : 
     v = Unknown.
-  Proof. destruct v; try discriminate. reflexivity. Qed.
+  Proof using. destruct v; try discriminate. reflexivity. Qed.
 
   Lemma type_of_BoolT : forall v,
     type_of v = BoolT -> exists b, v = Bool b.
-  Proof. intros v H. destruct v; try discriminate. exists b. reflexivity. Qed.
+  Proof using. intros v H. destruct v; try discriminate. exists b. reflexivity. Qed.
 
   Lemma type_of_IntT : forall v,
     type_of v = IntT -> exists i, v = Int i.
-  Proof. intros v H. destruct v; try discriminate. exists i. reflexivity. Qed.
+  Proof using. intros v H. destruct v; try discriminate. exists i. reflexivity. Qed.
 
   Lemma type_of_StrT : forall v,
     type_of v = StrT -> exists s, v = Str s.
-  Proof. intros v H. destruct v; try discriminate. exists s. reflexivity. Qed.
+  Proof using. intros v H. destruct v; try discriminate. exists s. reflexivity. Qed.
 
   Lemma type_of_GVertexT : forall v,
     type_of v = GVertexT -> exists v', v = GVertex v'.
-  Proof. intros v H. destruct v; try discriminate. exists v. reflexivity. Qed.
+  Proof using. intros v H. destruct v; try discriminate. exists v. reflexivity. Qed.
 
   Lemma type_of_GEdgeT : forall v,
     type_of v = GEdgeT -> exists e, v = GEdge e.
-  Proof. intros v H. destruct v; try discriminate. exists e. reflexivity. Qed.
+  Proof using. intros v H. destruct v; try discriminate. exists e. reflexivity. Qed.
 
   Definition from_property (x : Property.t) : Value.t :=
     match x with
@@ -132,11 +132,11 @@ Module Rcd.
     fun k => option_map Value.type_of (r k).
 
   Lemma type_of_empty : type_of empty = emptyT.
-  Proof. reflexivity. Qed.
+  Proof using. reflexivity. Qed.
 
   Lemma type_of_t_update r k v :
     type_of (k !-> v; r) = (k !-> option_map Value.type_of v; type_of r).
-  Proof.
+  Proof using.
     extensionality k'.
     unfold type_of, TotalMap.update, equiv_decb.
     desf.
@@ -144,14 +144,14 @@ Module Rcd.
 
   Lemma type_of_update r k v :
     type_of (k |-> v; r) = (k |-> Value.type_of v; type_of r).
-  Proof.
+  Proof using.
     unfold PartialMap.update.
     now rewrite type_of_t_update.
   Qed.
 
   Lemma type_of_singleton k v :
     type_of (k |-> v) = (k |-> Value.type_of v).
-  Proof.
+  Proof using.
     unfold PartialMap.update.
     now rewrite type_of_t_update.
   Qed.
@@ -169,31 +169,31 @@ Module Rcd.
 
   Lemma type_of_UnknownT r k (Htype : type_of r k = Some Value.UnknownT) : 
     r k = Some Value.Unknown.
-  Proof. solve_type_of_T Value.type_of_UnknownT. Qed.
+  Proof using. solve_type_of_T Value.type_of_UnknownT. Qed.
     
   Lemma type_of_BoolT r k (Htype : type_of r k = Some Value.BoolT) :
     exists b, r k = Some (Value.Bool b).
-  Proof. solve_type_of_T Value.type_of_BoolT. Qed.
+  Proof using. solve_type_of_T Value.type_of_BoolT. Qed.
 
   Lemma type_of_IntT r k (Htype : type_of r k = Some Value.IntT) :
     exists i, r k = Some (Value.Int i).
-  Proof. solve_type_of_T Value.type_of_IntT. Qed.
+  Proof using. solve_type_of_T Value.type_of_IntT. Qed.
 
   Lemma type_of_StrT r k (Htype : type_of r k = Some Value.StrT) :
     exists s, r k = Some (Value.Str s).
-  Proof. solve_type_of_T Value.type_of_StrT. Qed.
+  Proof using. solve_type_of_T Value.type_of_StrT. Qed.
 
   Lemma type_of_GVertexT r k (Htype : type_of r k = Some Value.GVertexT) :
     exists v, r k = Some (Value.GVertex v).
-  Proof. solve_type_of_T Value.type_of_GVertexT. Qed.
+  Proof using. solve_type_of_T Value.type_of_GVertexT. Qed.
 
   Lemma type_of_GEdgeT r k (Htype : type_of r k = Some Value.GEdgeT) :
     exists e, r k = Some (Value.GEdge e).
-  Proof. solve_type_of_T Value.type_of_GEdgeT. Qed.
+  Proof using. solve_type_of_T Value.type_of_GEdgeT. Qed.
 
   Lemma type_of_None r k (Htype : type_of r k = None) :
     r k = None.
-  Proof.
+  Proof using.
     unfold type_of in Htype.
     destruct (r k); now try discriminate.
   Qed.
@@ -203,7 +203,7 @@ Module Rcd.
 
   Lemma in_dom_iff k r :
     PartialMap.in_dom k r <-> PartialMap.in_dom k (type_of r).
-  Proof.
+  Proof using.
     unfold PartialMap.in_dom, type_of.
     split.
     { intros [v H]. eexists. now rewrite H. }
@@ -213,7 +213,7 @@ Module Rcd.
   Section join.
     Lemma type_of_join r1 r2 :
       type_of (PartialMap.join r1 r2) = PartialMap.join (type_of r1) (type_of r2).
-    Proof.
+    Proof using.
       extensionality k.
       unfold PartialMap.join, type_of, option_map.
       desf.
@@ -221,7 +221,7 @@ Module Rcd.
 
     Lemma type_of_disjoint_iff r1 r2 :
       PartialMap.disjoint (type_of r1) (type_of r2) <-> PartialMap.disjoint r1 r2.
-    Proof.
+    Proof using.
       unfold PartialMap.disjoint, type_of, option_map.
       split.
       all: intros Hdisj k.
@@ -231,7 +231,7 @@ Module Rcd.
 
     Lemma type_of_disjoint (r1 r2 : t) (Hdisj : PartialMap.disjoint r1 r2) :
       PartialMap.disjoint (type_of r1) (type_of r2).
-    Proof. now apply type_of_disjoint_iff. Qed.
+    Proof using. now apply type_of_disjoint_iff. Qed.
   End join.
 
   Definition explicit_proj (r : t) : t := fun k =>
@@ -248,7 +248,7 @@ Module Rcd.
 
   Lemma type_of_explicit_proj r :
     type_of (explicit_proj r) = explicit_projT (type_of r).
-  Proof.
+  Proof using.
     extensionality k.
     unfold explicit_proj, explicit_projT.
     desf.
@@ -271,7 +271,7 @@ Module BindingTable.
   Lemma of_type_unique (table : t) ty1 ty2 (Hneq : table <> nil)
                        (Htype1 : of_type table ty1) (Htype2 : of_type table ty2) :
     ty1 = ty2.
-  Proof.
+  Proof using.
     destruct table as [| r].
     { contradiction. }
     transitivity (Rcd.type_of r).
@@ -282,13 +282,13 @@ Module BindingTable.
 
   Lemma of_type_cons_l (table : t) ty r (Htype : of_type (r :: table) ty) :
     Rcd.type_of r = ty.
-  Proof.
+  Proof using.
     apply Htype. now left.
   Qed.
 
   Lemma of_type_cons_r (table : t) ty r (Htype : of_type (r :: table) ty) :
     of_type table ty.
-  Proof.
+  Proof using.
     intros r' HIn. apply Htype.
     right. assumption.
   Qed.
@@ -296,7 +296,7 @@ Module BindingTable.
   Lemma of_type_cons (table : t) ty r (Htype_r : Rcd.type_of r = ty)
                      (Htype_table : of_type table ty) :
     of_type (r :: table) ty.
-  Proof.
+  Proof using.
     intros r' HIn. destruct HIn as [Heq | HIn].
     - now subst.
     - now apply Htype_table.
@@ -305,14 +305,14 @@ Module BindingTable.
   Lemma of_type_concat (tables : list t) ty
                        (Htype : forall table, In table tables -> of_type table ty) :
     of_type (List.concat tables) ty.
-  Proof.
+  Proof using.
     intros r HIn. apply in_concat in HIn. desf.
     eapply Htype; eassumption.
   Qed.
 
   (* The empty table is of any type *)
   Lemma empty_of_type ty : of_type empty ty.
-  Proof. intros r HIn. inv HIn. Qed.
+  Proof using. intros r HIn. inv HIn. Qed.
 
   Section type_ofT.
     Variable table : t.

@@ -64,7 +64,7 @@ Ltac desf_translate_pvertex_pedge :=
 
 Theorem translate_pattern'_type pi (Hwf : PatternT.wfT pi) :
   type_of (translate_pattern' pi) = PatternT.type_of Full pi.
-Proof.
+Proof using.
   all: induction pi; simpls.
   all: desf_translate_pvertex_pedge.
   all: inv Hwf.
@@ -78,7 +78,7 @@ Qed.
 
 Theorem translate_pattern_type pi (Hwf : PatternT.wfT pi) :
   type_of (translate_pattern pi) = PatternT.type_of Explicit pi.
-Proof.
+Proof using.
   unfold translate_pattern. simpls.
   rewrite translate_pattern'_type; auto.
   now rewrite PatternT.explicit_projT_type_of.
@@ -88,7 +88,7 @@ Theorem translate_pattern'_type_of__types pi n :
   type_of (translate_pattern' pi) n = Some Value.GVertexT \/
   type_of (translate_pattern' pi) n = Some Value.GEdgeT \/
   type_of (translate_pattern' pi) n = None.
-Proof.
+Proof using.
   edestruct type_of_types as [H | [H | H]]; eauto.
 Qed.
 
@@ -96,14 +96,14 @@ Corollary translate_pattern'__type_of_None pi n (Hwf : PatternT.wfT pi)
   (HIn_vertices : type_of (translate_pattern' pi) n <> Some Value.GVertexT)
   (HIn_edges    : type_of (translate_pattern' pi) n <> Some Value.GEdgeT) :
     type_of (translate_pattern' pi) n = None.
-Proof.
+Proof using.
   edestruct translate_pattern'_type_of__types as [H | [H | H]]; eauto.
   all: contradiction.
 Qed.
 
 Theorem translate_pattern'_wf pi (Hwf : PatternT.wfT pi) :
   ExecutionPlan.wf (translate_pattern' pi).
-Proof.
+Proof using.
   induction pi; simpls.
   all: inv Hwf.
   all: unfold translate_pvertex, translate_pedge.
@@ -119,7 +119,7 @@ Qed.
 
 Theorem translate_pattern_wf pi (Hwf : PatternT.wfT pi) :
   ExecutionPlan.wf (translate_pattern pi).
-Proof.
+Proof using.
   unfold translate_pattern. simpls.
   now apply translate_pattern'_wf.
 Qed.
@@ -136,7 +136,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Theorem match_clause_wf graph pi
     (Hwf_g : PropertyGraph.wf graph) (Hwf : PatternT.wfT pi) :
       exists table', eval_match_clause graph pi = Some table'.
-  Proof.
+  Proof using.
     eapply eval_wf; eauto.
     now apply translate_pattern_wf.
   Qed.
@@ -145,7 +145,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Hres : eval_match_clause graph pi = Some table')
     (Hwf : PatternT.wfT pi) :
       BindingTable.of_type table' (PatternT.type_of Explicit pi).
-  Proof.
+  Proof using.
     unfold eval_match_clause in Hres.
     apply eval_type_of in Hres.
     now rewrite translate_pattern_type in Hres.
@@ -159,7 +159,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Theorem eval_translate_pattern'_reduce graph pi pe pv table'
     (Hres : eval graph (translate_pattern' (Pattern.hop pi pe pv)) = Some table') :
       exists table, eval graph (translate_pattern' pi) = Some table.
-  Proof.
+  Proof using.
     desf_match_result Hres.
     all: eauto.
   Qed.
@@ -168,7 +168,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Htype : Rcd.type_of r' = PatternT.type_of Full (Pattern.start pv))
     (Hval : r' (Pattern.vname pv) = Some (Value.GVertex v)) :
       r' = (Pattern.vname pv |-> Value.GVertex v).
-  Proof.
+  Proof using.
     extensionality k; simpls.
     apply (f_equal (fun f => f k)) in Htype.
     desf_unfold_pat.
@@ -191,7 +191,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       exists r, << Hexp : expansion_of_by_hop graph r' r All pi pe pv >> /\
                 << Hmatch' : Path.matches Full graph r path pi >> /\
                 << Htype' : Rcd.type_of r = PatternT.type_of Full pi >>.
-  Proof.
+  Proof using.
     exists (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r').
     inv Hmatch.
     destruct Hpe, Hpv.
@@ -218,7 +218,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       exists r, << Hexp : expansion_of_by_hop graph r' r Into pi pe pv >> /\
                 << Hmatch' : Path.matches Full graph r path pi >> /\
                 << Hdom' : Rcd.type_of r = PatternT.type_of Full pi >>.
-  Proof.
+  Proof using.
     exists (Pattern.ename pe !-> None; r').
     inv Hmatch. inv Hwf.
     destruct Hpe, Hpv.
@@ -243,7 +243,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Htype : Rcd.type_of r' = PatternT.type_of Full pi)
     (Hmatch : Path.matches Full graph r' path pi) :
       In r' table'.
-  Proof.
+  Proof using.
     gen_dep Htype Hres r' table' path.
     induction pi; ins.
     all: inv Hwf.
@@ -282,7 +282,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Htype : Rcd.type_of r' = PatternT.type_of Explicit pi)
     (Hmatch : Path.matches Explicit graph r' path pi) :
       In r' table'.
-  Proof.
+  Proof using.
     desf_match_result Hres.
     eapply Path.matches_explicit_exists_proj in Hmatch; auto.
     desf.
@@ -298,7 +298,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Helabel : forall l : label, Pattern.elabel pe = Some l -> elabel graph e = l)
     (Hexp : expansion_of_by_hop' graph r' r mode v_from e v_to pi pe pv) :
       Path.matches Full graph r' (Path.hop path e v_to) (Pattern.hop pi pe pv).
-  Proof.
+  Proof using.
     inv Hwf.
     apply Path.matches_cons.
     all: unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
@@ -327,7 +327,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Hwf : PatternT.wfT pi)
     (HIn : In r' table') :
       exists path, Path.matches Full graph r' path pi.
-  Proof.
+  Proof using.
     gen_dep Hres r' table'.
     induction pi; ins.
     all: inv Hwf.
@@ -370,7 +370,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     (Hwf : PatternT.wfT pi)
     (HIn : In r' table') :
       exists path, Path.matches Explicit graph r' path pi.
-  Proof.
+  Proof using.
     desf_match_result Hres.
     eapply return_all_spec' in HIn; eauto; desf.
     edestruct eval_translate_pattern'_spec'; eauto.

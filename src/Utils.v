@@ -32,7 +32,7 @@ Program Instance string_eqdec : EqDec string eq := String.string_dec.
 
 Lemma equiv_decb_true : forall {A : Type} `{EqDec A eq} (a b : A),
   a = b -> a ==b b = true.
-Proof.
+Proof using.
   intros A ? ? a b Heq.
   unfold equiv_decb.
   destruct (a == b) as [Heq' | Hneq'].
@@ -42,7 +42,7 @@ Qed.
 
 Lemma equiv_decb_false : forall {A : Type} `{EqDec A eq} (a b : A),
   a <> b -> a ==b b = false.
-Proof.
+Proof using.
   intros A ? ? a b Hneq.
   unfold equiv_decb.
   destruct (a == b) as [Heq' | Hneq'].
@@ -52,7 +52,7 @@ Qed.
 
 Lemma equiv_decb_true' : forall {A : Type} `{EqDec A eq} (a b : A),
   a ==b b = true -> a = b.
-Proof.
+Proof using.
   intros A ? ? a b H.
   unfold equiv_decb in H.
   destruct (a == b) as [Heq' | Hneq'].
@@ -62,7 +62,7 @@ Qed.
 
 Lemma equiv_decb_false' : forall {A : Type} `{EqDec A eq} (a b : A),
   a ==b b = false -> a <> b.
-Proof.
+Proof using.
   intros A ? ? a b H.
   unfold equiv_decb in H.
   destruct (a == b) as [Heq' | Hneq'].
@@ -72,7 +72,7 @@ Qed.
 
 Lemma equiv_decb_true_iff : forall {A : Type} `{EqDec A eq} (a b : A),
   (a ==b b) = true <-> a = b.
-Proof.
+Proof using.
   intros. split.
   apply equiv_decb_true'.
   apply equiv_decb_true.
@@ -80,7 +80,7 @@ Qed.
 
 Lemma equiv_decbP : forall {A : Type} `{EqDec A eq} (x y : A),
   reflect (x = y) (x ==b y).
-Proof.
+Proof using.
   intros A ? ? x y. unfold equiv_decb.
   destruct (x == y) as [Heq | Hneq].
   + apply ReflectT. apply Heq.
@@ -89,14 +89,14 @@ Qed.
 
 #[global]
 Instance neq_symmetric {A : Type} : Symmetric (fun (x y : A) => ~(x = y)).
-Proof.
+Proof using.
   intros x y Hneq Heq.
   apply Hneq. symmetry. apply Heq.
 Qed.
 
 #[global]
 Instance unequiv_symmetric {A : Type} : Symmetric (fun (x y : A) => x =/= y).
-Proof.
+Proof using.
   intros x y Hneq Heq.
   apply Hneq. symmetry. apply Heq.
 Qed.
@@ -120,7 +120,7 @@ Definition In_decb {A : Type} `{EqDec A eq} (a : A) (xs : list A) : bool := In_d
 
 Theorem In_decbP {A : Type} `{EqDec A eq} (a : A) (xs : list A) :
   reflect (In a xs) (In_decb a xs).
-Proof.
+Proof using.
   unfold In_decb.
   destruct (In_dec a xs).
   { now apply ReflectT. }
@@ -129,7 +129,7 @@ Qed.
 
 Lemma In_decb_true_iff : forall {A : Type} `{EqDec A eq} (a : A) (xs : list A),
   In_decb a xs = true <-> In a xs.
-Proof.
+Proof using.
   intros. unfold In_decb.
   destruct (In_dec a xs) as [HIn | HIn].
   all: split; auto.
@@ -145,7 +145,7 @@ Fixpoint fold_option {A : Type} (xs : list (option A)) : option (list A) :=
 Lemma fold_option_some {A : Type} (xs : list (option A))
                        (Hsome : forall a, In a xs -> exists a', a = Some a') :
   exists xs', fold_option xs = Some xs'.
-Proof.
+Proof using.
   induction xs as [| x xs]. { now eexists. }
 
   destruct Hsome with x. { now left. }
@@ -157,7 +157,7 @@ Qed.
 Lemma fold_option_some_inv {A : Type} (xs : list (option A)) (xs' : list A) (a : option A)
                            (Hres : fold_option xs = Some xs') (HIn : In a xs) :
   exists a', a = Some a'.
-Proof.
+Proof using.
   generalize dependent xs'.
   induction xs as [| x xs]; ins.
   simpls. unfold option_bind in *.
@@ -169,7 +169,7 @@ Qed.
 Lemma fold_option_In {A : Type} (xs : list (option A)) (xs' : list A) (a' : A) 
                      (H : fold_option xs = Some xs') :
   In (Some a') xs <-> In a' xs'.
-Proof.
+Proof using.
   generalize dependent xs'.
   induction xs as [| x xs]; ins.
   { inv H. }
@@ -185,7 +185,7 @@ Qed.
 Lemma fold_option_none {A : Type} (xs : list (option A))
                        (Hnone : In None xs) :
   fold_option xs = None.
-Proof.
+Proof using.
   induction xs as [| x xs], Hnone; subst; auto.
   simpl. rewrite (IHxs H). now destruct x.
 Qed.
@@ -209,7 +209,7 @@ Arguments filter_map {A B} f xs.
 
 Lemma filter_map_In {A B : Type} (f : A -> option B) (xs : list A) (y : B) :
   In y (filter_map f xs) <-> exists x, f x = Some y /\ In x xs.
-Proof.
+Proof using.
   unfold filter_map.
   induction xs as [| x xs IHxs ]; simpls.
   { split; ins; desf. }
@@ -233,26 +233,26 @@ Qed.
 Lemma option_map_some (A B : Type) (f : A -> B) (a : option A) (y : B)
                       (Hres : option_map f a = Some y) :
   exists x, f x = y /\ a = Some x.
-Proof.
+Proof using.
   destruct a as [x |]; [exists x | inv Hres].
   split; simpls; desf.
 Qed.
 
 Lemma NoDup_cons_l (A : Type) (x : A) (xs : list A) (Hdup : NoDup (x :: xs)) :
   ~ In x xs.
-Proof.
+Proof using.
   apply NoDup_cons_iff in Hdup. desf.
 Qed.
 
 Lemma NoDup_cons_r (A : Type) (x : A) (xs : list A) (Hdup : NoDup (x :: xs)) :
   NoDup xs.
-Proof.
+Proof using.
   apply NoDup_cons_iff in Hdup. desf.
 Qed.
 
 Lemma NoDup_cons_contra (A : Type) (x : A) (xs : list A)
                         (Hdup : NoDup (x :: xs)) (HIn : In x xs) : False.
-Proof.
+Proof using.
   eapply NoDup_cons_l; eassumption.
 Qed.
 

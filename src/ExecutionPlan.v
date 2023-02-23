@@ -216,7 +216,7 @@ Module ExecutionPlan.
     type_of plan k = Some Value.GVertexT \/
     type_of plan k = Some Value.GEdgeT \/
     type_of plan k = None.
-  Proof.
+  Proof using.
     induction plan; simpl in *.
     all: unfold Rcd.explicit_projT.
     all: autounfold with unfold_pat.
@@ -278,7 +278,7 @@ Module ExecutionPlan.
     Theorem eval_type_of plan graph table'
                          (Heval : eval graph plan = Some table') :
         BindingTable.of_type table' (type_of plan).
-    Proof.
+    Proof using.
       generalize dependent table'.
       induction plan; intros; simpl in *.
       { apply scan_vertices_type with graph. assumption. }
@@ -393,7 +393,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
 
   Theorem scan_vertices_wf graph n (Hwf : PropertyGraph.wf graph) :
     exists table', scan_vertices n graph = Some table'.
-  Proof. now eexists. Qed.
+  Proof using. now eexists. Qed.
 
   Theorem filter_by_label_wf graph table ty mode n l
                              (Hwf : PropertyGraph.wf graph)
@@ -403,7 +403,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                                     | Edges    => ty n = Some Value.GEdgeT
                                     end) :
     exists table', filter_by_label mode n l graph table = Some table'.
-  Proof.
+  Proof using.
     autounfold with filter_by_label_db.
     all: induction table as [| r table IH]; ins; eauto.
   Qed.
@@ -413,14 +413,14 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                                     (Htype : BindingTable.of_type table ty)
                                     (Hty : ty n = Some Value.GVertexT) :
     exists table', filter_by_label Vertices n l graph table = Some table'.
-  Proof. eapply filter_by_label_wf with (mode := Vertices); eassumption. Qed.
+  Proof using. eapply filter_by_label_wf with (mode := Vertices); eassumption. Qed.
 
   Theorem filter_edges_by_label_wf graph table ty n l
                                  (Hwf : PropertyGraph.wf graph)
                                  (Htype : BindingTable.of_type table ty)
                                  (Hty : ty n = Some Value.GEdgeT) :
     exists table', filter_by_label Edges n l graph table = Some table'.
-  Proof. eapply filter_by_label_wf with (mode := Edges); eassumption. Qed.
+  Proof using. eapply filter_by_label_wf with (mode := Edges); eassumption. Qed.
 
   Theorem expand_wf graph table ty mode n_from n_edge n_to d
                     (Hwf : PropertyGraph.wf graph)
@@ -432,7 +432,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                                 | Into => ty n_to = Some Value.GVertexT 
                                 end) :
     exists table', expand mode n_from n_edge n_to d graph table = Some table'.
-  Proof.
+  Proof using.
     all: autounfold with expand_db.
     
     eenough (exists t, fold_option _ = Some t) as [t Hfold].
@@ -460,7 +460,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                   (Hty_edge : ty n_edge = None)
                   (Hty_to   : ty n_to   = None) :
     exists table', expand All n_from n_edge n_to d graph table = Some table'.
-  Proof. eapply expand_wf with (mode := All); eassumption. Qed.
+  Proof using. eapply expand_wf with (mode := All); eassumption. Qed.
 
   Theorem expand_into_wf graph table ty n_from n_edge n_to d
                   (Hwf : PropertyGraph.wf graph)
@@ -469,18 +469,18 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                   (Hty_edge : ty n_edge = None)
                   (Hty_to   : ty n_to   = Some Value.GVertexT) :
     exists table', expand Into n_from n_edge n_to d graph table = Some table'.
-  Proof. eapply expand_wf with (mode := Into); eassumption. Qed.
+  Proof using. eapply expand_wf with (mode := Into); eassumption. Qed.
 
   Theorem return_all_wf graph table :
     exists table', return_all graph table = Some table'.
-  Proof. now eexists. Qed.
+  Proof using. now eexists. Qed.
 
   (** If the operation returned some table then the type of the table is correct *)
   
   Theorem scan_vertices_type graph table' n 
                            (Hres : scan_vertices n graph = Some table') :
     BindingTable.of_type table' (n |-> Value.GVertexT).
-  Proof.
+  Proof using.
     unfold scan_vertices in Hres.
     injection Hres as Hres. subst. intros r' HIn.
     apply in_map_iff in HIn as [r [Heq HIn]].
@@ -492,7 +492,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
                              (Hres : filter_by_label mode n l graph table = Some table')
                              (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' ty.
-  Proof.
+  Proof using.
     generalize dependent table'.
     destruct mode.
     all: autounfold with filter_by_label_db.
@@ -507,7 +507,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     | Into => BindingTable.of_type table'
         (n_edge |-> Value.GEdgeT; Rcd.type_of r)
     end.
-  Proof.
+  Proof using.
     autounfold with expand_db in *.
     desf.
     all: intros r' HIn'.
@@ -522,7 +522,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     | All => BindingTable.of_type table' (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty)
     | Into => BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty)
     end.
-  Proof.
+  Proof using.
     unfold expand in *.
 
     edestruct (fold_option _) as [tables' | ] eqn:Hfold.
@@ -547,20 +547,20 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table'
       (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
-  Proof. eapply expand_type with (mode := All); eassumption. Qed.
+  Proof using. eapply expand_type with (mode := All); eassumption. Qed.
 
   Theorem expand_into_type
     graph table table' ty n_from n_edge n_to d
     (Hres : expand Into n_from n_edge n_to d graph table = Some table')
     (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
-  Proof. eapply expand_type with (mode := Into); eassumption. Qed.
+  Proof using. eapply expand_type with (mode := Into); eassumption. Qed.
 
   Theorem return_all_type graph table table' ty
                           (Hres : return_all graph table = Some table')
                           (Htype : BindingTable.of_type table ty) :
     BindingTable.of_type table' (Rcd.explicit_projT ty).
-  Proof.
+  Proof using.
     intros r' HIn.
     unfold return_all in Hres.
     injection Hres as ?; subst.
@@ -576,7 +576,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : scan_vertices n graph = Some table')
     (HIn : In v (vertices graph)) :
       In (n |-> Value.GVertex v) table'.
-  Proof.
+  Proof using.
     unfold scan_vertices in Hres.
     inj_subst.
     apply in_map_iff.
@@ -587,7 +587,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : scan_vertices n graph = Some table')
     (HIn : In r' table') :
       exists v, r' = (n |-> Value.GVertex v) /\ In v (vertices graph).
-  Proof.
+  Proof using.
     unfold scan_vertices in Hres.
     inj_subst.
     apply in_map_iff in HIn as [v [Heq HIn]].
@@ -599,7 +599,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Theorem vertex_has_label_true_iff graph n l r :
     vertex_has_label n l graph r = true <->
       exists v, r n = Some (Value.GVertex v) /\ In l (vlabels graph v).
-  Proof.
+  Proof using.
     split; ins.
     all: unfold vertex_has_label in *.
     all: desf; normalize_bool.
@@ -610,7 +610,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Theorem edge_has_label_true_iff graph n l r :
     edge_has_label n l graph r = true <->
       exists e, r n = Some (Value.GEdge e) /\ elabel graph e = l.
-  Proof.
+  Proof using.
     split; ins.
     all: unfold edge_has_label in *.
     all: desf.
@@ -627,7 +627,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       | Edges    => In r table' <-> In r table /\
           (exists e, r n = Some (Value.GEdge e) /\ elabel graph e = l)
       end.
-  Proof.
+  Proof using.
     unfold filter_by_label, has_label in Hres.
     inj_subst.
     destruct mode; ins.
@@ -641,7 +641,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : filter_by_label Vertices n l graph table = Some table')
     (Hval : r n = Some (Value.GVertex v)) (Hlabel : In l (vlabels graph v))
     (HIn : In r table) : In r table'.
-  Proof.
+  Proof using.
     rewrite -> filter_by_label_spec with (mode := Vertices); eauto.
   Qed.
   
@@ -649,7 +649,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : filter_by_label Vertices n l graph table = Some table')
     (HIn : In r' table') : In r' table /\
         exists v, r' n = Some (Value.GVertex v) /\ In l (vlabels graph v).
-  Proof.
+  Proof using.
     rewrite <- filter_by_label_spec with (mode := Vertices); eauto.
   Qed.
 
@@ -657,7 +657,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : filter_by_label Edges n l graph table = Some table')
     (Hval : r n = Some (Value.GEdge e)) (Hlabel : elabel graph e = l)
     (HIn : In r table) : In r table'.
-  Proof.
+  Proof using.
     rewrite -> filter_by_label_spec with (mode := Edges); eauto.
   Qed.
   
@@ -665,7 +665,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : filter_by_label Edges n l graph table = Some table')
     (HIn : In r' table') : In r' table /\
         exists e, r' n = Some (Value.GEdge e) /\ elabel graph e = l.
-  Proof.
+  Proof using.
     rewrite <- filter_by_label_spec with (mode := Edges); eauto.
   Qed.
   
@@ -674,7 +674,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Theorem expand_single_spec graph table' r r' mode n_from n_edge n_to d
     (Hres : expand_single mode n_from n_edge n_to d graph r = Some table') :
       expansion_of graph r' r mode n_from n_edge n_to d <-> In r' table'.
-  Proof.
+  Proof using.
     split; ins.
     all: unfold expansion_of, expansion_of', Path.matches_direction in *.
 
@@ -719,7 +719,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       (Hres : expand mode n_from n_edge n_to d graph table = Some table')
       (Hexp : expansion_of graph r' r mode n_from n_edge n_to d)
       (HIn : In r table) : In r' table'.
-  Proof.
+  Proof using.
     unfold expand in *.
     edestruct (fold_option _) as [tables' | ] eqn:Hfold.
     2: now inv Hres.
@@ -743,7 +743,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (HIn : In r' table') :
       exists r, In r table /\
                 expansion_of graph r' r mode n_from n_edge n_to d.
-  Proof.
+  Proof using.
     unfold expand in *.
     edestruct (fold_option _) as [tables' | ] eqn:?.
     2: now inv Hres.
@@ -765,7 +765,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : return_all graph table = Some table')
     (HIn : In r table) :
       In (Rcd.explicit_proj r) table'.
-  Proof.
+  Proof using.
     unfold return_all in *.
     injection Hres as ?; subst.
     eapply in_map in HIn.
@@ -776,7 +776,7 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     (Hres : return_all graph table = Some table')
     (HIn : In r' table') :
       exists r, In r table /\ r' = Rcd.explicit_proj r.
-  Proof.
+  Proof using.
     unfold return_all in *.
     injection Hres as ?; subst.
     apply in_map_iff in HIn as [r ?]; desf.

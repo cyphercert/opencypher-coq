@@ -46,11 +46,11 @@ Module TotalMap.
 
     Lemma apply_empty (x : A) (v : B) :
         (_ !-> v) x = v.
-    Proof. unfold empty. reflexivity. Qed.
+    Proof using. unfold empty. reflexivity. Qed.
 
     Lemma update_eq m x v :
         (x !-> v ; m) x = v.
-    Proof.
+    Proof using.
       unfold update.
       now rewrite equiv_decb_true.
     Qed.
@@ -58,21 +58,21 @@ Module TotalMap.
     Theorem update_neq m x1 x2 v
       (Hneq : x1 <> x2) :
         (x1 !-> v ; m) x2 = m x2.
-    Proof.
+    Proof using.
       unfold update.
       now rewrite equiv_decb_false.
     Qed.
 
     Lemma update_shadow m x v1 v2 :
         (x !-> v2 ; x !-> v1 ; m) = (x !-> v2 ; m).
-    Proof.
+    Proof using.
       extensionality x'. unfold update.
       now destruct (x ==b x').
     Qed.
 
     Theorem update_same m x :
       (x !-> m x ; m) = m.
-    Proof.
+    Proof using.
       extensionality x'. unfold update.
       destruct (equiv_decbP x x') as [Heq | Hneq].
       { now rewrite Heq. }
@@ -82,7 +82,7 @@ Module TotalMap.
     Theorem update_permute m v1 v2 x1 x2
       (Hneq : x2 <> x1) :
         (x1 !-> v1 ; x2 !-> v2 ; m) = (x2 !-> v2 ; x1 !-> v1 ; m).
-    Proof.
+    Proof using.
       extensionality x'. unfold update.
       destruct (equiv_decbP x1 x'), (equiv_decbP x2 x').
       all: try reflexivity.
@@ -127,14 +127,14 @@ Module PartialMap.
 
     Lemma apply_empty (x : A) :
         (empty : t A B) x = None.
-    Proof.
+    Proof using.
       unfold empty.
       now rewrite TotalMap.apply_empty.
     Qed.
 
     Lemma update_eq m x v :
         (x |-> v ; m) x = Some v.
-    Proof.
+    Proof using.
       unfold update.
       now rewrite TotalMap.update_eq.
     Qed.
@@ -142,14 +142,14 @@ Module PartialMap.
     Theorem update_neq m x1 x2 v
       (Hneq : x2 <> x1) :
         (x2 |-> v ; m) x1 = m x1.
-    Proof.
+    Proof using.
       unfold update.
       now rewrite TotalMap.update_neq.
     Qed.
 
     Lemma update_shadow m x v1 v2 :
       (x |-> v2 ; x |-> v1 ; m) = (x |-> v2 ; m).
-    Proof.
+    Proof using.
       unfold update.
       now rewrite TotalMap.update_shadow.
     Qed.
@@ -157,7 +157,7 @@ Module PartialMap.
     Theorem update_same m x v
       (Heq : m x = Some v) :
         (x |-> v ; m) = m.
-    Proof.
+    Proof using.
       unfold update. rewrite <- Heq.
       apply TotalMap.update_same.
     Qed.
@@ -165,7 +165,7 @@ Module PartialMap.
     Theorem update_permute m x1 x2 v1 v2
       (Hneq : x2 <> x1) :
         (x1 |-> v1 ; x2 |-> v2 ; m) = (x2 |-> v2 ; x1 |-> v1 ; m).
-    Proof.
+    Proof using.
       unfold update.
       now apply TotalMap.update_permute.
     Qed.
@@ -173,7 +173,7 @@ Module PartialMap.
     Lemma add_none m x v
       (Hnone : m x = None) :
         m = (x !-> None; x !-> Some v; m).
-    Proof.
+    Proof using.
       extensionality x'.
       unfold TotalMap.update.
       destruct (equiv_decbP x x') as [Heq | Hneq].
@@ -206,7 +206,7 @@ Module PartialMap.
 
     Lemma not_in_dom_iff (m : t A B) (x : A) :
       ~ in_dom x m <-> m x = None.
-    Proof.
+    Proof using.
       unfold in_dom.
       destruct (m x).
       all: split; ins.
@@ -216,7 +216,7 @@ Module PartialMap.
 
     Lemma disjoint_iff (m1 m2 : t A B) :
       disjoint m1 m2 <-> (forall k, ~ in_dom k m1 \/ ~ in_dom k m2).
-    Proof.
+    Proof using.
       unfold disjoint.
       setoid_rewrite not_in_dom_iff.
       reflexivity.
@@ -224,7 +224,7 @@ Module PartialMap.
 
     Lemma join_comm (m1 m2 : t A B) (Hdisj : disjoint m1 m2) :
       (join m1 m2) = (join m2 m1).
-    Proof.
+    Proof using.
       extensionality k.
       unfold join.
       destruct Hdisj with k; desf.
@@ -232,7 +232,7 @@ Module PartialMap.
 
     Lemma join_assoc (m1 m2 m3 : t A B) :
       join m1 (join m2 m3) = join (join m1 m2) m3.
-    Proof.
+    Proof using.
       extensionality k.
       unfold join.
       desf.
@@ -240,7 +240,7 @@ Module PartialMap.
 
     Lemma join_empty_r (m : t A B) :
       join m empty = m.
-    Proof.
+    Proof using.
       extensionality k.
       unfold join, empty, TotalMap.empty.
       desf.
@@ -248,7 +248,7 @@ Module PartialMap.
 
     Lemma join_empty_l (m : t A B) :
       join empty m = m.
-    Proof.
+    Proof using.
       extensionality k.
       unfold join, empty, TotalMap.empty.
       desf.
@@ -256,14 +256,14 @@ Module PartialMap.
 
     Lemma empty_disjoint_l (m : t A B) :
       disjoint empty m.
-    Proof.
+    Proof using.
       unfold join, empty, TotalMap.empty.
       intros k. now left.
     Qed.
 
     Lemma empty_disjoint_r (m : t A B) :
       disjoint m empty.
-    Proof.
+    Proof using.
       unfold disjoint, empty, TotalMap.empty.
       intros k. now right.
     Qed.
@@ -271,7 +271,7 @@ Module PartialMap.
     Lemma disjoint_symm (m1 m2 : t A B)
       (Hdisj : disjoint m1 m2) :
         disjoint m2 m1.
-    Proof.
+    Proof using.
       unfold disjoint in *.
       intros k.
       destruct Hdisj with k; auto.
@@ -279,7 +279,7 @@ Module PartialMap.
 
     Lemma disjoint_symm_iff (m1 m2 : t A B) :
       disjoint m1 m2 <-> disjoint m2 m1.
-    Proof.
+    Proof using.
       split; apply disjoint_symm.
     Qed.
   End join_lemmas.
