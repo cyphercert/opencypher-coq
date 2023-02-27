@@ -75,6 +75,7 @@ Module ExecutionPlan.
     (* expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) : step1 *)
     Parameter expand : ExpandMode.t -> Name.t -> Name.t -> Name.t -> Pattern.direction -> step1.
 
+    (* return_all : step1 *)
     Parameter return_all : step1.
 
     Section axioms.

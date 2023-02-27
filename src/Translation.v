@@ -357,8 +357,8 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     all: try now rewrite PartialMap.update_eq.
 
     all: try eapply matches_expansion_of; eauto.
-    all: try unfold expansion_of_by_hop, expansion_of.
 
+    all: try unfold expansion_of_by_hop, expansion_of.
     all: ins.
     all: try unfold expansion_of' in *; desf.
     all: desf_unfold_pat.

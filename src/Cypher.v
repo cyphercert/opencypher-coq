@@ -303,7 +303,8 @@ End Pattern.
 
 Module QueryExpr.
   Inductive t : Type :=
-  | QEGObj (go : PropertyGraph.gobj)
+  | QEVertex (v : PropertyGraph.vertex)
+  | QEEdge (e : PropertyGraph.edge)
   | QEVar  (n : Name.raw)
   | QEProj (a : t) (k : Property.name)
 

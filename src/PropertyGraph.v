@@ -31,10 +31,6 @@ Module PropertyGraph.
   Definition edge      := nat.
   Definition label     := string.
 
-  Inductive gobj : Type :=
-  | gedge (e: PropertyGraph.edge)
-  | gvertex (v: PropertyGraph.vertex).
-
   (** Graph database model **)
 
   (** vertices : vertices of the graph **)
@@ -72,18 +68,6 @@ Module PropertyGraph.
 
   Definition get_eprop (g : PropertyGraph.t) (k : Property.name) (e : edge) : option Property.t :=
     get_prop k (eprops g e).
-
-  Definition get_gobj_prop (g : PropertyGraph.t) (k : Property.name) (go : gobj) : option Property.t :=
-    match go with
-    | gedge e => get_eprop g k e
-    | gvertex v => get_vprop g k v
-    end.
-
-  Definition get_gobj_labels (g : PropertyGraph.t) (go : gobj) : list label :=
-    match go with
-    | gvertex v => vlabels g v
-    | gedge e => [ elabel g e ]
-    end.
 
   Definition e_from (g : t) (e : edge) := fst (ends g e).
   Definition e_to   (g : t) (e : edge) := snd (ends g e).

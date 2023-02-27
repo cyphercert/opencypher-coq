@@ -710,11 +710,8 @@ Section QueryExpr.
 
     Fixpoint eval_qexpr (a : QueryExpr.t) : option Value.t :=
       match a with
-      | QEGObj go =>
-        match go with
-        | gvertex v => Some (GVertex v)
-        | gedge e => Some (GEdge e)
-        end
+      | QEVertex v => Some(GVertex v)
+      | QEEdge e => Some(GEdge e)
 
       | QEVar n => u (Name.explicit n)
 
