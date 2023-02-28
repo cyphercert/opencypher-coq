@@ -18,6 +18,7 @@ Require Import Utils.
 
 Import PartialMap.Notations.
 Import TotalMap.Notations.
+Import Path.UpdateNotations.
 Import PropertyGraph.
 Import ExecutionPlan.
 Import FilterMode.
@@ -82,23 +83,6 @@ Proof using.
   unfold translate_pattern. simpls.
   rewrite translate_pattern'_type; auto.
   now rewrite PatternT.explicit_projT_type_of.
-Qed.
-
-Theorem translate_pattern'_type_of__types pi n :
-  type_of (translate_pattern' pi) n = Some Value.GVertexT \/
-  type_of (translate_pattern' pi) n = Some Value.GEdgeT \/
-  type_of (translate_pattern' pi) n = None.
-Proof using.
-  edestruct type_of_types as [H | [H | H]]; eauto.
-Qed.
-
-Corollary translate_pattern'__type_of_None pi n (Hwf : PatternT.wfT pi)
-  (HIn_vertices : type_of (translate_pattern' pi) n <> Some Value.GVertexT)
-  (HIn_edges    : type_of (translate_pattern' pi) n <> Some Value.GEdgeT) :
-    type_of (translate_pattern' pi) n = None.
-Proof using.
-  edestruct translate_pattern'_type_of__types as [H | [H | H]]; eauto.
-  all: contradiction.
 Qed.
 
 Theorem translate_pattern'_wf pi (Hwf : PatternT.wfT pi) :
@@ -185,66 +169,52 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
 
   Lemma matches_hop_All graph path e v pi pe pv r'
     (Hwf : PatternT.wfT (Pattern.hop pi pe pv))
-    (Htype : Rcd.type_of r' = PatternT.type_of Full (Pattern.hop pi pe pv))
     (Hmatch : Path.matches Full graph r' (Path.hop path e v) (Pattern.hop pi pe pv))
     (HIn : PatternT.type_of Full pi (Pattern.vname pv) = None) :
       exists r, << Hexp : expansion_of_by_hop graph r' r All pi pe pv >> /\
-                << Hmatch' : Path.matches Full graph r path pi >> /\
-                << Htype' : Rcd.type_of r = PatternT.type_of Full pi >>.
+                << Hmatch' : Path.matches Full graph r path pi >>.
   Proof using.
-    exists (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r').
-    inv Hmatch.
+    inv Hmatch. inv Hwf.
+    exists r.
     destruct Hpe, Hpv.
-    autounfold with matches_name_db in *.
-    splits.
-    { unfold expansion_of_by_hop, expansion_of, expansion_of'.
-      do 3 eexists. splits; eauto.
-      all: try extensionality k.
-      all: desf_unfold_pat.
-      all: try eauto using Path.matches_full_last.
-      all: try now (exfalso; eapply PatternT.last_neq_pe; eauto).
-      all: try now (exfalso; eapply PatternT.last_neq_pv; eauto). }
-    { inv Hwf.
-      apply Path.matches_exclude. apply Path.matches_exclude.
-      all: auto. }
-    { apply PatternT.matches_pattern_type_exclude_All; eauto. }
+    unfold Path.update_with_mode in *.
+    unfold expansion_of_by_hop, expansion_of, expansion_of'.
+    splits; auto.
+    do 3 eexists. splits; eauto.
+    { eauto using Path.matches_full_last. }
+    all: erewrite <- Path.matches_not_in_dom_iff; eauto.
   Qed.
 
   Lemma matches_hop_Into graph path e v pi pe pv r'
     (Hwf : PatternT.wfT (Pattern.hop pi pe pv))
-    (Htype : Rcd.type_of r' = PatternT.type_of Full (Pattern.hop pi pe pv))
     (Hmatch : Path.matches Full graph r' (Path.hop path e v) (Pattern.hop pi pe pv))
     (HIn : PatternT.type_of Full pi (Pattern.vname pv) = Some Value.GVertexT) :
       exists r, << Hexp : expansion_of_by_hop graph r' r Into pi pe pv >> /\
-                << Hmatch' : Path.matches Full graph r path pi >> /\
-                << Hdom' : Rcd.type_of r = PatternT.type_of Full pi >>.
+                << Hmatch' : Path.matches Full graph r path pi >>.
   Proof using.
-    exists (Pattern.ename pe !-> None; r').
     inv Hmatch. inv Hwf.
+    exists r.
+    desf.
+    { eapply Path.matches_in_dom_vertex with (r' := r) in Htype_pv;
+        eauto; desf. }
     destruct Hpe, Hpv.
-    autounfold with matches_name_db in *.
-    eauto.
-    splits.
-    { unfold expansion_of_by_hop, expansion_of, expansion_of'.
-      do 3 eexists. splits; eauto.
-      
-      all: try extensionality k.
-      all: desf_unfold_pat.
-      all: try eauto using Path.matches_full_last.
-      all: try now (exfalso; eapply PatternT.last_neq_pe; eauto).
+    unfold Path.update_with_mode in *.
+    unfold expansion_of_by_hop, expansion_of, expansion_of'.
+    splits; auto.
+    do 3 eexists. splits; eauto.
+    { eauto using Path.matches_full_last. }
+    { erewrite <- Path.matches_not_in_dom_iff; eauto. }
+    { extensionality k. desf_unfold_pat.
       congruence. }
-    { apply Path.matches_exclude; auto. }
-    { eapply PatternT.matches_pattern_type_exclude_Into; eauto. }
   Qed.
 
   Lemma eval_translate_pattern'_spec graph path pi table' r'
     (Hres : eval graph (translate_pattern' pi) = Some table')
     (Hwf : PatternT.wfT pi)
-    (Htype : Rcd.type_of r' = PatternT.type_of Full pi)
     (Hmatch : Path.matches Full graph r' path pi) :
       In r' table'.
   Proof using.
-    gen_dep Htype Hres r' table' path.
+    gen_dep Hres r' table' path.
     induction pi; ins.
     all: inv Hwf.
     all: destruct path; inv Hmatch.
@@ -252,20 +222,25 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     all: try destruct Hpe.
 
     { all: desf_match_result Hres.
-      1: eapply filter_vertices_by_label_spec; try eassumption.
-      all: auto.
-      all: assert (r' = (Pattern.vname pv |-> Value.GVertex v))
-            by (eauto using matches_pattern_type_start); subst.
+      1: eapply filter_vertices_by_label_spec; eauto.
+      { apply PartialMap.update_eq. }
       all: eauto using scan_vertices_spec. }
 
+    desf; simpls.
+
     all: desf_match_result Hres.
+    
     all: repeat match goal with
          | [H : filter_by_label Vertices _ _ _ _ = _ |- _ ] =>
-            eapply filter_vertices_by_label_spec; try eassumption; clear H
+            eapply filter_vertices_by_label_spec; eauto; clear H
          | [H : filter_by_label Edges _ _ _ _ = _ |- _ ] =>
-            eapply filter_edges_by_label_spec; try eassumption; clear H
+            eapply filter_edges_by_label_spec; eauto; clear H
          end.
-    all: auto.
+
+    all: try apply PartialMap.update_eq.
+    all: try (rewrite PartialMap.update_neq; auto).
+    all: try apply PartialMap.update_eq.
+    
     all: match goal with 
          | [H : expand Into _ _ _ _ _ _ = _ |- _ ] =>
             apply matches_hop_Into in Hmatch; eauto
@@ -279,13 +254,13 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Theorem match_clause_spec graph path pi table' r'
     (Hres : eval_match_clause graph pi = Some table')
     (Hwf : PatternT.wfT pi)
-    (Htype : Rcd.type_of r' = PatternT.type_of Explicit pi)
     (Hmatch : Path.matches Explicit graph r' path pi) :
       In r' table'.
   Proof using.
     desf_match_result Hres.
-    eapply Path.matches_explicit_exists_proj in Hmatch; auto.
-    desf.
+    assert (Hmatch' := Hmatch).
+    eapply Path.matches_explicit_exists_proj in Hmatch' as [r ?]; auto.
+    erewrite Path.matches_both_modes with (r := r'); eauto.
     eapply return_all_spec; eauto.
     eapply eval_translate_pattern'_spec; eauto.
   Qed.
@@ -300,21 +275,21 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       Path.matches Full graph r' (Path.hop path e v_to) (Pattern.hop pi pe pv).
   Proof using.
     inv Hwf.
-    apply Path.matches_cons.
-    all: unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
-    all: desf; desf.
-    all: repeat apply Path.matches_exclude.
-    all: eauto using Path.matches_full_in_dom_contra.
+    unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
+    desf; desf.
+    all: Path.lift_to_update_with_mode.
+    all: try replace (Pattern.ename pe F|-> Value.GEdge e; r) with 
+                     (Pattern.vname pv F|-> Value.GVertex v_to;
+                      Pattern.ename pe F|-> Value.GEdge e; r)
+         by (unfold Path.update_with_mode; extensionality k;
+              desf_unfold_pat; congruence).
+    all: apply Path.matches_cons; simpls; auto.
     all: try constructor; auto.
-    all: autounfold with matches_name_db in *.
 
     all: assert (Path.last path = v_from)
           by (erewrite Path.matches_full_last in Hval_from; eauto;
             injection Hval_from; trivial).
     all: subst; auto.
-
-    all: desf_unfold_pat.
-    all: try congruence.
 
     all: unfold Path.matches_direction in Hdir.
     all: desf; desf.
@@ -352,16 +327,12 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     1-2: eexists (Path.start _).
     all: try eexists (Path.hop path _ _).
 
-    all: try eapply Path.matches_nil, Path.Build_matches_pvertex.
-    all: autounfold with matches_name_db in *; eauto.
-    all: try now rewrite PartialMap.update_eq.
+    1-2: Path.lift_to_update_with_mode.
+    1-2: do 2 constructor; auto.
 
     all: try eapply matches_expansion_of; eauto.
-
-    all: try unfold expansion_of_by_hop, expansion_of.
-    all: ins.
-    all: try unfold expansion_of' in *; desf.
-    all: desf_unfold_pat.
+    all: try unfold expansion_of_by_hop, expansion_of, expansion_of' in *.
+    all: ins; desf_unfold_pat.
   Qed.
 
   Theorem match_clause_spec' graph pi table' r'

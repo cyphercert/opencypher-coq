@@ -246,7 +246,21 @@ Module Rcd.
     | _ => None
     end.
 
-  Lemma type_of_explicit_proj r :
+  Theorem explicit_proj_empty : explicit_proj empty = empty.
+  Proof.
+    extensionality k.
+    unfold explicit_proj, empty.
+    desf.
+  Qed.
+
+  Theorem explicit_projT_emptyT : explicit_projT emptyT = emptyT.
+  Proof.
+    extensionality k.
+    unfold explicit_projT, emptyT.
+    desf.
+  Qed.
+
+  Theorem type_of_explicit_proj r :
     type_of (explicit_proj r) = explicit_projT (type_of r).
   Proof using.
     extensionality k.

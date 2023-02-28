@@ -69,8 +69,7 @@ Module Pattern.
       vprops  : list (Property.name * Property.t);
     }.
 
-  (** Edge pattern. It is a pair where the first item is edge condition (contained in elabels, eprops, edir, enum) *)
-  (** and the second item is pattern of following vertex (contained in evertex). **)
+  (** Edge pattern. **)
 
   (** ename   : name for the pattern **)
 

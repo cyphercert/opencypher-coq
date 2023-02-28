@@ -395,38 +395,54 @@ Module Path.
     | start v => v
     end.
 
+  Definition update_with_mode (mode : MatchMode.t) (n : Name.t)
+                              (v : Value.t) (r : Rcd.t) : Rcd.t := 
+    match mode with
+    | Full => (n |-> v; r)
+    | Explicit =>
+      match n with
+      | Name.implicit _ => r
+      | Name.explicit _ => (n |-> v; r)
+      end
+    end.
+
+  Module UpdateNotations.
+    Notation "n '|-[' mode ']->'  v ';' r" := (update_with_mode mode n v r)
+      (at level 100, v at next level, right associativity).
+    Notation "n '|-[' mode ']->' v " := (update_with_mode mode n v Rcd.empty)
+      (at level 100).
+
+    Notation "n 'F|->' v ';' r" := (update_with_mode Full n v r)
+      (at level 100, v at next level, right associativity).
+    Notation "n 'F|->' v " := (update_with_mode Full n v Rcd.empty)
+      (at level 100).
+
+    Notation "n 'E|->' v ';' r" := (update_with_mode Explicit n v r)
+      (at level 100, v at next level, right associativity).
+    Notation "n 'E|->' v " := (update_with_mode Explicit n v Rcd.empty)
+      (at level 100).
+  End UpdateNotations.
+  Import UpdateNotations.
+
+  #[global]
+  Ltac lift_to_update_with_mode :=
+    repeat change (?n |-> ?v; ?r) with (n F|-> v; r);
+    repeat change (?n |-> ?v) with (n F|-> v).
+
   Section matches.
     Import Pattern.
 
     Variable mode : MatchMode.t.
     Variable g : PropertyGraph.t.
-    Variable r : Rcd.t.
-
-    Definition matches_name_full (n : Name.t) (v : Value.t) : Prop := 
-      r n = Some v.
-
-    Definition matches_name_explicit (n : Name.t) (v : Value.t) : Prop := 
-      match n with
-      | Name.implicit _ => True
-      | Name.explicit _ => r n = Some v
-      end.
-
-    Definition matches_name (n : Name.t) (v : Value.t) : Prop := 
-      match mode with
-      | Full => matches_name_full n v
-      | Explicit => matches_name_explicit n v
-      end.
 
     Record matches_pvertex (v : vertex) (pv : pvertex) : Prop := {
         vertex_in_g : In v (PropertyGraph.vertices g);
-        matches_vname : matches_name (Pattern.vname pv) (Value.GVertex v);
         matches_vlabel : forall l, Pattern.vlabel pv = Some l ->
           In l (PropertyGraph.vlabels g v);
       }.
 
     Record matches_pedge (e : edge) (pe : pedge) : Prop := {
         edge_in_g : In e (PropertyGraph.edges g);
-        matches_ename : matches_name (Pattern.ename pe) (Value.GEdge e);
         matches_elabel : forall l, Pattern.elabel pe = Some l ->
           PropertyGraph.elabel g e = l;
       }.
@@ -465,55 +481,23 @@ Module Path.
       all: auto.
     Defined.
 
-    Inductive matches : Path.t -> Pattern.t -> Prop :=
+    Inductive matches : Rcd.t -> Path.t -> Pattern.t -> Prop :=
     | matches_nil (pv : pvertex) (v : vertex) 
                   (Hpv : matches_pvertex v pv) :
-        matches (Path.start v) (Pattern.start pv) 
-    | matches_cons (v : vertex) (e : edge) (p : Path.t)
+        matches (vname pv |-[mode]-> Value.GVertex v)
+                (Path.start v) (Pattern.start pv) 
+    | matches_cons (v : vertex) (e : edge) (p : Path.t) (r : Rcd.t)
                    (pv : pvertex) (pe : pedge) (pi : Pattern.t) 
-                   (Hpi : matches p pi) (Hpe : matches_pedge e pe)
+                   (Hpi : matches r p pi) (Hpe : matches_pedge e pe)
                    (Hdir : matches_direction (Path.last p) v e (Pattern.edir pe))
-                   (Hpv : matches_pvertex v pv) :
-        matches (Path.hop p e v) (Pattern.hop pi pe pv)
+                   (Hpv : matches_pvertex v pv)
+                   (Hprev : r (Pattern.vname pv) = None \/
+                            r (Pattern.vname pv) = Some (Value.GVertex v)) :
+        matches (vname pv |-[mode]-> Value.GVertex v;
+                 ename pe |-[mode]-> Value.GEdge e; r)
+                (Path.hop p e v) (Pattern.hop pi pe pv)
     .
   End matches.
-
-  #[global]
-  Hint Unfold matches_name_full matches_name_explicit matches_name : matches_name_db.
-
-  Theorem matches_name__full_explicit r n v
-    (Hmatch : matches_name Full r n v) :
-      matches_name Explicit r n v.
-  Proof using.
-    autounfold with matches_name_db.
-    destruct n; auto.
-  Qed.
-
-  Theorem matches_pvertex__full_explicit graph r v pv
-    (Hmatch : matches_pvertex Full graph r v pv) :
-      matches_pvertex Explicit graph r v pv.
-  Proof using.
-    destruct Hmatch; constructor; auto.
-    now apply matches_name__full_explicit.
-  Qed.
-
-  Theorem matches_pedge__full_explicit graph r e pe
-    (Hmatch : matches_pedge Full graph r e pe) :
-      matches_pedge Explicit graph r e pe.
-  Proof using.
-    destruct Hmatch; constructor; auto.
-    now apply matches_name__full_explicit.
-  Qed.
-
-  Theorem matches__full_explicit graph path pi r
-    (Hmatch : matches Full graph r path pi) :
-      matches Explicit graph r path pi.
-  Proof using.
-    induction Hmatch.
-    all: constructor; auto.
-    all: try now apply matches_pvertex__full_explicit.
-    all: try now apply matches_pedge__full_explicit.
-  Qed.
 
   Theorem matches_in_dom_vertex mode graph path pi r' n
     (Hmatch : matches mode graph r' path pi)
@@ -523,7 +507,7 @@ Module Path.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: autounfold with matches_name_db in *.
+    all: unfold update_with_mode in *.
     all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
@@ -536,20 +520,19 @@ Module Path.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: autounfold with matches_name_db in *.
+    all: unfold update_with_mode in *.
     all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
 
-  Theorem matches_full_in_dom_contra mode graph path pi r' n
-    (Hmatch : matches mode graph r' path pi)
-    (Hval : r' n = None) :
-      PatternT.type_of mode pi n = None.
+  Theorem matches_not_in_dom_iff mode graph path pi r' n
+    (Hmatch : matches mode graph r' path pi) :
+      PatternT.type_of mode pi n = None <-> r' n = None.
   Proof using.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: autounfold with matches_name_db in *.
+    all: unfold update_with_mode in *.
     all: simpls; desf_unfold_pat; desf.
   Qed.
 
@@ -560,26 +543,17 @@ Module Path.
     destruct pi. 
     all: inv Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: simpls.
-    all: unfold matches_name in *; desf.
-    all: eauto.
+    all: unfold update_with_mode in *.
+    all: apply PartialMap.update_eq.
   Qed.
 
-  Theorem matches_exclude mode graph path pi r' n x
-    (Hmatch : matches mode graph r' path pi)
-    (HIn : PatternT.type_of Full pi n = None) :
-      matches mode graph (n !-> x; r') path pi.
-  Proof using.
-    destruct mode.
-    all: induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: constructor; auto.
-    all: try apply IHHmatch.
-    all: try constructor; auto.
-    all: autounfold with matches_name_db in *.
-    all: desf; ins.
-    all: desf_unfold_pat.
-    all: exfalso; auto.
+  Lemma explicit_proj__update_with_mode mode n v r :
+    Rcd.explicit_proj (n |-[mode]-> v; r) =
+      (n E|-> v; (Rcd.explicit_proj r)).
+  Proof.
+    unfold update_with_mode, Rcd.explicit_proj in *.
+    extensionality k.
+    desf_unfold_pat.
   Qed.
 
   Theorem matches_explicit_proj mode graph path pi r
@@ -588,113 +562,66 @@ Module Path.
   Proof using.
     destruct mode.
     all: induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
+    all: repeat rewrite explicit_proj__update_with_mode.
+    all: try rewrite Rcd.explicit_proj_empty.
     all: constructor; auto.
-    all: constructor; auto.
-    all: autounfold with matches_name_db in *.
-    all: desf.
-  Qed.
-
-  Theorem matches_explicit mode graph path pi r
-    (Hmatch : matches mode graph r path pi) :
-      matches Explicit graph r path pi.
-  Proof using.
-    destruct mode.
-    { assumption. }
-    induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: constructor; auto.
-    all: constructor; auto.
-    all: autounfold with matches_name_db in *.
-    all: desf.
+    all: unfold Rcd.explicit_proj; desf; auto.
   Qed.
 
   Theorem matches_two_records graph path pi r1 r2 n
     (Hmatch1 : matches Explicit graph r1 path pi)
-    (Hmatch2 : matches Explicit graph r2 path pi)
-    (HIn1 : PatternT.type_of Explicit pi (Name.explicit n) <> None) :
+    (Hmatch2 : matches Explicit graph r2 path pi) :
       r1 (Name.explicit n) = r2 (Name.explicit n).
   Proof using.
-    induction Hmatch1; inv Hmatch2.
+    gen_dep r2.
+    induction Hmatch1; ins; inv Hmatch2.
     all: destruct Hpv; try destruct Hpe.
     all: destruct Hpv0; try destruct Hpe0.
-    all: autounfold with matches_name_db in *.
-    all: simpls; desf_unfold_pat; desf; auto.
-    all: try now rewrite matches_vname0, matches_vname1.
-    all: try now rewrite matches_ename0, matches_ename1.
+    all: unfold update_with_mode in *.
+    all: simpls; desf_unfold_pat; auto.
   Qed.
 
-  Theorem matches_explicit_exists_proj graph path pi r'
-    (Hwf : PatternT.wfT pi)
-    (Hmatch : matches Explicit graph r' path pi)
-    (Htype  : Rcd.type_of r' = PatternT.type_of Explicit pi) :
-      exists r,
-        << Hproj : r' = Rcd.explicit_proj r >> /\
-        << Hmatch' : matches Full graph r path pi >> /\
-        << Htype' : Rcd.type_of r = PatternT.type_of Full pi >>.
+  Theorem matches_both_modes graph path pi r r'
+    (Hmatch : matches Explicit graph r path pi)
+    (Hmatch' : matches Full graph r' path pi) :
+      r = Rcd.explicit_proj r'.
   Proof using.
-    gen_dep path r'.
-    induction pi; intros; inv Hmatch; clear Hmatch.
+    gen_dep r'.
+    induction Hmatch; intros; inv Hmatch'.
+    all: repeat rewrite explicit_proj__update_with_mode.
+    { now rewrite Rcd.explicit_proj_empty. }
+    erewrite IHHmatch; eauto.
+  Qed.
+
+  Theorem matches_explicit_exists_proj graph path pi r
+    (Hwf : PatternT.wfT pi)
+    (Hmatch : matches Explicit graph r path pi) :
+      exists r', matches Full graph r' path pi.
+  Proof using.
+    induction Hmatch.
     all: inv Hwf.
-    { simpls.
-      exists (Pattern.vname pv |-> Value.GVertex v).
-      all: splits.
-      all: try constructor; try constructor.
+    2: destruct IHHmatch as [r' Hmatch']; auto.
+    all: eexists; splits.
+    all: econstructor; eauto.
 
-      all: destruct Hpv; try destruct Hpe.
-      all: autounfold with matches_name_db in *.
-      all: desf.
+    erewrite -> matches_both_modes with (r := r) in Hprev; eauto.
+    unfold Rcd.explicit_proj in Hprev.
+    unfold PatternT.imp_name_unique in *.
+    desf; auto.
+    
+    left. erewrite <- matches_not_in_dom_iff; eauto.
+  Qed.
 
-      all: try apply PartialMap.update_eq.
-      all: try apply Rcd.type_of_singleton.
-
-      all: extensionality k.
-      all: apply (f_equal (fun f => f k)) in Htype.
-      all: unfold Rcd.type_of, option_map in Htype.
-      all: unfold Rcd.explicit_proj.
-      all: desf_unfold_pat; desf.
-    }
-
-    destruct Htype_pv as [Htype_pv | Htype_pv].
-    1: set (r'0 := (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r')).
-    2: set (r'0 := (Pattern.ename pe !-> None; r')).
-    all: specialize IHpi with (r' := r'0); subst r'0.
-    all: edestruct IHpi as [r ?]; eauto; clear IHpi; desf.
-    all: try erewrite PatternT.matches_pattern_type_exclude_All.
-    all: try erewrite PatternT.matches_pattern_type_exclude_Into.
-    all: repeat apply matches_exclude.
-    all: eauto.
-
-    1: exists (Pattern.vname pv |-> Value.GVertex v;
-               Pattern.ename pe |-> Value.GEdge e; r).
-    2: exists (Pattern.ename pe |-> Value.GEdge e; r).
-    all: splits.
-    all: try constructor; try constructor.
-
-    all: destruct Hpv, Hpe.
-    all: repeat apply matches_exclude.
-    all: eauto.
-
-    all: autounfold with matches_name_db in *.
-    all: try apply PartialMap.update_eq.
-    all: try rewrite PartialMap.update_neq.
-    all: try rewrite PartialMap.update_eq.
-
-    all: eauto.
-
+  Theorem matches_type_of mode graph path pi r
+    (Hmatch : matches mode graph r path pi) :
+      PatternT.type_of mode pi = Rcd.type_of r.
+  Proof.
+    destruct mode.
+    all: induction Hmatch.
+    all: unfold update_with_mode; simpls; desf.
     all: repeat rewrite Rcd.type_of_update.
-    all: try rewrite Htype'; clear Htype'.
-    all: try extensionality k.
-    all: try apply (f_equal (fun f => f k)) in Htype.
-    all: try apply (f_equal (fun f => f k)) in Hproj.
-    all: try apply (f_equal (fun f => f (Pattern.vname pv))) in Htype.
-    all: try apply (f_equal (fun f => f (Pattern.vname pv))) in Hproj.
-    all: unfold Rcd.type_of, option_map in Htype.
-    all: unfold Rcd.explicit_proj in *; simpls.
-    all: unfold PatternT.imp_name_unique in *.
-    all: desf_unfold_pat; desf.
-
-    all: try (rewrite PatternT.type_of_None in Htype; auto; discriminate).
+    all: try rewrite IHHmatch.
+    all: auto.
   Qed.
 End Path.
 
@@ -932,8 +859,8 @@ Module EvalQuery.
 
     Axiom match_clause_spec : forall graph path pattern table' r',
       eval_match_clause graph pattern = Some table' ->
-        PatternT.wfT pattern -> Rcd.type_of r' = PatternT.type_of Explicit pattern ->
-          Path.matches Explicit graph r' path pattern -> In r' table'.
+        PatternT.wfT pattern -> Path.matches Explicit graph r' path pattern ->
+          In r' table'.
 
     Axiom match_clause_spec' : forall graph pattern table' r',
       eval_match_clause graph pattern = Some table' ->
