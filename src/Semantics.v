@@ -21,49 +21,97 @@ Import TotalMap.Notations.
 Module MatchMode.
   Inductive t :=
   | Explicit
+  | Mixed
   | Full
   .
+
+  Definition update_with_mode_start {T} (mode : t)
+    (vname : Name.t) (vv : T) :
+    PartialMap.t Name.t T
+  :=
+    match mode with
+    | Full => (vname |-> vv)
+    | _ => 
+        match vname with
+        | Name.explicit _=> (vname |-> vv)
+        | Name.implicit _=> PartialMap.empty
+        end
+    end.
+
+  Definition update_with_mode_hop {T} (mode : t)
+    '((vname, ename) : Name.t * Name.t)
+    '((vv, ev) : T * T)
+    (r : PartialMap.t Name.t T) :
+      PartialMap.t Name.t T
+  :=
+    match mode with
+    | Explicit => 
+        match vname, ename with
+        | Name.explicit _, Name.explicit _ => (vname |-> vv; ename |-> ev; r)
+        | Name.explicit _, Name.implicit _ => (vname |-> vv; r)
+        | Name.implicit _, Name.explicit _ => (ename |-> ev; r)
+        | Name.implicit _, Name.implicit _ => r
+        end
+    | Full => (vname |-> vv; ename |-> ev; r)
+    | Mixed =>
+        match vname, ename with
+        | _,               Name.explicit _ => (vname |-> vv; ename |-> ev; r)
+        | Name.explicit _, Name.implicit _ => (vname |-> vv; r)
+        | Name.implicit _, Name.implicit _ => r
+        end
+    end.
+
+  Module UpdateNotations.
+    Notation "np '|-[' mode ']->'  vp ';' r" := (update_with_mode_hop mode np vp r)
+      (at level 100, vp at next level, right associativity).
+    Notation "n '|-[' mode ']->' v " := (update_with_mode_start mode n v)
+      (at level 100).
+
+    Notation "np 'F|->' vp ';' r" := (update_with_mode_hop Full np vp r)
+      (at level 100, vp at next level, right associativity).
+    Notation "n 'F|->' v " := (update_with_mode_start Full n v)
+      (at level 100).
+
+    Notation "np 'E|->' vp ';' r" := (update_with_mode_hop Explicit np vp r)
+      (at level 100, vp at next level, right associativity).
+    Notation "n 'E|->' v " := (update_with_mode_start Explicit n v)
+      (at level 100).
+
+    Notation "np 'M|->' vp ';' r" := (update_with_mode_hop Mixed np vp r)
+      (at level 100, vp at next level, right associativity).
+    Notation "n 'M|->' v " := (update_with_mode_start Mixed n v)
+      (at level 100).
+  End UpdateNotations.
+  Import UpdateNotations.
+
+  #[global]
+  Ltac lift_to_update_with_mode :=
+    repeat change (?nv |-> ?vv; ?ne |-> ?ve; ?r) with ((nv, ne) F|-> (vv, ve); r);
+    repeat change (?n |-> ?v) with (n F|-> v).
 End MatchMode.
 Import MatchMode.
+Import UpdateNotations.
 
 Module PatternT.
   Definition T := Rcd.T.
 
-  Section type_of.
-    Fixpoint type_of_full (pi : Pattern.t) : T :=
-      match pi with
-      | Pattern.start pv =>
-          (Pattern.vname pv |-> Value.GVertexT)
-      | Pattern.hop pi pe pv =>
-          (Pattern.vname pv |-> Value.GVertexT; Pattern.ename pe |-> Value.GEdgeT; type_of_full pi)
-      end.
+  Fixpoint type_of (mode : MatchMode.t) (pi : Pattern.t) : T :=
+    match pi with
+    | Pattern.start pv =>
+       (Pattern.vname pv |-[mode]-> Value.GVertexT)
+    | Pattern.hop pi pe pv =>
+      ((Pattern.vname pv, Pattern.ename pe) |-[mode]->
+        (Value.GVertexT, Value.GEdgeT); type_of mode pi)
+    end.
 
-    Fixpoint type_of_explicit (pi : Pattern.t) : T :=
-      match pi with
-      | Pattern.start pv =>
-        match Pattern.vname pv with
-        | Name.explicit _ => (Pattern.vname pv |-> Value.GVertexT)
-        | Name.implicit _ => Rcd.emptyT
-        end
-      | Pattern.hop pi pe pv =>
-        match Pattern.vname pv, Pattern.ename pe with
-        | Name.explicit _, Name.explicit _ =>
-          (Pattern.vname pv |-> Value.GVertexT; Pattern.ename pe |-> Value.GEdgeT; type_of_explicit pi)
-        | Name.explicit _, Name.implicit _ =>
-          (Pattern.vname pv |-> Value.GVertexT; type_of_explicit pi)
-        | Name.implicit _, Name.explicit _ =>
-          (Pattern.ename pe |-> Value.GEdgeT; type_of_explicit pi)
-        | Name.implicit _, Name.implicit _ =>
-          type_of_explicit pi
-        end
-      end.
-
-    Definition type_of (mode : MatchMode.t) (pi : Pattern.t) : T :=
-      match mode with
-      | Full => type_of_full pi
-      | Explicit => type_of_explicit pi
-      end.
-  End type_of.
+  Lemma type_of_None_downgrade mode pi n
+    (Hval : type_of Full pi n = None) :
+      type_of mode pi n = None.
+  Proof.
+    induction pi; simpls.
+    all: unfold update_with_mode_start, update_with_mode_hop.
+    all: desf_unfold_pat.
+  Qed.
 
   Lemma type_of__dom_vertices (pi : Pattern.t) nv
     (Hwf : Pattern.wf pi)
@@ -178,6 +226,28 @@ Module PatternT.
     split; eauto using type_of_explicit__dom_edges, dom_edges__type_of.
   Qed.
 
+  Theorem In_dom_vertices mode pi nv
+    (Hwf : Pattern.wf pi)
+    (Hval : type_of mode pi nv = Some Value.GVertexT) :
+      In nv (Pattern.dom_vertices pi).
+  Proof using.
+    destruct mode.
+    all: induction pi.
+    all: inv Hwf; simpls.
+    all: desf_unfold_pat.
+  Qed.
+
+  Theorem In_dom_edges mode pi ne
+    (Hwf : Pattern.wf pi)
+    (Hval : type_of mode pi ne = Some Value.GEdgeT) :
+      In ne (Pattern.dom_edges pi).
+  Proof using.
+    destruct mode.
+    all: induction pi.
+    all: inv Hwf; simpls.
+    all: desf_unfold_pat.
+  Qed.
+
   Lemma last__dom_vertices pi :
     type_of Full pi (Pattern.vname (Pattern.last pi)) = Some Value.GVertexT.
   Proof using.
@@ -226,13 +296,9 @@ Module PatternT.
     unfold PartialMap.in_dom in *.
     destruct Hdom as [v Htype].
     rewrite Pattern.In_dom.
-    destruct mode eqn:Heq, k.
-    all: try (rewrite type_of_explicit__implicit in Htype; discriminate).
-    1: rewrite In_dom_vertices_explicit__iff, In_dom_edges_explicit__iff; auto.
-    all: try rewrite In_dom_vertices__iff, In_dom_edges__iff; auto.
     all: edestruct type_of__types with (mode := mode) (pi := pi) as [? | [? | ?]].
-    all: desf.
-    all: simpls; eauto.
+    all: try (left; eapply In_dom_vertices; now eauto).
+    all: try (right; eapply In_dom_edges; now eauto).
     all: congruence.
   Qed.
 
@@ -350,38 +416,6 @@ Module PatternT.
     all: try apply (f_equal (fun f => f k)) in IHpi.
     all: desf_unfold_pat.
   Qed.
-
-  Theorem matches_pattern_type_exclude_All mode pi pe pv r'
-    (Hwf : wfT (Pattern.hop pi pe pv))
-    (Htype : Rcd.type_of r' = PatternT.type_of mode (Pattern.hop pi pe pv))
-    (HIn : PatternT.type_of Full pi (Pattern.vname pv) = None) :
-      Rcd.type_of (Pattern.ename pe !-> None; Pattern.vname pv !-> None; r') =
-        PatternT.type_of mode pi.
-  Proof using.
-    inv Hwf.
-    repeat rewrite Rcd.type_of_t_update; simpls.
-    rewrite Htype; clear Htype.
-    destruct mode; simpls.
-    all: extensionality k.
-    all: desf_unfold_pat.
-    all: now rewrite type_of_None.
-  Qed.
-
-  Lemma matches_pattern_type_exclude_Into mode pi pe pv r'
-    (Hwf : wfT (Pattern.hop pi pe pv))
-    (Htype : Rcd.type_of r' = PatternT.type_of mode (Pattern.hop pi pe pv))
-    (HIn : PatternT.type_of Full pi (Pattern.vname pv) = Some Value.GVertexT) :
-      Rcd.type_of (Pattern.ename pe !-> None; r') = PatternT.type_of mode pi.
-  Proof using.
-    inv Hwf.
-    rewrite Rcd.type_of_t_update; simpls.
-    rewrite Htype; clear Htype; unfold PartialMap.update.
-    destruct mode; simpls.
-    all: extensionality k.
-    all: desf_unfold_pat.
-    all: try now rewrite type_of_None.
-    all: now rewrite type_of_explicit_full.
-  Qed.
 End PatternT.
 
 Module Path.
@@ -394,40 +428,6 @@ Module Path.
     | hop _ _ v => v
     | start v => v
     end.
-
-  Definition update_with_mode (mode : MatchMode.t) (n : Name.t)
-                              (v : Value.t) (r : Rcd.t) : Rcd.t := 
-    match mode with
-    | Full => (n |-> v; r)
-    | Explicit =>
-      match n with
-      | Name.implicit _ => r
-      | Name.explicit _ => (n |-> v; r)
-      end
-    end.
-
-  Module UpdateNotations.
-    Notation "n '|-[' mode ']->'  v ';' r" := (update_with_mode mode n v r)
-      (at level 100, v at next level, right associativity).
-    Notation "n '|-[' mode ']->' v " := (update_with_mode mode n v Rcd.empty)
-      (at level 100).
-
-    Notation "n 'F|->' v ';' r" := (update_with_mode Full n v r)
-      (at level 100, v at next level, right associativity).
-    Notation "n 'F|->' v " := (update_with_mode Full n v Rcd.empty)
-      (at level 100).
-
-    Notation "n 'E|->' v ';' r" := (update_with_mode Explicit n v r)
-      (at level 100, v at next level, right associativity).
-    Notation "n 'E|->' v " := (update_with_mode Explicit n v Rcd.empty)
-      (at level 100).
-  End UpdateNotations.
-  Import UpdateNotations.
-
-  #[global]
-  Ltac lift_to_update_with_mode :=
-    repeat change (?n |-> ?v; ?r) with (n F|-> v; r);
-    repeat change (?n |-> ?v) with (n F|-> v).
 
   Section matches.
     Import Pattern.
@@ -493,8 +493,7 @@ Module Path.
                    (Hpv : matches_pvertex v pv)
                    (Hprev : r (Pattern.vname pv) = None \/
                             r (Pattern.vname pv) = Some (Value.GVertex v)) :
-        matches (vname pv |-[mode]-> Value.GVertex v;
-                 ename pe |-[mode]-> Value.GEdge e; r)
+        matches ((vname pv, ename pe) |-[mode]-> (Value.GVertex v, Value.GEdge e); r)
                 (Path.hop p e v) (Pattern.hop pi pe pv)
     .
   End matches.
@@ -507,7 +506,7 @@ Module Path.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode in *.
+    all: unfold update_with_mode_hop, update_with_mode_start in *.
     all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
@@ -520,7 +519,7 @@ Module Path.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode in *.
+    all: unfold update_with_mode_hop, update_with_mode_start in *.
     all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
@@ -532,7 +531,7 @@ Module Path.
     destruct mode.
     all: induction Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode in *.
+    all: unfold update_with_mode_hop, update_with_mode_start in *.
     all: simpls; desf_unfold_pat; desf.
   Qed.
 
@@ -543,15 +542,24 @@ Module Path.
     destruct pi. 
     all: inv Hmatch.
     all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode in *.
+    all: unfold update_with_mode_hop, update_with_mode_start in *.
     all: apply PartialMap.update_eq.
   Qed.
 
-  Lemma explicit_proj__update_with_mode mode n v r :
+  Lemma explicit_proj__update_with_mode_hop mode n v r :
     Rcd.explicit_proj (n |-[mode]-> v; r) =
       (n E|-> v; (Rcd.explicit_proj r)).
-  Proof.
-    unfold update_with_mode, Rcd.explicit_proj in *.
+  Proof using.
+    unfold update_with_mode_hop, Rcd.explicit_proj in *.
+    extensionality k.
+    desf_unfold_pat.
+  Qed.
+
+  Lemma explicit_proj__update_with_mode_start mode n v :
+    Rcd.explicit_proj (n |-[mode]-> v) =
+      (n E|-> v).
+  Proof using.
+    unfold update_with_mode_start, Rcd.explicit_proj in *.
     extensionality k.
     desf_unfold_pat.
   Qed.
@@ -562,8 +570,8 @@ Module Path.
   Proof using.
     destruct mode.
     all: induction Hmatch.
-    all: repeat rewrite explicit_proj__update_with_mode.
-    all: try rewrite Rcd.explicit_proj_empty.
+    all: repeat rewrite explicit_proj__update_with_mode_hop.
+    all: try rewrite explicit_proj__update_with_mode_start.
     all: constructor; auto.
     all: unfold Rcd.explicit_proj; desf; auto.
   Qed.
@@ -577,39 +585,42 @@ Module Path.
     induction Hmatch1; ins; inv Hmatch2.
     all: destruct Hpv; try destruct Hpe.
     all: destruct Hpv0; try destruct Hpe0.
-    all: unfold update_with_mode in *.
+    all: unfold update_with_mode_hop, update_with_mode_start in *.
     all: simpls; desf_unfold_pat; auto.
   Qed.
 
-  Theorem matches_both_modes graph path pi r r'
+  Theorem matches_both_modes mode graph path pi r r'
     (Hmatch : matches Explicit graph r path pi)
-    (Hmatch' : matches Full graph r' path pi) :
+    (Hmatch' : matches mode graph r' path pi) :
       r = Rcd.explicit_proj r'.
   Proof using.
     gen_dep r'.
     induction Hmatch; intros; inv Hmatch'.
-    all: repeat rewrite explicit_proj__update_with_mode.
-    { now rewrite Rcd.explicit_proj_empty. }
+    all: repeat rewrite explicit_proj__update_with_mode_hop.
+    { now rewrite explicit_proj__update_with_mode_start. }
     erewrite IHHmatch; eauto.
   Qed.
 
-  Theorem matches_explicit_exists_proj graph path pi r
+  Theorem matches_explicit_exists_proj mode graph path pi r
     (Hwf : PatternT.wfT pi)
     (Hmatch : matches Explicit graph r path pi) :
-      exists r', matches Full graph r' path pi.
+      exists r', matches mode graph r' path pi.
   Proof using.
-    induction Hmatch.
+    destruct mode.
+    all: induction Hmatch.
     all: inv Hwf.
-    2: destruct IHHmatch as [r' Hmatch']; auto.
+    all: try destruct IHHmatch as [r' Hmatch']; auto.
     all: eexists; splits.
     all: econstructor; eauto.
 
-    erewrite -> matches_both_modes with (r := r) in Hprev; eauto.
-    unfold Rcd.explicit_proj in Hprev.
-    unfold PatternT.imp_name_unique in *.
-    desf; auto.
-    
-    left. erewrite <- matches_not_in_dom_iff; eauto.
+    all: erewrite -> matches_both_modes with (r := r) in Hprev; eauto.
+    all: unfold Rcd.explicit_proj in Hprev.
+    all: unfold PatternT.imp_name_unique in *.
+    all: desf; auto.
+
+    all: left; erewrite <- matches_not_in_dom_iff;
+          [ eapply PatternT.type_of_None_downgrade | ].
+    all: eauto.
   Qed.
 
   Theorem matches_type_of mode graph path pi r
@@ -618,7 +629,8 @@ Module Path.
   Proof.
     destruct mode.
     all: induction Hmatch.
-    all: unfold update_with_mode; simpls; desf.
+    all: unfold update_with_mode_start, update_with_mode_hop.
+    all: simpls; desf.
     all: repeat rewrite Rcd.type_of_update.
     all: try rewrite IHHmatch.
     all: auto.

@@ -18,12 +18,12 @@ Require Import Utils.
 
 Import PartialMap.Notations.
 Import TotalMap.Notations.
-Import Path.UpdateNotations.
 Import PropertyGraph.
 Import ExecutionPlan.
 Import FilterMode.
 Import ExpandMode.
 Import MatchMode.
+Import UpdateNotations.
 
 Section translate_pattern.
   Import Pattern.
@@ -177,7 +177,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     inv Hmatch. inv Hwf.
     exists r.
     destruct Hpe, Hpv.
-    unfold Path.update_with_mode in *.
+    unfold update_with_mode_hop, update_with_mode_start in *.
     unfold expansion_of_by_hop, expansion_of, expansion_of'.
     splits; auto.
     do 3 eexists. splits; eauto.
@@ -198,7 +198,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     { eapply Path.matches_in_dom_vertex with (r' := r) in Htype_pv;
         eauto; desf. }
     destruct Hpe, Hpv.
-    unfold Path.update_with_mode in *.
+    unfold update_with_mode_hop, update_with_mode_start in *.
     unfold expansion_of_by_hop, expansion_of, expansion_of'.
     splits; auto.
     do 3 eexists. splits; eauto.
@@ -275,7 +275,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     inv Hwf.
     unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
     desf; desf.
-    all: Path.lift_to_update_with_mode.
+    all: lift_to_update_with_mode.
     all: apply Path.matches_cons; simpls; auto.
     all: try constructor; auto.
 
@@ -320,7 +320,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     1-2: eexists (Path.start _).
     all: try eexists (Path.hop path _ _).
 
-    1-2: Path.lift_to_update_with_mode.
+    1-2: lift_to_update_with_mode.
     1-2: do 2 constructor; auto.
 
     all: try eapply matches_expansion_of; eauto.
