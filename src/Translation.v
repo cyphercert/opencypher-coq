@@ -204,8 +204,6 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     do 3 eexists. splits; eauto.
     { eauto using Path.matches_full_last. }
     { erewrite <- Path.matches_not_in_dom_iff; eauto. }
-    { extensionality k. desf_unfold_pat.
-      congruence. }
   Qed.
 
   Lemma eval_translate_pattern'_spec graph path pi table' r'
@@ -278,11 +276,6 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     unfold expansion_of_by_hop', expansion_of', expansion_of in Hexp.
     desf; desf.
     all: Path.lift_to_update_with_mode.
-    all: try replace (Pattern.ename pe F|-> Value.GEdge e; r) with 
-                     (Pattern.vname pv F|-> Value.GVertex v_to;
-                      Pattern.ename pe F|-> Value.GEdge e; r)
-         by (unfold Path.update_with_mode; extensionality k;
-              desf_unfold_pat; congruence).
     all: apply Path.matches_cons; simpls; auto.
     all: try constructor; auto.
 

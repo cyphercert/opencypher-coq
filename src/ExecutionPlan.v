@@ -41,13 +41,12 @@ Definition expansion_of' (g : PropertyGraph.t) (r' r : Rcd.t)
   << Hdir : Path.matches_direction g v_from v_to e d >> /\
   << Hval_from : r n_from = Some (Value.GVertex v_from) >> /\
   << Hval_edge : r n_edge = None >> /\
+  << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >> /\
   match mode with
   | ExpandMode.All =>
-    << Hval_to : r n_to = None >> /\
-    << Hval' : r' = (n_to |-> Value.GVertex v_to; n_edge |-> Value.GEdge e; r) >>
+    << Hval_to : r n_to = None >>
   | ExpandMode.Into =>
-    << Hval_to : r n_to = Some (Value.GVertex v_to) >> /\
-    << Hval' : r' = (n_edge |-> Value.GEdge e; r) >>
+    << Hval_to : r n_to = Some (Value.GVertex v_to) >>
   end.
 
 (* r' is expanded from r by traversing one edge *)
@@ -124,16 +123,11 @@ Module ExecutionPlan.
           BindingTable.of_type table ty ->
             BindingTable.of_type table' ty.
 
-      Axiom expand_all_type : forall n_from n_edge n_to d,
-        expand All n_from n_edge n_to d graph table = Some table' ->
+      Axiom expand_type : forall mode n_from n_edge n_to d,
+        expand mode n_from n_edge n_to d graph table = Some table' ->
           BindingTable.of_type table ty ->
             BindingTable.of_type table'
               (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
-
-      Axiom expand_into_type : forall n_from n_edge n_to d,
-        expand Into n_from n_edge n_to d graph table = Some table' ->
-          BindingTable.of_type table ty ->
-            BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
 
       Axiom return_all_type :
         return_all graph table = Some table' ->
@@ -208,8 +202,7 @@ Module ExecutionPlan.
     match plan with
     | ScanVertices n => n |-> Value.GVertexT
     | FilterByLabel mode n l plan => type_of plan
-    | Expand All n_from n_edge n_to d plan => n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; type_of plan
-    | Expand Into n_from n_edge n_to d plan => n_edge |-> Value.GEdgeT; type_of plan
+    | Expand mode n_from n_edge n_to d plan => n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; type_of plan
     | ReturnAll plan => Rcd.explicit_projT (type_of plan)
     end.
 
@@ -257,7 +250,7 @@ Module ExecutionPlan.
 
     #[local]
     Hint Resolve scan_vertices_type filter_by_label_type
-                expand_all_type expand_into_type return_all_type : type_axioms.
+                expand_type return_all_type : type_axioms.
 
     #[local]
     Hint Resolve scan_vertices_wf filter_vertices_by_label_wf filter_edges_by_label_wf
@@ -364,7 +357,8 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     Definition expand_into_single (r : Rcd.t) : option BindingTable.t :=
       match r n_from, r n_edge, r n_to with
       | Some (Value.GVertex v_from), None, Some (Value.GVertex v_to) =>
-          Some (map (fun e => n_edge |-> Value.GEdge e; r)
+          Some (map (fun e => n_to   |-> Value.GVertex v_to;
+                              n_edge |-> Value.GEdge e; r)
           match d with
           | Pattern.OUT  => edges_between graph v_from v_to
           | Pattern.IN   => edges_between graph v_to   v_from
@@ -501,13 +495,9 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
   Qed.
 
   Theorem expand_single_type graph r table' mode n_from n_edge n_to d
-                          (Hres : expand_single mode n_from n_edge n_to d graph r = Some table') :
-    match mode with
-    | All => BindingTable.of_type table'
-        (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; Rcd.type_of r)
-    | Into => BindingTable.of_type table'
-        (n_edge |-> Value.GEdgeT; Rcd.type_of r)
-    end.
+    (Hres : expand_single mode n_from n_edge n_to d graph r = Some table') :
+      BindingTable.of_type table'
+        (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; Rcd.type_of r).
   Proof using.
     autounfold with expand_db in *.
     desf.
@@ -516,46 +506,24 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
     all: solve_type_of_extension r (Rcd.type_of r).
   Qed.
 
-  Theorem expand_type graph table table' mode ty n_from n_edge n_to d
+  Theorem expand_type graph table table' ty mode n_from n_edge n_to d
                           (Hres : expand mode n_from n_edge n_to d graph table = Some table')
                           (Htype : BindingTable.of_type table ty) :
-    match mode with
-    | All => BindingTable.of_type table' (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty)
-    | Into => BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty)
-    end.
+    BindingTable.of_type table'
+      (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
   Proof using.
     unfold expand in *.
-
-    edestruct (fold_option _) as [tables' | ] eqn:Hfold.
-    2: now inv Hres.
-    simpls; inj_subst.
-
+    unfold option_map in Hres; desf.
     destruct mode.
+
     all: apply BindingTable.of_type_concat; intros table' HIn_tables'.
-    all: eassert (Hmap : In (Some table') (map _ table));
-         [ eapply fold_option_In; eassumption
-         | clear Hfold; clear HIn_tables' ].
+    all: eassert (Hmap : In (Some table') (map _ table))
+          by (eapply fold_option_In; eauto).
 
     all: apply in_map_iff in Hmap as [r ?]; desf.
     all: assert (Rcd.type_of r = ty) as Hty by auto; subst.
-    { eapply expand_single_type with (mode := All); eassumption. }
-    eapply expand_single_type with (mode := Into); eassumption.
+    all: eauto using expand_single_type.
   Qed.
-
-  Theorem expand_all_type
-    graph table table' ty n_from n_edge n_to d
-    (Hres : expand All n_from n_edge n_to d graph table = Some table')
-    (Htype : BindingTable.of_type table ty) :
-    BindingTable.of_type table'
-      (n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; ty).
-  Proof using. eapply expand_type with (mode := All); eassumption. Qed.
-
-  Theorem expand_into_type
-    graph table table' ty n_from n_edge n_to d
-    (Hres : expand Into n_from n_edge n_to d graph table = Some table')
-    (Htype : BindingTable.of_type table ty) :
-    BindingTable.of_type table' (n_edge |-> Value.GEdgeT; ty).
-  Proof using. eapply expand_type with (mode := Into); eassumption. Qed.
 
   Theorem return_all_type graph table table' ty
                           (Hres : return_all graph table = Some table')
@@ -722,12 +690,12 @@ Module ExecutionPlanImpl : ExecutionPlan.Spec.
       (HIn : In r table) : In r' table'.
   Proof using.
     unfold expand in *.
+
     edestruct (fold_option _) as [tables' | ] eqn:Hfold.
     2: now inv Hres.
     simpls; inj_subst.
 
-    eassert (Hmap : In (_ r) (map _ table)).
-    { now eapply in_map. }
+    eassert (Hmap : In (_ r) (map _ table)) by (now eapply in_map).
 
     eassert (exists table', _ r = Some table') as [table' Hres].
     { eapply fold_option_some_inv in Hfold as [table' Heq]; eauto. }
