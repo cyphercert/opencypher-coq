@@ -879,4 +879,23 @@ Module EvalQuery.
         PropertyGraph.wf graph -> PatternT.wfT pattern -> In r' table' ->
           exists path, Path.matches Explicit graph r' path pattern.
   End Spec.
+
+  Module SpecComplete (Spec1 Spec2 : Spec).
+    Import BindingTable.Notations.
+
+    Lemma match_clause_unique graph pattern table1 table2
+      (Hwf_graph : PropertyGraph.wf graph)
+      (Hwf_pattern : PatternT.wfT pattern)
+      (Hres1 : Spec1.eval_match_clause graph pattern = Some table1)
+      (Hres2 : Spec2.eval_match_clause graph pattern = Some table2) :
+        table1 ~~ table2.
+    Proof.
+      unfold BindingTable.equiv; ins.
+      split; ins.
+      { edestruct Spec1.match_clause_spec'; eauto.
+        eapply Spec2.match_clause_spec; eauto. }
+      { edestruct Spec2.match_clause_spec'; eauto.
+        eapply Spec1.match_clause_spec; eauto. }
+    Qed.
+  End SpecComplete.
 End EvalQuery.

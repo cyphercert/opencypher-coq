@@ -372,6 +372,20 @@ Module BindingTable.
 
   #[global]
   Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
+
+  Definition equiv (table1 table2 : t) :=
+    forall r, In r table1 <-> In r table2.
+
+  #[global]
+  Instance equiv_Equivalence : Equivalence equiv.
+  Proof using.
+    constructor; red; intros.
+    all: unfold equiv; firstorder.
+  Qed.
+
+  Module Notations.
+    Notation "t1 ~~ t2" := (equiv t1 t2) (at level 70).
+  End Notations.
 End BindingTable.
 
 #[global]
