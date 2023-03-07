@@ -34,9 +34,20 @@ Module PatternSlice.
           (Value.GVertexT, Value.GEdgeT); type_of rT pi)
     end.
 
+  Theorem type_of__types rT pi n
+    (Htype : rT n = Some Value.GVertexT \/
+             rT n = Some Value.GEdgeT \/
+             rT n = None) :
+    type_of rT pi n = Some Value.GVertexT \/
+    type_of rT pi n = Some Value.GEdgeT \/
+    type_of rT pi n = None.
+  Proof.
+    induction pi; simpls.
+    all: desf_unfold_pat.
+  Qed.
+
   Section wf.
-    Variable r : Rcd.t.
-    Local Definition rT := Rcd.type_of r.
+    Variable rT : Rcd.T.
 
     Inductive wf' : t -> Prop :=
     | wf'_empty : wf' empty
@@ -173,7 +184,7 @@ Module PatternSlice.
     (Hwf : PatternT.wfT pi)
     (Hsplit : split' pi = (pi0, pi'))
     (Hmatch : Path.matches Mixed g r p pi0) :
-      wf' r pi'.
+      wf' (Rcd.type_of r) pi'.
   Proof.
     gen_dep Hwf pi0 pi'.
     induction pi; ins; inv Hwf; desf.
@@ -190,7 +201,7 @@ Module PatternSlice.
     (Hwf : PatternT.wfT pi)
     (Hsplit : split pi = (pi0, pi'))
     (Hmatch : Path.matches Mixed g r p pi0) :
-      wf r pi'.
+      wf (Rcd.type_of r) pi'.
   Proof.
     unfold split in *.
     desf; inv Hwf.
@@ -280,4 +291,15 @@ Module PathSlice.
     erewrite -> PatternSlice.split_append; eauto.
     eapply matches_append; eauto.
   Qed.
+
+  Theorem matches_type_of g r r' p' pi' svname
+    (Hmatch' : PathSlice.matches g r svname r' p' pi') :
+      Rcd.type_of r' = PatternSlice.type_of (Rcd.type_of r) pi'.
+  Proof.
+    induction Hmatch'; auto.
+    simpl. desf.
+    all: repeat rewrite Rcd.type_of_update.
+    all: now repeat f_equal.
+  Qed.
+  
 End PathSlice.
