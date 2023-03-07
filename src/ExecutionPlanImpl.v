@@ -1,16 +1,10 @@
-Require Import String.
-Require Import List.
-Require Import Bool.
-Require Import BinNums.
-From Coq Require Import Logic.FunctionalExtensionality.
-Import ListNotations.
-
-Require Import Maps.
 Require Import Utils.
+Require Import Maps.
 Require Import PropertyGraph.
 Require Import Cypher.
 Require Import BindingTable.
 Require Import Semantics.
+Require Import PatternE.
 Require Import ExecutionPlan.
 Require Import TraverseOp.
 

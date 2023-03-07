@@ -1,12 +1,4 @@
-Require Import String.
-Require Import List.
 Require Import Utils.
-Require Import BinNums.
-Require Import Maps.
-Require Import Bool.
-Import ListNotations.
-
-From hahn Require Import HahnBase.
 
 Module Property.
 

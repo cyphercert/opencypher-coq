@@ -1,12 +1,16 @@
-Require Import List.
-Require Import String.
-Require Import List.
-Require Import Bool.
-Require Import BinNums.
-From hahn Require Import HahnBase.
+Require Export List.
+Require Export String.
+Require Export List.
+Require Export Bool.
+Require Export BinNums.
+From hahn Require Export HahnBase.
 From Coq Require Export Classes.EquivDec.
 From Coq Require Export Classes.RelationClasses.
-Import ListNotations.
+From Coq Require Export Logic.FunctionalExtensionality.
+Export ListNotations.
+
+#[global]
+Open Scope string_scope.
 
 (* To override notation from Classes.EquivDec *)
 Notation "x <> y" := (not (eq x y)).

@@ -1,16 +1,8 @@
 From Coq Require Import Arith.Arith.
 From Coq Require Import Bool.Bool.
-Require Export Coq.Strings.String.
-From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Lists.List.
-From Coq Require Import Classes.EquivDec.
-From hahn Require Import HahnBase.
 
 Require Import Utils.
-(**From Coq Require Import omega.Omega.**)
-
-(* ################################################################# *)
-(**maps**)
 
 Module TotalMap.
   Definition t (A B : Type) `{EqDec A eq} := A -> B.
@@ -35,9 +27,6 @@ Module TotalMap.
   End Notations.
 
   Import Notations.
-
-  (* ################################################################# *)
-  (** lemmas about total maps **)
 
   Section lemmas.
     Context (A B : Type).
@@ -91,8 +80,6 @@ Module TotalMap.
   End lemmas.
 End TotalMap.
 
-(* ################################################################# *)
-(** * Partial maps *)
 
 Module PartialMap.
   Definition t (A B : Type) `{EqDec A eq} := TotalMap.t A (option B).

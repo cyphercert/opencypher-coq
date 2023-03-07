@@ -1,12 +1,6 @@
-Require Import String.
-Require Import List.
-Import ListNotations.
-From Coq Require Import Classes.EquivDec.
-From hahn Require Import HahnBase.
-
-Require Import PropertyGraph.
-Require Import Maps.
 Require Import Utils.
+Require Import Maps.
+Require Import PropertyGraph.
 Import Property.
 
 (** Query pattern definition. In general terms, the query pattern is the conditions on the edges *)

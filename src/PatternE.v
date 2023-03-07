@@ -1,20 +1,9 @@
-Require Import String.
-Require Import List.
-Require Import Bool.
-Require Import BinNums.
-From Coq Require Import Logic.FunctionalExtensionality.
-Import ListNotations.
-Open Scope string_scope.
-From hahn Require Import HahnBase.
-From Coq Require Import Classes.EquivDec.
-From Coq Require Import Classes.RelationClasses.
-
-Require Import Cypher.
-Require Import Semantics.
-Require Import BindingTable.
-Require Import PropertyGraph.
-Require Import Maps.
 Require Import Utils.
+Require Import Maps.
+Require Import PropertyGraph.
+Require Import Cypher.
+Require Import BindingTable.
+Require Import Semantics.
 Import PartialMap.Notations.
 Import PropertyGraph.
 Import MatchMode.
