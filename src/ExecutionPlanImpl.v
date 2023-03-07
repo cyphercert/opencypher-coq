@@ -6,7 +6,7 @@ Require Import BindingTable.
 Require Import Semantics.
 Require Import PatternE.
 Require Import ExecutionPlan.
-Require Import TraverseOp.
+Require TraverseOpImpl.
 
 Import PartialMap.Notations.
 Import TotalMap.Notations.
