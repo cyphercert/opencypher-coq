@@ -43,6 +43,26 @@ Module Name.
   Program Instance eqdec : EqDec t eq := eq_dec.
 
   Definition eqb (a b : t) : bool := a ==b b.
+
+  Definition is_explicit (n : t) : Prop :=
+    match n with
+    | explicit _ => True
+    | _ => False
+    end.
+
+  Definition is_implicit (n : t) : Prop :=
+    match n with
+    | implicit _ => True
+    | _ => False
+    end.
+
+  Definition is_explicit_dec (n : t) : {is_explicit n} + {is_implicit n}.
+    unfold is_explicit, is_implicit.
+    destruct n; eauto.
+  Defined.
+
+  Definition is_explicit_decb (n : t) : bool :=
+    if is_explicit_dec n then true else false.
 End Name.
 
 Module Pattern.

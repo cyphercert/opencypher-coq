@@ -385,6 +385,19 @@ Module PatternT.
     split; auto using wfT_wf, wf_wfT.
   Qed.
 
+  Lemma type_of_Some_upgrade mode pi n v
+    (Hwf : wfT pi)
+    (Hval : type_of mode pi n = Some v) :
+      type_of Full pi n = Some v.
+  Proof.
+    induction pi; inv Hwf; simpls.
+    all: unfold update_with_mode_start, update_with_mode_hop in *.
+    all: desf.
+    all: desf_unfold_pat; desf; auto.
+    all: apply IHpi in Hval; auto.
+    all: congruence.
+  Qed.
+
   Lemma last_neq_pe pi pe pv
     (Hwf : wfT (Pattern.hop pi pe pv)) :
       Pattern.vname (Pattern.last pi) <> Pattern.ename pe.
@@ -544,6 +557,20 @@ Module Path.
     all: destruct Hpv; try destruct Hpe.
     all: unfold update_with_mode_hop, update_with_mode_start in *.
     all: apply PartialMap.update_eq.
+  Qed.
+
+  Theorem matches_last mode graph path pi r' v
+    (Hmatch : matches mode graph r' path pi)
+    (Hval : r' (Pattern.vname (Pattern.last pi)) = Some (Value.GVertex v)) :
+      Path.last path = v.
+  Proof using.
+    destruct mode, pi.
+    all: inv Hmatch.
+    all: destruct Hpv; try destruct Hpe.
+    all: simpls; desf.
+    all: try rewrite PartialMap.update_eq in Hval.
+    all: try rewrite PartialMap.update_neq in Hval.
+    all: desf.
   Qed.
 
   Lemma explicit_proj__update_with_mode_hop mode n v r :
