@@ -112,10 +112,22 @@ Module Pattern.
 
   (*hop (start a) b c :  (a)-[b]-(c) *)
 
-  Definition last (p : t) :=
-    match p with
+  Fixpoint first (pi : t) : pvertex :=
+    match pi with
+    | hop pi _ _ => first pi
+    | start pv => pv
+    end.
+
+  Definition last (pi : t) : pvertex :=
+    match pi with
     | hop _ _ pv => pv
     | start pv => pv
+    end.
+
+  Fixpoint length (pi : t) : nat :=
+    match pi with
+    | hop pi _ _ => S (length pi)
+    | start _ => 1
     end.
 
   (* Domain of the pattern, i.e. names of the variables *)

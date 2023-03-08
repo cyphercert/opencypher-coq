@@ -302,3 +302,17 @@ Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) 
 
 Tactic Notation "gen_dep" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) :=
   generalize dependent a; gen_dep b c d e f g h i.
+
+Fixpoint tails {A : Type} (xs : list A) : list (list A) :=
+  match xs with
+  | [] => [[]]
+  | x :: xs => (x :: xs) :: tails xs
+  end.
+
+Theorem tails_hd {A : Type} (xs : list A) :
+  tails xs = xs :: tl (tails xs).
+Proof using. now destruct xs. Qed.
+
+Theorem map_tl {A B : Type} (f : A -> B) (xs : list A) :
+  map f (tl xs) = tl (map f xs).
+Proof using. now destruct xs. Qed.

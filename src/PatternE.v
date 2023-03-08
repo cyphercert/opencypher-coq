@@ -1,3 +1,7 @@
+Require Import Lia.
+Require Import FunInd.
+Require Import Recdef.
+
 Require Import Utils.
 Require Import Maps.
 Require Import PropertyGraph.
@@ -15,6 +19,12 @@ Module PatternSlice.
   | hop (pi : t) (pe : Pattern.pedge) (pv : Pattern.pvertex)
   .
 
+  Fixpoint length (pi : t) : nat :=
+    match pi with
+    | empty => 0
+    | hop pi _ _ => S (length pi)
+    end.
+
   Fixpoint type_of (rT : Rcd.T) (pi : t) : Rcd.T :=
     match pi with
     | empty => rT
@@ -30,7 +40,7 @@ Module PatternSlice.
     type_of rT pi n = Some Value.GVertexT \/
     type_of rT pi n = Some Value.GEdgeT \/
     type_of rT pi n = None.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: desf_unfold_pat.
   Qed.
@@ -103,12 +113,12 @@ Module PatternSlice.
     let pi0 := Pattern.hop (Pattern.start pv0) pe1 pv1 in
     let pi' := hop empty pe2 pv2 in
       split pi = (pi0, pi').
-  Proof. reflexivity. Qed.
+  Proof using. reflexivity. Qed.
 
   Lemma split'_append pi pi0 pi'
     (Hsplit : split' pi = (pi0, pi')) :
       pi = append pi0 pi'.
-  Proof.
+  Proof using.
     gen_dep pi0 pi'.
     induction pi; ins; desf.
     simpl. f_equal. eauto.
@@ -117,18 +127,59 @@ Module PatternSlice.
   Theorem split_append pi pi0 pi'
     (Hsplit : split pi = (pi0, pi')) :
       pi = append pi0 pi'.
-  Proof.
+  Proof using.
     unfold split in *.
     destruct pi; desf.
     simpl. f_equal.
     eauto using split'_append.
   Qed.
 
+  Lemma split'_first pi pi0 pi'
+    (Hsplit : split' pi = (pi0, pi')) :
+      Pattern.first pi0 = Pattern.first pi.
+  Proof using.
+    gen_dep pi0 pi'.
+    induction pi; ins; desf.
+    simpl. eauto.
+  Qed.
+    
+  Theorem split_first pi pi0 pi'
+    (Hsplit : split pi = (pi0, pi')) :
+      Pattern.first pi0 = Pattern.first pi.
+  Proof using.
+    unfold split in *.
+    destruct pi; desf; simpl.
+    eauto using split'_first.
+  Qed.
+
+  Lemma split'_type_of_last pi pi0 pi'
+    (Hsplit : split' pi = (pi0, pi')) :
+      PatternT.type_of Mixed pi0 (Pattern.vname (Pattern.last pi0)) =
+        Some Value.GVertexT.
+  Proof using.
+    gen_dep pi0 pi'.
+    induction pi; ins; desf.
+    all: simpls; desf.
+    all: try apply PartialMap.update_eq.
+    eauto.
+  Qed.
+  
+  Theorem split_type_of_last pi pi0 pi'
+    (Hsplit : split pi = (pi0, pi')) :
+      PatternT.type_of Mixed pi0 (Pattern.vname (Pattern.last pi0)) =
+        Some Value.GVertexT.
+  Proof using.
+    unfold split in *.
+    destruct pi; desf; simpl.
+    { apply PartialMap.update_eq. }
+    eauto using split'_type_of_last.
+  Qed.
+
   Lemma split'_wf_pattern pi pi0 pi'
     (Hwf : PatternT.wfT pi)
     (Hsplit : split' pi = (pi0, pi')) :
       PatternT.wfT pi0.
-  Proof.
+  Proof using.
     gen_dep pi0 pi'.
     induction pi; ins; desf.
     inv Hwf; eauto.
@@ -138,43 +189,38 @@ Module PatternSlice.
     (Hwf : PatternT.wfT pi)
     (Hsplit : split pi = (pi0, pi')) :
       PatternT.wfT pi0.
-  Proof.
+  Proof using.
     unfold split in *.
     destruct pi; desf; inv Hwf.
     eauto using split'_wf_pattern.
   Qed.
 
-  Lemma split'_type_of g r p pi pi0 pi'
-    (Hsplit : split' pi = (pi0, pi'))
-    (Hmatch : Path.matches Mixed g r p pi0) :
-      type_of (Rcd.type_of r) pi' = PatternT.type_of Mixed pi.
-  Proof.
-    erewrite <- Path.matches_type_of; eauto.
+  Lemma split'_type_of pi pi0 pi'
+    (Hsplit : split' pi = (pi0, pi')) :
+      type_of (PatternT.type_of Mixed pi0) pi' =
+        PatternT.type_of Mixed pi.
+  Proof using.
     gen_dep pi0 pi'.
     induction pi; ins; desf.
     all: simpl; desf; eauto.
   Qed.
 
-  Theorem split_type_of g r p pi pi0 pi'
-    (Hsplit : split pi = (pi0, pi'))
-    (Hmatch : Path.matches Mixed g r p pi0) :
-      type_of (Rcd.type_of r) pi' = PatternT.type_of Mixed pi.
-  Proof.
+  Theorem split_type_of pi pi0 pi'
+    (Hsplit : split pi = (pi0, pi')) :
+      type_of (PatternT.type_of Mixed pi0) pi' =
+        PatternT.type_of Mixed pi.
+  Proof using.
     unfold split in *.
     destruct pi.
-    all: do 2 (simpls; desf).
-    all: repeat f_equal.
-    all: eauto using split'_type_of.
-    all: erewrite <- Path.matches_type_of; eauto.
-    all: simpls; desf.
+    all: desf; simpl.
+    all: erewrite split'_type_of; eauto.
   Qed.
 
-  Lemma split'_wf_slice g r p pi pi0 pi'
+  Lemma split'_wf_slice pi pi0 pi'
     (Hwf : PatternT.wfT pi)
-    (Hsplit : split' pi = (pi0, pi'))
-    (Hmatch : Path.matches Mixed g r p pi0) :
-      wf' (Rcd.type_of r) pi'.
-  Proof.
+    (Hsplit : split' pi = (pi0, pi')) :
+      wf' (PatternT.type_of Mixed pi0) pi'.
+  Proof using.
     gen_dep Hwf pi0 pi'.
     induction pi; ins; inv Hwf; desf.
     all: try now constructor.
@@ -186,12 +232,11 @@ Module PatternSlice.
     all: now apply PatternT.type_of_None_downgrade.
   Qed.
 
-  Theorem split_wf_slice g r p pi pi0 pi'
+  Theorem split_wf_slice pi pi0 pi'
     (Hwf : PatternT.wfT pi)
-    (Hsplit : split pi = (pi0, pi'))
-    (Hmatch : Path.matches Mixed g r p pi0) :
-      wf (Rcd.type_of r) pi'.
-  Proof.
+    (Hsplit : split pi = (pi0, pi')) :
+      wf (PatternT.type_of Mixed pi0) pi'.
+  Proof using.
     unfold split in *.
     desf; inv Hwf.
     all: constructor; auto.
@@ -205,6 +250,182 @@ Module PatternSlice.
     apply PatternT.type_of_Some_upgrade in Hty; auto.
     congruence.
   Qed.
+
+  Theorem split'_length pi pi0 pi'
+    (Hsplit : split' pi = (pi0, pi')) :
+      Pattern.length pi = Pattern.length pi0 + length pi'.
+  Proof using.
+    gen_dep pi0 pi'.
+    induction pi; ins; desf; simpls.
+    erewrite IHpi; eauto.
+  Qed.
+
+  Theorem split'_length_le pi pi0 pi'
+    (Hsplit : split' pi = (pi0, pi')) :
+      Pattern.length pi0 <= Pattern.length pi.
+  Proof using.
+    erewrite split'_length with (pi := pi); eauto.
+    lia.
+  Qed.
+
+  Theorem split_length pi pi0 pi'
+    (Hsplit : split pi = (pi0, pi')) :
+      Pattern.length pi = Pattern.length pi0 + length pi'.
+  Proof using.
+    unfold split in *.
+    destruct pi; desf; simpl.
+    erewrite split'_length; eauto.
+  Qed.
+
+  Theorem split_length_le pi pi0 pi'
+    (Hsplit : split pi = (pi0, pi')) :
+      Pattern.length pi0 <= Pattern.length pi.
+  Proof using.
+    erewrite split_length with (pi := pi); eauto.
+    lia.
+  Qed.
+
+  Function split_all (pi : Pattern.t) { measure Pattern.length pi } :
+    list PatternSlice.t * Pattern.pvertex :=
+    match pi with
+    | Pattern.start pv => ([], pv)
+    | _ =>
+      let (pi0, pi') := split pi in
+      let (pis', pv) := split_all pi0 in
+        (pi' :: pis', pv)
+    end.
+  Proof using.
+    ins. desf. unfold lt. apply le_n_S.
+    eapply split'_length_le; eauto.
+  Defined.
+
+  Fixpoint appends (pis' : list PatternSlice.t) (pi : Pattern.t) : Pattern.t :=
+    match pis' with
+    | [] => pi
+    | pi' :: pis' => append (appends pis' pi) pi'
+    end.
+
+  Definition partial_paths
+    (pv : Pattern.pvertex)
+    (pis' : list PatternSlice.t) :
+      list Pattern.t
+  := map (fun pis' => appends pis' (Pattern.start pv)) (tails pis').
+
+  Theorem split_all_first pi pis' pv
+    (Hsplit : split_all pi = (pis', pv)) :
+      Pattern.first pi = pv.
+  Proof using.
+    gen_dep pv pis'.
+    pattern pi, (split_all pi).
+    apply split_all_ind; ins; desf.
+    erewrite <- split_first; eauto.
+  Qed.
+
+  Theorem split_all_appends pis' pi pv
+    (Hsplit : split_all pi = (pis', pv)) :
+      appends pis' (Pattern.start pv) = pi.
+  Proof using.
+    gen_dep pv pis'.
+    pattern pi, (split_all pi).
+    apply split_all_ind; ins; desf.
+    simpl. rewrite H; auto.
+    erewrite split_append; eauto.
+  Qed.
+
+  Theorem split_all_idempotent pi pis' pv
+    (Heq : split_all pi = (pis', pv)) :
+      split_all (appends pis' (Pattern.start pv)) = (pis', pv).
+  Proof using.
+    erewrite <- split_all_appends with (pi := pi) in Heq; eauto.
+  Qed.
+
+  Definition split_all_with_paths (pi : Pattern.t) :
+    list (PatternSlice.t * Pattern.t) :=
+    let (pis', pv) := split_all pi in
+      combine pis' (tl (partial_paths pv pis')).
+
+  Theorem split_all_with_paths_ind
+    (P : Pattern.t -> list (PatternSlice.t * Pattern.t) -> Prop)
+    (Hbase : forall pv, P (Pattern.start pv) [])
+    (Hstep : forall pi pi0 pi',
+      split pi = (pi0, pi') ->
+      pi' <> empty ->
+      P pi0 (split_all_with_paths pi0) ->
+      P pi ((pi', pi0) :: split_all_with_paths pi0)
+    ) :
+      forall pi, P pi (split_all_with_paths pi).
+  Proof using.
+    intros pi.
+    unfold split_all_with_paths, split in *.
+    pattern pi, (split_all pi).
+    apply split_all_ind; ins; desf.
+    all: rewrite tails_hd in Heq.
+    all: simpls; desf.
+    rewrite map_tl.
+    fold (partial_paths pv pis').
+    erewrite split_all_appends; eauto.
+    match goal with
+    | [ Heq : split' ?pi''' = _,
+        Heq0 : split_all ?pi'' = _
+        |- ?P (Pattern.hop ?pi''' ?pe ?pv) _ ] =>
+      specialize (Hstep (Pattern.hop pi''' pe pv) pi'');
+      simpls; rewrite Heq, Heq0 in Hstep; desf
+    end.
+    now apply Hstep.
+  Qed.
+
+  Theorem split_all_with_paths_wf_pattern pi0 pi pi'
+    (Hwf : PatternT.wfT pi)
+    (Hsplit : In (pi', pi0) (split_all_with_paths pi)) :
+      PatternT.wfT pi0.
+  Proof using.
+    gen_dep pi0 pi' pi.
+    intros pi. pattern pi, (split_all_with_paths pi).
+    apply split_all_with_paths_ind.
+    all: ins; desf.
+    2: eapply H1; eauto.
+    all: eapply split_wf_pattern; eauto.
+  Qed.
+
+  Lemma split_all_with_paths_split pi0 pi pi'
+    (Hsplit : In (pi', pi0) (split_all_with_paths pi)) :
+      split (append pi0 pi') = (pi0, pi').
+  Proof using.
+    gen_dep pi0 pi' pi.
+    intros pi. pattern pi, (split_all_with_paths pi).
+    apply split_all_with_paths_ind.
+    all: ins; desf.
+    { erewrite <- split_append; eauto. }
+    eapply H1; eauto.
+  Qed.
+
+  Theorem split_all_step pi0 pi pi' pv pis'
+    (Hsplit : split pi = (pi0, pi'))
+    (Hne : pi' <> empty)
+    (Hall : split_all pi0 = (pis', pv)) :
+      split_all pi = (pi' :: pis', pv).
+  Proof using.
+    gen_dep pi0 pi' pis' pv.
+    pattern pi, (split_all pi).
+    apply split_all_ind; ins; desf.
+    congruence.
+  Qed.
+
+  Theorem split_all_with_paths_step pi0 pi pi'
+    (Hsplit : split pi = (pi0, pi'))
+    (Hne : pi' <> empty) :
+      split_all_with_paths pi =
+        (pi', pi0) :: split_all_with_paths pi0.
+  Proof using.
+    unfold split_all_with_paths. desf.
+    erewrite split_all_step in Heq; eauto.
+    desf. simpls.
+    rewrite tails_hd. simpl.
+    repeat f_equal.
+    { erewrite split_all_appends; eauto. }
+    now rewrite map_tl.
+  Qed.
+  
 End PatternSlice.
 
 Module PathSlice.
@@ -253,13 +474,13 @@ Module PathSlice.
   Lemma matches_svname g r r' svname p pi
     (Hmatch : matches g r svname r' p pi) :
       exists v, r svname = Some (Value.GVertex v).
-  Proof. induction Hmatch; eauto. Qed.
+  Proof using. induction Hmatch; eauto. Qed.
     
   Theorem matches_append g r r' p p' pi pi'
     (Hmatch : Path.matches Mixed g r p pi)
     (Hmatch' : PathSlice.matches g r (Pattern.vname (Pattern.last pi)) r' p' pi') :
       Path.matches Mixed g r' (PathSlice.append p p') (PatternSlice.append pi pi').
-  Proof.
+  Proof using.
     induction Hmatch'.
     { assumption. }
     Opaque update_with_mode_hop.
@@ -271,20 +492,65 @@ Module PathSlice.
     all: erewrite Path.matches_last; eauto.
   Qed.
 
+  Theorem matches_append_inv g r' p0 pi pi'
+    (Htype : PatternT.type_of Mixed pi (Pattern.vname (Pattern.last pi)) =
+              Some Value.GVertexT)
+    (Hmatch : Path.matches Mixed g r' p0 (PatternSlice.append pi pi')) :
+      exists p p' r, p0 = PathSlice.append p p' /\
+        Path.matches Mixed g r p pi /\
+        PathSlice.matches g r (Pattern.vname (Pattern.last pi)) r' p' pi'.
+  Proof.
+    gen_dep r' p0.
+    induction pi'; ins.
+    { exists p0. exists PathSlice.empty. exists r'.
+      splits; auto. constructor.
+      apply Rcd.type_of_GVertexT.
+      erewrite <- Path.matches_type_of; eauto. }
+
+    inv Hmatch.
+    edestruct IHpi' as [p0 [p' [r0 [Happend [Hmatch0 Hmatch']]]]]; eauto.
+    
+    exists p0. exists (PathSlice.hop p' e v). exists r0.
+    splits; auto.
+    { simpls. now f_equal. }
+    constructor; auto.
+
+    assert (exists sv, r0 (Pattern.vname (Pattern.last pi)) =
+              Some (Value.GVertex sv)) as [sv ?]
+      by (eauto using matches_svname).
+    assert (r0 (Pattern.vname (Pattern.last pi)) =
+              Some (Value.GVertex (Path.last p0))).
+      by (erewrite Path.matches_last; eauto).
+
+    unfold last; desf.
+  Qed.
+
   Theorem matches_split g r r' p p' pi pi0 pi'
     (Hsplit : PatternSlice.split pi = (pi0, pi'))
     (Hmatch : Path.matches Mixed g r p pi0)
     (Hmatch' : PathSlice.matches g r (Pattern.vname (Pattern.last pi0)) r' p' pi') :
       Path.matches Mixed g r' (append p p') pi.
-  Proof.
+  Proof using.
     erewrite -> PatternSlice.split_append; eauto.
     eapply matches_append; eauto.
+  Qed.
+
+  Theorem matches_split_inv g r' p pi pi0 pi'
+    (Hsplit : PatternSlice.split pi = (pi0, pi'))
+    (Hmatch : Path.matches Mixed g r' p pi) :
+      exists p0 p' r, p = append p0 p' /\
+        Path.matches Mixed g r p0 pi0 /\
+        PathSlice.matches g r (Pattern.vname (Pattern.last pi0)) r' p' pi'.
+  Proof using.
+    eapply matches_append_inv; eauto.
+    { eauto using PatternSlice.split_type_of_last. }
+    erewrite <- PatternSlice.split_append; eauto.
   Qed.
 
   Theorem matches_type_of g r r' p' pi' svname
     (Hmatch' : PathSlice.matches g r svname r' p' pi') :
       Rcd.type_of r' = PatternSlice.type_of (Rcd.type_of r) pi'.
-  Proof.
+  Proof using.
     induction Hmatch'; auto.
     simpl. desf.
     all: repeat rewrite Rcd.type_of_update.

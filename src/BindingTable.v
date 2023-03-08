@@ -237,14 +237,14 @@ Module Rcd.
     end.
 
   Theorem explicit_proj_empty : explicit_proj empty = empty.
-  Proof.
+  Proof using.
     extensionality k.
     unfold explicit_proj, empty.
     desf.
   Qed.
 
   Theorem explicit_projT_emptyT : explicit_projT emptyT = emptyT.
-  Proof.
+  Proof using.
     extensionality k.
     unfold explicit_projT, emptyT.
     desf.

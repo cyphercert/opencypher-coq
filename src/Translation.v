@@ -35,12 +35,14 @@ Section translate_pattern.
     | Pattern.start pv => 
         translate_pvertex pv (ScanVertices (vname pv))
     | Pattern.hop pi pe pv =>
+      let mode := 
+        if ((PatternT.type_of Full pi (vname pv)) == (Some Value.GVertexT))
+        then Into else All
+      in
       let plan := translate_pattern' pi in
       let plan :=
-        if ((PatternT.type_of Full pi (vname pv)) == (Some Value.GVertexT)) then
-          Expand Into (vname (last pi)) (ename pe) (vname pv) (edir pe) plan
-        else
-          Expand All (vname (last pi)) (ename pe) (vname pv) (edir pe) plan
+        Expand mode (vname (last pi)) (ename pe) (vname pv)
+               (edir pe) plan
       in translate_pvertex pv (translate_pedge pe plan)
     end.
 
@@ -53,17 +55,24 @@ Ltac desf_translate_pvertex_pedge :=
   desf; simpls;
   normalize_bool.
 
+Lemma translate_pvertex_type pv plan :
+  type_of (translate_pvertex pv plan) = type_of plan.
+Proof using. desf_translate_pvertex_pedge. Qed.
+
+Lemma translate_pedge_type pe plan :
+  type_of (translate_pedge pe plan) = type_of plan.
+Proof using. desf_translate_pvertex_pedge. Qed.
+
 Theorem translate_pattern'_type pi (Hwf : PatternT.wfT pi) :
   type_of (translate_pattern' pi) = PatternT.type_of Full pi.
 Proof using.
   all: induction pi; simpls.
-  all: desf_translate_pvertex_pedge.
-  all: inv Hwf.
-  all: extensionality n.
-  all: desf_unfold_pat.
-  all: try contradiction.
-  all: try congruence.
-  all: rewrite IHpi.
+  all: rewrite translate_pvertex_type.
+  all: try rewrite translate_pedge_type.
+  { reflexivity. }
+  inv Hwf. desf.
+  all: simpl.
+  all: repeat f_equal.
   all: auto.
 Qed.
 
@@ -136,17 +145,6 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Proof using.
     desf_match_result Hres.
     all: eauto.
-  Qed.
-
-  Lemma matches_pattern_type_start r' pv v
-    (Htype : Rcd.type_of r' = PatternT.type_of Full (Pattern.start pv))
-    (Hval : r' (Pattern.vname pv) = Some (Value.GVertex v)) :
-      r' = (Pattern.vname pv |-> Value.GVertex v).
-  Proof using.
-    extensionality k; simpls.
-    apply (f_equal (fun f => f k)) in Htype.
-    desf_unfold_pat.
-    now apply Rcd.type_of_None.
   Qed.
 
   Definition expansion_of_by_hop' graph r' r mode v_from e v_to pi pe pv :=

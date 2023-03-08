@@ -15,16 +15,15 @@ Module MatchMode.
   .
 
   Definition update_with_mode_start {T} (mode : t)
-    (vname : Name.t) (vv : T) :
-    PartialMap.t Name.t T
+    (vname : Name.t) (vv : T) : PartialMap.t Name.t T
   :=
     match mode with
-    | Full => (vname |-> vv)
-    | _ => 
+    | Explicit => 
         match vname with
         | Name.explicit _=> (vname |-> vv)
         | Name.implicit _=> PartialMap.empty
         end
+    | _ => (vname |-> vv)
     end.
 
   Definition update_with_mode_hop {T} (mode : t)
@@ -96,7 +95,7 @@ Module PatternT.
   Lemma type_of_None_downgrade mode pi n
     (Hval : type_of Full pi n = None) :
       type_of mode pi n = None.
-  Proof.
+  Proof using.
     induction pi; simpls.
     all: unfold update_with_mode_start, update_with_mode_hop.
     all: desf_unfold_pat.
@@ -378,7 +377,7 @@ Module PatternT.
     (Hwf : wfT pi)
     (Hval : type_of mode pi n = Some v) :
       type_of Full pi n = Some v.
-  Proof.
+  Proof using.
     induction pi; inv Hwf; simpls.
     all: unfold update_with_mode_start, update_with_mode_hop in *.
     all: desf.
@@ -642,7 +641,7 @@ Module Path.
   Theorem matches_type_of mode graph path pi r
     (Hmatch : matches mode graph r path pi) :
       PatternT.type_of mode pi = Rcd.type_of r.
-  Proof.
+  Proof using.
     destruct mode.
     all: induction Hmatch.
     all: unfold update_with_mode_start, update_with_mode_hop.
@@ -905,7 +904,7 @@ Module EvalQuery.
       (Hres1 : Spec1.eval_match_clause graph pattern = Some table1)
       (Hres2 : Spec2.eval_match_clause graph pattern = Some table2) :
         table1 ~~ table2.
-    Proof.
+    Proof using.
       unfold BindingTable.equiv; ins.
       split; ins.
       { edestruct Spec1.match_clause_spec'; eauto.
