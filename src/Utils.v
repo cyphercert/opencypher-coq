@@ -1,7 +1,8 @@
 Require Export List.
 Require Export String.
+(* We don't import Bool because of notation conflicts with RelationAlgebra*)
+(* Require Import Bool. *)
 Require Export List.
-Require Export Bool.
 Require Export BinNums.
 From hahn Require Export HahnBase.
 From Coq Require Export Classes.EquivDec.
@@ -83,12 +84,12 @@ Proof using.
 Qed.
 
 Lemma equiv_decbP : forall {A : Type} `{EqDec A eq} (x y : A),
-  reflect (x = y) (x ==b y).
+  Bool.reflect (x = y) (x ==b y).
 Proof using.
   intros A ? ? x y. unfold equiv_decb.
   destruct (x == y) as [Heq | Hneq].
-  + apply ReflectT. apply Heq.
-  + apply ReflectF. apply Hneq.
+  + apply Bool.ReflectT. apply Heq.
+  + apply Bool.ReflectF. apply Hneq.
 Qed.
 
 #[global]
@@ -123,12 +124,12 @@ Defined.
 Definition In_decb {A : Type} `{EqDec A eq} (a : A) (xs : list A) : bool := In_dec a xs.
 
 Theorem In_decbP {A : Type} `{EqDec A eq} (a : A) (xs : list A) :
-  reflect (In a xs) (In_decb a xs).
+  Bool.reflect (In a xs) (In_decb a xs).
 Proof using.
   unfold In_decb.
   destruct (In_dec a xs).
-  { now apply ReflectT. }
-  { now apply ReflectF. }
+  { now apply Bool.ReflectT. }
+  { now apply Bool.ReflectF. }
 Qed.
 
 Lemma In_decb_true_iff : forall {A : Type} `{EqDec A eq} (a : A) (xs : list A),
@@ -262,10 +263,10 @@ Qed.
 
 Ltac normalize_bool :=
   repeat match goal with
-  | [ H : negb _ = true |- _ ] => rewrite negb_true_iff in H
-  | [ H : negb _ <> true |- _ ] => rewrite negb_true_iff in H
-  | [ H : _ = false |- _ ] => rewrite <- not_true_iff_false in H
-  | [ H : _ <> false |- _ ] => rewrite -> not_false_iff_true in H
+  | [ H : negb _ = true |- _ ] => rewrite Bool.negb_true_iff in H
+  | [ H : negb _ <> true |- _ ] => rewrite Bool.negb_true_iff in H
+  | [ H : _ = false |- _ ] => rewrite <- Bool.not_true_iff_false in H
+  | [ H : _ <> false |- _ ] => rewrite -> Bool.not_false_iff_true in H
   | [ H : (In_decb _ _) = true |- _ ] => rewrite -> In_decb_true_iff in H
   | [ H : (In_decb _ _) <> true |- _ ] => rewrite -> In_decb_true_iff in H
   end.

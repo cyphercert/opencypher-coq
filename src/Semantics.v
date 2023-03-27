@@ -475,8 +475,8 @@ Module Path.
       all: unfold matches_direction_decb, matches_direction,
                   ends_match_decb, equiv, complement in *.
       all: desf.
-      all: try rewrite -> orb_true_iff in e0.
-      all: try rewrite -> orb_true_iff in c.
+      all: try rewrite -> Bool.orb_true_iff in e0.
+      all: try rewrite -> Bool.orb_true_iff in c.
       all: repeat rewrite -> equiv_decb_true_iff in e0.
       all: repeat rewrite -> equiv_decb_true_iff in c.
       all: auto.

@@ -45,6 +45,15 @@ Module PatternSlice.
     all: desf_unfold_pat.
   Qed.
 
+  Theorem type_of_None rT pi n
+    (Htype : type_of rT pi n = None) :
+      rT n = None.
+  Proof.
+    induction pi.
+    { now simpl. }
+    simpls. desf; desf_unfold_pat.
+  Qed.
+
   Section wf.
     Variable rT : Rcd.T.
 
@@ -555,6 +564,17 @@ Module PathSlice.
     simpl. desf.
     all: repeat rewrite Rcd.type_of_update.
     all: now repeat f_equal.
+  Qed.
+
+  Theorem matches_last_In g r r' p' pi' svname v
+    (Hprev : r svname = Some (Value.GVertex v))
+    (HIn : In v (vertices g))
+    (Hmatch' : PathSlice.matches g r svname r' p' pi') :
+      In (PathSlice.last r svname p') (vertices g).
+  Proof.
+    destruct Hmatch'; simpls.
+    { desf. }
+    inv Hpv.
   Qed.
   
 End PathSlice.

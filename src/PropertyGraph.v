@@ -87,13 +87,13 @@ Module PropertyGraph.
     all: try exists e.
     all: try erewrite equiv_decb_true.
     all: try match goal with 
-         | Heq : (_ && _ = true) |- _ => apply andb_true_iff in Heq; destruct Heq
+         | Heq : (_ && _ = true) |- _ => apply Bool.andb_true_iff in Heq; destruct Heq
          end.
     all: repeat match goal with 
          | Heq : (_ = true) |- _ => apply equiv_decb_true' in Heq
          end.
     all: edestruct (ends g _); desf.
-    { rewrite andb_true_iff. rewrite equiv_decb_true_iff. auto. }
+    { rewrite Bool.andb_true_iff. rewrite equiv_decb_true_iff. auto. }
   Qed.
 
   Lemma out_edges_In g e v v' :
@@ -115,6 +115,9 @@ Module PropertyGraph.
   Qed.
 
   Record wf (g : t) := mk_wf {
+    vertices_NoDup : NoDup (vertices g);
+    edges_NoDup : NoDup (edges g);
+
     ends_In : forall v v' e,
       In e (edges g) -> ends g e = (v, v') -> In v (vertices g) /\ In v' (vertices g);
 
