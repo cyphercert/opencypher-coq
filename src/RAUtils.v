@@ -1,5 +1,5 @@
 Require Import Utils.
-From RelationAlgebra Require Export ordinal lattice level sups comparisons.
+From RelationAlgebra Require Export ordinal lattice level sups sums comparisons.
 
 Open Scope ltb_scope.
 
@@ -300,4 +300,33 @@ Proof.
   split; ins.
   { apply eqb_eq. auto. }
   { subst. apply eqb_refl. }
+Qed.
+
+From RelationAlgebra Require Import bmx matrix monoid boolean.
+Local Open Scope ra_terms.
+
+Lemma andb_is_true_iff a b :
+  a && b <-> a /\ b.
+Proof.
+  unfold is_true.
+  now rewrite Bool.andb_true_iff.
+Qed.
+
+Lemma bmx_one_spec n i j :
+  (mx_one bool_ops bool_tt n) i j <-> i = j.
+Proof.
+  simpl. unfold mx_one.
+  unfold eqb_ord, ofbool, is_true. simpl.
+  split; ins; desf; desf.
+  now apply eq_ord.
+Qed.
+
+Lemma bmx_dot_spec n m q i j (a : bmx n m) (b : bmx m q) :
+  ((mx_dot _ _ _ _ _) a b) i j <-> exists k, a i k /\ b k j.
+Proof.
+  unfold mx_dot.
+  rewrite is_true_sup. simpl.
+  setoid_rewrite andb_is_true_iff.
+  split; ins; desf.
+  all: eauto using in_seq.
 Qed.

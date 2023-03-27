@@ -17,7 +17,7 @@ Import MatchMode.
 Import UpdateNotations.
 
 Require Import RAUtils.
-From RelationAlgebra Require Import syntax matrix bmx monoid sums boolean.
+From RelationAlgebra Require Import matrix bmx monoid boolean.
 Open Scope ra_terms.
 
 Section translate.
@@ -209,22 +209,6 @@ Section translate.
       in mpi' ⋅ mpe ⋅ mpv
     end.
 
-  Lemma andb_is_true_iff a b :
-    a && b <-> a /\ b.
-  Proof.
-    unfold is_true.
-    now rewrite Bool.andb_true_iff.
-  Qed.
-
-  Lemma mx_one_spec n i j :
-    (mx_one bool_ops bool_tt n) i j <-> i = j.
-  Proof.
-    simpl. unfold mx_one.
-    unfold eqb_ord, ofbool, is_true. simpl.
-    split; ins; desf; desf.
-    now apply eq_ord.
-  Qed.
-
   Theorem translate_slice'_spec' pi' i j r n_from
     (Hwf' : PatternSlice.wf' (Rcd.type_of r) pi')
     (Hij : translate_slice' pi' i j)
@@ -236,28 +220,24 @@ Section translate.
     induction pi'; ins.
     { exists PathSlice.empty. split.
       { constructor. eexists; eassumption. }
-      rewrite mx_one_spec in Hij. simpl. desf. }
+      rewrite bmx_one_spec in Hij. simpl. desf. }
 
     inv Hwf'. inv Hwf_G.
-    unfold mx_dot in *.
 
-    rewrite is_true_sup in Hij; destruct Hij as [j' [_ Hij]].
-    rewrite andb_is_true_iff in Hij; destruct Hij as [Hij Hj'j].
+    repeat setoid_rewrite bmx_dot_spec in Hij.
+    destruct Hij as [j' [[k [Hik Hkj]] Hj'j]].
+    apply IHpi' in Hik; clear IHpi'; auto.
 
     destruct (Pattern.vlabel pv) as [l |] eqn:Heq_v.
     1: rewrite label_matrix_spec in Hj'j;
         destruct Hj'j as [? Hvlabel].
-    2: rewrite mx_one_spec in Hj'j.
+    2: rewrite bmx_one_spec in Hj'j.
     all: subst j'.
-
-    all: rewrite is_true_sup in Hij; destruct Hij as [k [_ Hij]].
-    all: rewrite andb_is_true_iff in Hij; destruct Hij as [Hik Hkj].
 
     all: destruct (Pattern.edir pe) eqn:Heq_edir; simpls.
     all: try rewrite adj_matrix_spec_OUT in Hkj.
     all: try rewrite adj_matrix_spec_IN in Hkj.
     all: try rewrite adj_matrix_spec_BOTH in Hkj.
-    all: apply IHpi' in Hik; clear IHpi'; auto.
     all: desf.
 
     all: exists (PathSlice.hop p' e j); split; [| reflexivity].
@@ -284,8 +264,8 @@ Section translate.
       translate_slice' pi' i j.
   Proof.
     gen_dep j; induction Hmatch; ins; subst.
-    { simpl. rewrite mx_one_spec. desf. now apply eq_ord. }
-    
+    { simpl. rewrite bmx_one_spec. desf. now apply eq_ord. }
+
     assert (exists k : ord vertices_sup, PathSlice.last r n_from p = k) as [k Hk].
     { enough (HIn : In (PathSlice.last r n_from p) (vertices G)).
       now eexists (ord_of_vertex _ HIn).
@@ -294,22 +274,17 @@ Section translate.
     assert (IH : translate_slice' pi i k).
     { apply IHHmatch; auto. inv Hwf'. }
     clear IHHmatch.
-    unfold mx_dot. desf.
 
-    all: rewrite is_true_sup.
+    repeat setoid_rewrite bmx_dot_spec.
+    desf.
+
     all: exists j.
-    all: split; [ apply in_seq | ].
-    all: rewrite andb_is_true_iff.
-
-    all: try rewrite mx_one_spec.
+    all: try rewrite bmx_one_spec.
     all: try rewrite label_matrix_spec.
     all: destruct Hpv.
     all: splits; auto.
 
-    all: rewrite is_true_sup.
     all: exists k.
-    all: split; [ apply in_seq | ].
-    all: rewrite andb_is_true_iff.
     all: split; [ assumption | ].
 
     all: simpl.
