@@ -127,4 +127,22 @@ Module PropertyGraph.
     eprops_In : forall e, eprops g e <> nil -> In e (edges g);
   }.
 
+  Lemma wf_e_from_In g e
+    (Hwf : wf g)
+    (HIn : In e (edges g)) :
+      In (e_from g e) (vertices g).
+  Proof using.
+    unfold e_from, fst. desf.
+    edestruct ends_In; eauto.
+  Qed.
+
+  Lemma wf_e_to_In g e
+    (Hwf : wf g)
+    (HIn : In e (edges g)) :
+      In (e_to g e) (vertices g).
+  Proof using.
+    unfold e_to, snd. desf.
+    edestruct ends_In; eauto.
+  Qed.
+
 End PropertyGraph.
