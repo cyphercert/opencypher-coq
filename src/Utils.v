@@ -35,6 +35,9 @@ Program Instance int_eq_eqdec : EqDec Z eq := BinInt.Z.eq_dec.
 #[global]
 Program Instance string_eqdec : EqDec string eq := String.string_dec.
 
+#[global]
+Program Instance nat_eqdec : EqDec nat eq := PeanoNat.Nat.eq_dec.
+
 Lemma equiv_decb_true : forall {A : Type} `{EqDec A eq} (a b : A),
   a = b -> a ==b b = true.
 Proof using.

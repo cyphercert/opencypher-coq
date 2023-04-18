@@ -315,6 +315,7 @@ Section translate.
     { eapply translate_slice'_spec; eauto. }
     all: desf; auto.
   Qed.
+  Opaque translate_slice.
 
   Definition inc_mat_ty := bmx vertices_sup edges_sup.
 
@@ -515,6 +516,175 @@ Section translate.
       all: desf; auto.
     Qed.
   End translate_slice_inc_spec.
+  Opaque translate_slice_inc.
+
+  Definition ord_of_vertex_err v : option (ord vertices_sup) :=
+    match @In_dec nat _ nat_eqdec v (vertices G) with
+    | left HInV => Some (ord_of_vertex v HInV)
+    | right _ => None
+    end.
+
+  Lemma ord_of_vertex_err_value v i
+    (Hres : ord_of_vertex_err v = Some i) :
+      v = i.
+  Proof using.
+    unfold ord_of_vertex_err in Hres. desf.
+  Qed.
+
+  Lemma ord_of_vertex_In v :
+    In v V <-> exists i, ord_of_vertex_err v = Some i.
+  Proof using.
+    unfold ord_of_vertex_err.
+    split; ins; desf; eauto.
+  Qed.
+
+  Ltac subst_ord_of_vertex :=
+    match goal with
+    | [ H : ord_of_vertex_err ?v = Some ?i |- _ ] =>
+      let Heq := fresh "Heq" in
+      let HInV := fresh "HInV" in
+      assert (Heq := H);
+      assert (HInV : In v V) by (apply ord_of_vertex_In; exists i; apply H);
+      apply ord_of_vertex_err_value in Heq; subst v
+    | [ |- _ ] =>
+      fail "Hypothesis of the form 'ord_of_vertex_err ?v = Some ?i' not found"
+    end.
+
+  Definition r_from (r : Rcd.t) (n_from : Name.t) : option (ord vertices_sup) :=
+    match r n_from with
+    | Some (Value.GVertex i) => ord_of_vertex_err i
+    | _ => None
+    end.
+
+  Definition ords_of_vertices : list (ord vertices_sup) :=
+    filter_map ord_of_vertex_err (vertices G).
+  
+  Lemma ords_of_vertices_In v :
+    In v (vertices G) <->
+      exists (i : ord _), v = i /\ In i ords_of_vertices.
+  Proof using.
+    unfold ords_of_vertices.
+    setoid_rewrite filter_map_In.
+    split.
+    { setoid_rewrite ord_of_vertex_In.
+      ins; desf; eauto 10 using ord_of_vertex_err_value. }
+    ins; desf. now subst_ord_of_vertex.
+  Qed.
+
+  Definition candidate_ends (r : Rcd.t) (nv : Name.t) : option (list (ord _)) :=
+    match r nv with
+    | Some (Value.GVertex i) => ord_of_vertex_err i >>= fun i => Some [i]
+    | None => Some ords_of_vertices
+    | _ => None
+    end.
+
+  Lemma candidate_ends_In r nv js j
+    (Hres : candidate_ends r nv = Some js)
+    (HIn : In j js) :
+      r nv = None \/ r nv = Some (Value.GVertex j).
+  Proof using.
+    unfold candidate_ends, option_bind in Hres. desf.
+    { inv HIn. subst_ord_of_vertex. eauto. }
+    now left.
+  Qed.
+
+  Lemma candidate_ends_In' r nv js v
+    (Hres : candidate_ends r nv = Some js)
+    (HIn : In v V)
+    (Hprev : r nv = Some (Value.GVertex v) \/ r nv = None) :
+      exists (j : ord _), v = j /\ In j js.
+  Proof.
+    unfold candidate_ends, option_bind in Hres. desf.
+    { eexists. split.
+      { now subst_ord_of_vertex. }
+      simpl. left. now apply eq_ord. }
+    now apply ords_of_vertices_In.
+  Qed.
+
+  Definition traverse_adj_single (pi' : PatternSlice.t) (n_from : Name.t)
+             (r : Rcd.t) : option BindingTable.t :=
+    r_from r n_from >>= fun i =>
+      match pi' with
+      | PatternSlice.hop pi0' pe pv =>
+        candidate_ends r (Pattern.vname pv) >>= fun js =>
+          let js := filter (translate_slice pi' i) js in
+          let update_rcd (j : ord _) :=
+              PartialMap.join (Pattern.vname pv |-[Explicit]-> Value.GVertex j) r
+            in Some (map update_rcd js)
+      | _ => Some [r]
+      end.
+
+  Section traverse_adj_single_spec.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable r r' : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) pi'.
+    Hypothesis Hres : traverse_adj_single pi' n_from r = Some table'.
+    Hypothesis Hpe_imp :
+      match pi' with
+      | PatternSlice.hop _ pe _ => Name.is_implicit (Pattern.ename pe)
+      | PatternSlice.empty => True
+      end.
+
+    Theorem traverse_adj_single_spec'
+      (HIn : In r' table') :
+        exists p', PathSlice.matches G r n_from r' p' pi'.
+    Proof using Hwf_G Hres Hpe_imp Hwf.
+      unfold traverse_adj_single, option_bind, r_from in Hres.
+      Opaque update_with_mode_start.
+      desf.
+
+      { exists PathSlice.empty. inv HIn. constructor. eauto 2. }
+
+      rewrite in_map_iff in HIn; setoid_rewrite filter_In in HIn; desf.
+      change (?x = true) with (is_true x) in *.
+      repeat subst_ord_of_vertex.
+      match goal with
+      | [ H : is_true (translate_slice _ _ _) |- _ ] =>
+        eapply translate_slice_spec' in H;
+        eauto using candidate_ends_In; desf
+      end.
+
+      Transparent update_with_mode_start.
+      simpls. unfold Name.is_implicit in *. desf.
+      all: try rewrite PartialMap.join_empty_l.
+      all: try rewrite PartialMap.join_singleton.
+      all: eexists; eassumption.
+    Qed.
+
+    Theorem traverse_adj_single_spec p'
+      (Hmatch : PathSlice.matches G r n_from r' p' pi') :
+        In r' table'.
+    Proof using Hwf_G Hres Hpe_imp Hwf.
+      unfold traverse_adj_single, option_bind, r_from in Hres.
+      Opaque update_with_mode_start.
+      desf; inv Hmatch.
+      { now left. }
+      subst_ord_of_vertex. inv Hwf.
+      apply PathSlice.matches_wf'_eq in Hpi; auto; subst.
+      rewrite in_map_iff; setoid_rewrite filter_In. destruct Hpv.
+      eapply candidate_ends_In' in vertex_in_g; eauto.
+      2: { desf; auto. }
+      desc; subst.
+
+      eexists. splits.
+      Transparent update_with_mode_start.
+      { simpls. unfold Name.is_implicit in *. desf.
+        all: try rewrite PartialMap.join_empty_l.
+        all: try rewrite PartialMap.join_singleton.
+        all: eauto. }
+      { assumption. }
+      change (?x = true) with (is_true x) in *.
+      eapply translate_slice_spec; eauto; auto.
+    Qed.
+  End traverse_adj_single_spec.
+
+  Definition traverse_adj (pi' : PatternSlice.t) (n_from : Name.t)
+             (table : BindingTable.t) : option BindingTable.t :=
+    option_map (@List.concat Rcd.t)
+               (fold_option (map (traverse_adj_single pi' n_from) table)).
 End translate.
 
 Definition traverse : PatternSlice.t -> Name.t -> step1.

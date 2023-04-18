@@ -577,4 +577,14 @@ Module PathSlice.
     inv Hpv.
   Qed.
   
+  Theorem matches_wf'_eq g r r' p' pi' svname
+    (Hwf' : PatternSlice.wf' (Rcd.type_of r) pi')
+    (Hmatch' : PathSlice.matches g r svname r' p' pi') :
+      r = r'.
+  Proof using.
+    induction Hmatch'; auto.
+    inv Hwf'. unfold Name.is_implicit.
+    simpl. desf.
+    all: now apply IHHmatch'.
+  Qed.
 End PathSlice.

@@ -241,6 +241,14 @@ Module PartialMap.
       desf.
     Qed.
 
+    Lemma join_singleton (x : A) (v : B) (r : t A B) :
+      join (x |-> v) r = (x |-> v; r).
+    Proof.
+      extensionality k.
+      unfold join, update, TotalMap.update.
+      desf.
+    Qed.
+
     Lemma empty_disjoint_l (m : t A B) :
       disjoint empty m.
     Proof using.
