@@ -71,7 +71,7 @@ Proof using.
   all: try rewrite translate_pedge_type.
   { reflexivity. }
   inv Hwf. desf.
-  all: simpl.
+  all: unfold_update_with_mode; simpl.
   all: repeat f_equal.
   all: auto.
 Qed.
@@ -223,6 +223,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
             eapply filter_edges_by_label_spec; eauto; clear H
          end.
 
+    all: unfold_update_with_mode.
     all: try apply PartialMap.update_eq.
     all: try (rewrite PartialMap.update_neq; auto).
     all: try apply PartialMap.update_eq.
@@ -314,6 +315,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
 
     all: try eapply matches_expansion_of; eauto.
     all: try unfold expansion_of_by_hop, expansion_of, expansion_of' in *.
+    all: unfold_update_with_mode.
     all: ins; desf_unfold_pat.
   Qed.
 

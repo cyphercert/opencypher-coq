@@ -42,16 +42,17 @@ Module PatternSlice.
     type_of rT pi n = None.
   Proof using.
     induction pi; simpls.
-    all: desf_unfold_pat.
+    unfold_update_with_mode.
+    desf_unfold_pat.
   Qed.
 
   Theorem type_of_None rT pi n
     (Htype : type_of rT pi n = None) :
       rT n = None.
   Proof.
-    induction pi.
-    { now simpl. }
-    simpls. desf; desf_unfold_pat.
+    induction pi; simpls.
+    unfold_update_with_mode.
+    desf; desf_unfold_pat.
   Qed.
 
   Section wf.
@@ -168,7 +169,7 @@ Module PatternSlice.
   Proof using.
     gen_dep pi0 pi'.
     induction pi; ins; desf.
-    all: simpls; desf.
+    all: simpls; unfold_update_with_mode; desf.
     all: try apply PartialMap.update_eq.
     eauto.
   Qed.
@@ -211,6 +212,7 @@ Module PatternSlice.
   Proof using.
     gen_dep pi0 pi'.
     induction pi; ins; desf.
+    all: unfold_update_with_mode.
     all: simpl; desf; eauto.
   Qed.
 
@@ -561,7 +563,7 @@ Module PathSlice.
       Rcd.type_of r' = PatternSlice.type_of (Rcd.type_of r) pi'.
   Proof using.
     induction Hmatch'; auto.
-    simpl. desf.
+    simpl. unfold_update_with_mode. desf.
     all: repeat rewrite Rcd.type_of_update.
     all: now repeat f_equal.
   Qed.
@@ -583,6 +585,7 @@ Module PathSlice.
       r = r'.
   Proof using.
     induction Hmatch'; auto.
+    unfold_update_with_mode.
     inv Hwf'. unfold Name.is_implicit.
     simpl. desf.
     all: now apply IHHmatch'.

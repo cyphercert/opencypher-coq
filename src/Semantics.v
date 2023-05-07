@@ -49,6 +49,11 @@ Module MatchMode.
         end
     end.
 
+  Arguments update_with_mode_start {_} _ _ _ : simpl never.
+  Arguments update_with_mode_hop {_} _ _ _ _ : simpl never.
+  Ltac unfold_update_with_mode :=
+    unfold update_with_mode_start, update_with_mode_hop in *.
+
   Module UpdateNotations.
     Notation "np '|-[' mode ']->'  vp ';' r" := (update_with_mode_hop mode np vp r)
       (at level 100, vp at next level, right associativity).
@@ -97,7 +102,7 @@ Module PatternT.
       type_of mode pi n = None.
   Proof using.
     induction pi; simpls.
-    all: unfold update_with_mode_start, update_with_mode_hop.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -111,6 +116,7 @@ Module PatternT.
     all: desf.
     all: try apply PartialMap.update_eq.
 
+    unfold_update_with_mode.
     desf_unfold_pat.
     contradiction.
   Qed.
@@ -125,6 +131,7 @@ Module PatternT.
     all: desf; simpls; desf.
     all: try apply PartialMap.update_eq.
 
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
     all: congruence.
   Qed.
@@ -137,6 +144,7 @@ Module PatternT.
     induction pi; simpls.
     all: inv Hwf.
     all: desf.
+    all: unfold_update_with_mode.
     all: rewrite PartialMap.update_neq.
     all: try apply PartialMap.update_eq.
     all: try rewrite PartialMap.update_neq.
@@ -153,6 +161,7 @@ Module PatternT.
   Proof using.
     induction pi; simpls.
     all: inv Hwf.
+    all: unfold_update_with_mode.
     all: desf.
     all: try apply PartialMap.update_eq.
     all: try rewrite PartialMap.update_neq.
@@ -171,6 +180,7 @@ Module PatternT.
   Proof using.
     induction pi, mode; simpls.
     all: inv Hwf.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -181,6 +191,7 @@ Module PatternT.
   Proof using.
     induction pi, mode; simpls.
     all: inv Hwf.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -222,6 +233,7 @@ Module PatternT.
     destruct mode.
     all: induction pi.
     all: inv Hwf; simpls.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -233,6 +245,7 @@ Module PatternT.
     destruct mode.
     all: induction pi.
     all: inv Hwf; simpls.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -246,6 +259,7 @@ Module PatternT.
     type_of Explicit pi (Name.implicit n) = None.
   Proof using.
     induction pi; simpls.
+    all: unfold_update_with_mode.
     all: desf; simpls; desf.
     all: repeat rewrite PartialMap.update_neq.
     all: auto.
@@ -259,6 +273,7 @@ Module PatternT.
   Proof using.
     induction pi; simpls.
     all: destruct mode; simpls.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -312,6 +327,7 @@ Module PatternT.
       type_of Explicit pi n = None.
   Proof using.
     induction pi; simpls.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -319,6 +335,7 @@ Module PatternT.
     type_of Explicit pi (Name.explicit n) = type_of Full pi (Name.explicit n).
   Proof using.
     induction pi; simpls.
+    all: unfold_update_with_mode.
     all: desf_unfold_pat.
   Qed.
 
@@ -379,7 +396,7 @@ Module PatternT.
       type_of Full pi n = Some v.
   Proof using.
     induction pi; inv Hwf; simpls.
-    all: unfold update_with_mode_start, update_with_mode_hop in *.
+    all: unfold_update_with_mode.
     all: desf.
     all: desf_unfold_pat; desf; auto.
     all: apply IHpi in Hval; auto.
@@ -412,6 +429,7 @@ Module PatternT.
   Proof using.
     destruct mode.
     all: induction pi; simpls.
+    all: unfold_update_with_mode.
     all: unfold Rcd.explicit_projT in *.
     all: extensionality k.
     all: try apply (f_equal (fun f => f k)) in IHpi.
@@ -506,8 +524,8 @@ Module Path.
   Proof using.
     destruct mode.
     all: induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode_hop, update_with_mode_start in *.
+    all: destruct Hpv; try destruct Hpe; simpls.
+    all: unfold_update_with_mode.
     all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
@@ -519,8 +537,8 @@ Module Path.
   Proof using.
     destruct mode.
     all: induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode_hop, update_with_mode_start in *.
+    all: destruct Hpv; try destruct Hpe; simpls.
+    all: unfold_update_with_mode.
     all: simpls; desf_unfold_pat; desf.
     all: eauto.
   Qed.
@@ -531,8 +549,8 @@ Module Path.
   Proof using.
     destruct mode.
     all: induction Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode_hop, update_with_mode_start in *.
+    all: destruct Hpv; try destruct Hpe; simpls.
+    all: unfold_update_with_mode.
     all: simpls; desf_unfold_pat; desf.
   Qed.
 
@@ -542,8 +560,8 @@ Module Path.
   Proof using.
     destruct pi. 
     all: inv Hmatch.
-    all: destruct Hpv; try destruct Hpe.
-    all: unfold update_with_mode_hop, update_with_mode_start in *.
+    all: destruct Hpv; try destruct Hpe; simpls.
+    all: unfold_update_with_mode.
     all: apply PartialMap.update_eq.
   Qed.
 
@@ -554,7 +572,8 @@ Module Path.
   Proof using.
     destruct mode, pi.
     all: inv Hmatch.
-    all: destruct Hpv; try destruct Hpe.
+    all: destruct Hpv; try destruct Hpe; simpls.
+    all: unfold_update_with_mode.
     all: simpls; desf.
     all: try rewrite PartialMap.update_eq in Hval.
     all: try rewrite PartialMap.update_neq in Hval.
@@ -565,8 +584,9 @@ Module Path.
     Rcd.explicit_proj (n |-[mode]-> v; r) =
       (n E|-> v; (Rcd.explicit_proj r)).
   Proof using.
-    unfold update_with_mode_hop, Rcd.explicit_proj in *.
+    unfold_update_with_mode.
     extensionality k.
+    unfold Rcd.explicit_proj.
     desf_unfold_pat.
   Qed.
 
@@ -574,8 +594,9 @@ Module Path.
     Rcd.explicit_proj (n |-[mode]-> v) =
       (n E|-> v).
   Proof using.
-    unfold update_with_mode_start, Rcd.explicit_proj in *.
+    unfold_update_with_mode.
     extensionality k.
+    unfold Rcd.explicit_proj.
     desf_unfold_pat.
   Qed.
 

@@ -646,7 +646,6 @@ Section translate.
         exists p', PathSlice.matches G r n_from r' p' pi'.
     Proof using Hwf_G Hres Hpe_imp Hwf.
       unfold traverse_adj_single, option_bind, r_from in Hres.
-      Opaque update_with_mode_start.
       desf.
 
       { exists PathSlice.empty. inv HIn. constructor. eauto 2. }
@@ -660,7 +659,7 @@ Section translate.
         eauto using candidate_ends_In; desf
       end.
 
-      Transparent update_with_mode_start.
+      unfold_update_with_mode.
       simpls. unfold Name.is_implicit in *. desf.
       all: try rewrite PartialMap.join_empty_l.
       all: try rewrite PartialMap.join_singleton.
@@ -672,7 +671,6 @@ Section translate.
         In r' table'.
     Proof using Hwf_G Hres Hpe_imp Hwf.
       unfold traverse_adj_single, option_bind, r_from in Hres.
-      Opaque update_with_mode_start.
       desf; inv Hmatch.
       { now left. }
       subst_ord_of_vertex. inv Hwf.
@@ -683,8 +681,8 @@ Section translate.
       desc; subst.
 
       eexists. splits.
-      Transparent update_with_mode_start.
-      { simpls. unfold Name.is_implicit in *. desf.
+      { unfold_update_with_mode.
+        simpls. unfold Name.is_implicit in *. desf.
         all: try rewrite PartialMap.join_empty_l.
         all: try rewrite PartialMap.join_singleton.
         all: eauto. }
@@ -919,7 +917,6 @@ Section translate.
           (PatternSlice.hop pi' pe pv).
     Proof using Hwf_G Hres Hwf Hedir.
       unfold traverse_inc_single', option_bind, r_from in Hres.
-      Opaque update_with_mode_hop.
       desf.
 
       subst_ord_of_vertex.
@@ -930,7 +927,6 @@ Section translate.
         eapply translate_slice_inc_spec' in H
       end.
       all: desf; eauto using candidate_edges_In, candidate_edges_InE.
-      Transparent update_with_mode_hop.
     Qed.
 
     Theorem traverse_inc_single'_spec p' e
@@ -940,7 +936,6 @@ Section translate.
         In r' table'.
     Proof using Hwf_G Hres Hedir Hwf.
       unfold traverse_inc_single', option_bind, r_from in Hres.
-      Opaque update_with_mode_hop.
       desf; inv Hmatch.
 
       subst_ord_of_vertex. inv Hwf.
@@ -953,7 +948,6 @@ Section translate.
       change (?x = true) with (is_true x) in *.
       eapply translate_slice_inc_spec; eauto.
       destruct (Pattern.edir pe); simpl in *; auto; contradiction.
-      Transparent update_with_mode_hop.
     Qed.
   End traverse_inc_single'_spec.
 
