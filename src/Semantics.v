@@ -886,8 +886,9 @@ Module EvalQuery.
 
     Axiom match_clause_spec : forall graph path pattern table' r',
       eval_match_clause graph pattern = Some table' ->
-        PatternT.wfT pattern -> Path.matches Explicit graph r' path pattern ->
-          In r' table'.
+        PropertyGraph.wf graph -> PatternT.wfT pattern ->
+          Path.matches Explicit graph r' path pattern ->
+            In r' table'.
 
     Axiom match_clause_spec' : forall graph pattern table' r',
       eval_match_clause graph pattern = Some table' ->

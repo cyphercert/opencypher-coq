@@ -239,6 +239,7 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
 
   Theorem match_clause_spec graph path pi table' r'
     (Hres : eval_match_clause graph pi = Some table')
+    (Hg_wf : PropertyGraph.wf graph)
     (Hwf : PatternT.wfT pi)
     (Hmatch : Path.matches Explicit graph r' path pi) :
       In r' table'.

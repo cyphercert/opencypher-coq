@@ -387,20 +387,33 @@ Section translate.
     split; ins; desf.
   Qed.
 
-  Definition e_from_dir (d : Pattern.direction) (e : edge) : vertex :=
+  Definition e_to_dir (d : Pattern.direction) (e : edge) : vertex :=
     match d with
     | Pattern.OUT => e_to G e
     | Pattern.IN => e_from G e
     | Pattern.BOTH => 0%nat (* should not be used *)
     end.
+
+  Theorem matches_last_e_to_dir pi' pe pv p' e v n_from r r'
+    (Hedir : Pattern.edir pe <> Pattern.BOTH)
+    (Hmatch : PathSlice.matches G r n_from r'
+                (PathSlice.hop p' e v)
+                (PatternSlice.hop pi' pe pv)) :
+      v = e_to_dir (Pattern.edir pe) e.
+  Proof.
+    inv Hmatch.
+    destruct (Pattern.edir pe); simpls.
+    all: rewrite e_from_to in Hdir.
+    all: injection Hdir; ins.
+  Qed.
   
   Definition inc_label_matrix l d : bmx edges_sup edges_sup :=
-    fun e e' => eqb e e' && In_decb l (vlabels G (e_from_dir d e)).
+    fun e e' => eqb e e' && In_decb l (vlabels G (e_to_dir d e)).
 
   Lemma inc_label_matrix_spec l (e e' : ord _) d :
-    let j := e_from_dir d e in
+    let j := e_to_dir d e in
       inc_label_matrix l d e e' <->
-        e = e' /\ In l (vlabels G (e_from_dir d e)).
+        e = e' /\ In l (vlabels G (e_to_dir d e)).
   Proof using.
     unfold inc_label_matrix, is_true.
     rewrite Bool.andb_true_iff, In_decb_true_iff.
@@ -429,7 +442,7 @@ Section translate.
     end.
 
   Lemma translate_slice_inc_hop_spec pi' pe pv i (e : ord _) :
-    let j := e_from_dir (Pattern.edir pe) e in
+    let j := e_to_dir (Pattern.edir pe) e in
       translate_slice_inc (PatternSlice.hop pi' pe pv) i e <->
         exists k,
           << Hik : translate_slice' pi' i k >> /\
@@ -468,7 +481,7 @@ Section translate.
     Variable r : Rcd.t.
     Variable n_from : Name.t.
 
-    Notation j := (e_from_dir (Pattern.edir pe) e).
+    Notation j := (e_to_dir (Pattern.edir pe) e).
 
     Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) (PatternSlice.hop pi' pe pv).
     Hypothesis HIn_e : In (e : edge) (edges G).
@@ -545,7 +558,7 @@ Section translate.
       let HInV := fresh "HInV" in
       assert (Heq := H);
       assert (HInV : In v V) by (apply ord_of_vertex_In; exists i; apply H);
-      apply ord_of_vertex_err_value in Heq; subst v
+      apply ord_of_vertex_err_value in Heq; try (subst v || subst i)
     | [ |- _ ] =>
       fail "Hypothesis of the form 'ord_of_vertex_err ?v = Some ?i' not found"
     end.
@@ -640,7 +653,7 @@ Section translate.
 
       rewrite in_map_iff in HIn; setoid_rewrite filter_In in HIn; desf.
       change (?x = true) with (is_true x) in *.
-      repeat subst_ord_of_vertex.
+      subst_ord_of_vertex.
       match goal with
       | [ H : is_true (translate_slice _ _ _) |- _ ] =>
         eapply translate_slice_spec' in H;
@@ -683,12 +696,477 @@ Section translate.
 
   Definition traverse_adj (pi' : PatternSlice.t) (n_from : Name.t)
              (table : BindingTable.t) : option BindingTable.t :=
-    option_map (@List.concat Rcd.t)
-               (fold_option (map (traverse_adj_single pi' n_from) table)).
+    concat_option_map (traverse_adj_single pi' n_from) table.
+
+  Section traverse_adj_single_spec.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable table table' : BindingTable.t.
+    Variable ty : Rcd.T.
+
+    Hypothesis Htype : BindingTable.of_type table ty.
+    Hypothesis Hwf : PatternSlice.wf ty pi'.
+    Hypothesis Hres : traverse_adj pi' n_from table = Some table'.
+    Hypothesis Hpe_imp :
+      match pi' with
+      | PatternSlice.hop _ pe _ => Name.is_implicit (Pattern.ename pe)
+      | PatternSlice.empty => True
+      end.
+
+    Theorem traverse_adj_spec' r'
+      (HIn : In r' table') :
+        exists r p', << HIn : In r table >> /\
+          << Hmatches : PathSlice.matches G r n_from r' p' pi' >>.
+    Proof using Hpe_imp Hres Htype Hwf Hwf_G.
+      unfold traverse_adj in Hres.
+      erewrite in_concat_option_map_iff in HIn; eauto.
+      desc.
+      edestruct traverse_adj_single_spec'; eauto.
+      now rewrite Htype.
+    Qed.
+
+    Theorem traverse_adj_spec r r' p'
+      (HIn : In r table)
+      (Hmatch : PathSlice.matches G r n_from r' p' pi') :
+        In r' table'.
+    Proof using Hpe_imp Hres Htype Hwf Hwf_G.
+      unfold traverse_adj in Hres.
+      eapply in_concat_option_map_iff; eauto 1.
+      exists r.
+      eapply concat_option_map_some_inv in Hres; eauto 1.
+      destruct Hres.
+      eapply traverse_adj_single_spec in Hmatch; eauto.
+      { erewrite Htype; eauto. }
+    Qed.
+  End traverse_adj_single_spec.
+
+  Definition ord_of_edge_err e : option (ord edges_sup) :=
+    match @In_dec nat _ nat_eqdec e (edges G) with
+    | left HInE => Some (ord_of_edge e HInE)
+    | right _ => None
+    end.
+
+  Lemma ord_of_edge_err_value e i
+    (Hres : ord_of_edge_err e = Some i) :
+      e = i.
+  Proof using.
+    unfold ord_of_edge_err in Hres. desf.
+  Qed.
+
+  Lemma ord_of_edge_In e :
+    In e E <-> exists i, ord_of_edge_err e = Some i.
+  Proof using.
+    unfold ord_of_edge_err.
+    split; ins; desf; eauto.
+  Qed.
+
+  Lemma ord_of_edge_In' (e : ord _) :
+    In (e : edge) E <-> ord_of_edge_err e = Some e.
+  Proof using.
+    split; ins.
+    { unfold ord_of_edge_err. desf.
+      f_equal. now apply eq_ord. }
+    apply ord_of_edge_In. eauto.
+  Qed.
+
+  Ltac subst_ord_of_edge :=
+    match goal with
+    | [ H : ord_of_edge_err ?e = Some ?i |- _ ] =>
+      let Heq := fresh "Heq" in
+      let HInE := fresh "HInE" in
+      assert (Heq := H);
+      assert (HInE : In e E) by (apply ord_of_edge_In; exists i; apply H);
+      apply ord_of_edge_err_value in Heq; try subst e
+    | [ |- _ ] =>
+      fail "Hypothesis of the form 'ord_of_edge_err ?e = Some ?i' not found"
+    end.
+
+  Definition ords_of_edges : list (ord edges_sup) :=
+    filter_map ord_of_edge_err (edges G).
+  
+  Lemma ords_of_edges_In e :
+    In e (edges G) <->
+      exists (i : ord _), e = i /\ In i ords_of_edges.
+  Proof using.
+    unfold ords_of_edges.
+    setoid_rewrite filter_map_In.
+    split.
+    { setoid_rewrite ord_of_edge_In.
+      ins; desf; eauto 10 using ord_of_edge_err_value. }
+    ins; desf. now subst_ord_of_edge.
+  Qed.
+
+  Lemma ords_of_edges_In' (e : ord _) :
+    In e ords_of_edges <-> In (e : edge) (edges G).
+  Proof using.
+    rewrite ords_of_edges_In.
+    split; ins; desf; eauto.
+    assert (e = i) by now apply eq_ord.
+    now subst.
+  Qed.
+
+  Definition ords_of_edges_to_dir (v : ord vertices_sup) (d : Pattern.direction) : list (ord edges_sup) :=
+    let f '(e, u) := ord_of_edge_err e in
+      match d with
+      | Pattern.OUT => filter_map f (in_edges G v)
+      | Pattern.IN => filter_map f (out_edges G v)
+      | Pattern.BOTH => [] (* Should not be used *)
+      end.
+
+  Lemma ords_of_edges_to_dir_In v d e
+    (Hdir : d <> Pattern.BOTH) :
+      In e (ords_of_edges_to_dir v d) <->
+        e_to_dir d e = v /\
+        In (e : edge) E.
+  Proof using.
+    unfold ords_of_edges_to_dir, e_to_dir.
+    split; intros H.
+    { destruct d; simpls.
+      all: rewrite filter_map_In in H.
+      all: destruct H as [[? ?] [? HIn]].
+      all: apply in_edges_In in HIn || apply out_edges_In in HIn.
+      all: subst_ord_of_edge.
+      all: now desc. }
+    { destruct d; simpls; desc.
+      all: rewrite filter_map_In.
+      all: eexists ((e : edge), _).
+      all: rewrite in_edges_In || rewrite out_edges_In.
+      all: rewrite <- ord_of_edge_In'.
+      all: eauto. }
+  Qed.
+
+  Definition candidate_edges (r : Rcd.t) (nv : Name.t) (d : Pattern.direction) : option (list (ord edges_sup)) :=
+    match r nv with
+    | Some (Value.GVertex i) => ord_of_vertex_err i >>= fun i =>
+        Some (ords_of_edges_to_dir i d)
+    | None => Some ords_of_edges
+    | _ => None
+    end.
+
+  Lemma candidate_edges_In r nv d es e
+    (Hdir : d <> Pattern.BOTH)
+    (Hres : candidate_edges r nv d = Some es)
+    (HIn : In e es) :
+      r nv = None \/ r nv = Some (Value.GVertex (e_to_dir d e)).
+  Proof using.
+    unfold candidate_edges, option_bind in Hres. desf.
+    { subst_ord_of_vertex.
+      eapply ords_of_edges_to_dir_In in HIn; auto; desc.
+      right. congruence. }
+    now left.
+  Qed.
+
+  Lemma candidate_edges_InE r nv d es e
+    (Hdir : d <> Pattern.BOTH)
+    (Hres : candidate_edges r nv d = Some es)
+    (HIn : In e es) :
+      In (e : edge) E.
+  Proof.
+    unfold candidate_edges, option_bind in Hres. desf.
+    { now eapply ords_of_edges_to_dir_In in HIn; auto; desc. }
+    now eapply ords_of_edges_In' in HIn.
+  Qed.
+
+  Lemma candidate_edges_In' r nv d es e
+    (Hres : candidate_edges r nv d = Some es)
+    (HIn : In e E)
+    (Hdir : d <> Pattern.BOTH)
+    (Hprev : r nv = None \/ r nv = Some (Value.GVertex (e_to_dir d e))) :
+      exists (e' : ord _), e = e' /\ In e' es.
+  Proof.
+    unfold candidate_edges, option_bind in Hres. desf.
+    rewrite ords_of_edges_In in HIn. desc.
+    { eexists. eauto. }
+    setoid_rewrite ords_of_edges_to_dir_In; auto.
+    subst_ord_of_vertex.
+    setoid_rewrite ords_of_edges_In in HIn. desc.
+    setoid_rewrite <- ords_of_edges_In'.
+    eexists; splits; eauto.
+    congruence.
+  Qed.
+
+  Definition traverse_inc_single' (pi' : PatternSlice.t) (n_from : Name.t)
+             (r : Rcd.t) : option BindingTable.t :=
+    r_from r n_from >>= fun i =>
+      match pi' with
+      | PatternSlice.hop pi0' pe pv =>
+        candidate_edges r (Pattern.vname pv) (Pattern.edir pe) >>= fun es =>
+          let es := filter (translate_slice_inc pi' i) es in
+          let update_rcd (e : ord _) :=
+            let j := e_to_dir (Pattern.edir pe) e in
+              ((Pattern.vname pv, Pattern.ename pe) |-[Mixed]->
+                (Value.GVertex j, Value.GEdge e); r)
+            in Some (map update_rcd es)
+      | _ => Some [r]
+      end.
+
+  Section traverse_inc_single'_spec.
+    Variable pi' : PatternSlice.t.
+    Variable pe : Pattern.pedge.
+    Variable pv : Pattern.pvertex.
+    Variable n_from : Name.t.
+    Variable r r' : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) (PatternSlice.hop pi' pe pv).
+    Hypothesis Hres : traverse_inc_single' (PatternSlice.hop pi' pe pv) n_from r = Some table'.
+    Hypothesis Hedir : Pattern.edir pe <> Pattern.BOTH.
+
+    Theorem traverse_inc_single'_spec'
+      (HIn : In r' table') :
+        exists p' e, PathSlice.matches G r n_from r'
+          (PathSlice.hop p' e (e_to_dir (Pattern.edir pe) e))
+          (PatternSlice.hop pi' pe pv).
+    Proof using Hwf_G Hres Hwf Hedir.
+      unfold traverse_inc_single', option_bind, r_from in Hres.
+      Opaque update_with_mode_hop.
+      desf.
+
+      subst_ord_of_vertex.
+      rewrite in_map_iff in HIn; setoid_rewrite filter_In in HIn; desf.
+      change (?x = true) with (is_true x) in *.
+      match goal with
+      | [ H : is_true (translate_slice_inc _ _ _) |- _ ] =>
+        eapply translate_slice_inc_spec' in H
+      end.
+      all: desf; eauto using candidate_edges_In, candidate_edges_InE.
+      Transparent update_with_mode_hop.
+    Qed.
+
+    Theorem traverse_inc_single'_spec p' e
+      (Hmatch : PathSlice.matches G r n_from r'
+                  (PathSlice.hop p' e (e_to_dir (Pattern.edir pe) e))
+                  (PatternSlice.hop pi' pe pv)) :
+        In r' table'.
+    Proof using Hwf_G Hres Hedir Hwf.
+      unfold traverse_inc_single', option_bind, r_from in Hres.
+      Opaque update_with_mode_hop.
+      desf; inv Hmatch.
+
+      subst_ord_of_vertex. inv Hwf.
+      apply PathSlice.matches_wf'_eq in Hpi; auto; subst.
+      rewrite in_map_iff; setoid_rewrite filter_In. destruct Hpe.
+      eapply candidate_edges_In' in edge_in_g; eauto.
+      desc; subst.
+
+      eexists. splits; eauto.
+      change (?x = true) with (is_true x) in *.
+      eapply translate_slice_inc_spec; eauto.
+      destruct (Pattern.edir pe); simpl in *; auto; contradiction.
+      Transparent update_with_mode_hop.
+    Qed.
+  End traverse_inc_single'_spec.
+
+  Definition set_pedge_dir (pe : Pattern.pedge) (d : Pattern.direction) : Pattern.pedge :=
+    Pattern.Build_pedge (Pattern.ename pe) (Pattern.elabel pe) (Pattern.eprops pe) d.
+  
+  Lemma edir_set_pedge_dir pe d :
+    Pattern.edir (set_pedge_dir pe d) = d.
+  Proof. now destruct pe. Qed.
+
+  Definition set_last_pedge_dir (pi' : PatternSlice.t) (d : Pattern.direction) : PatternSlice.t :=
+    match pi' with
+    | PatternSlice.hop pi0' pe pv =>
+      PatternSlice.hop pi0' (set_pedge_dir pe d) pv
+    | PatternSlice.empty => PatternSlice.empty
+    end.
+
+  Lemma matches_edir_BOTH pi' pe pv p' n_from r r'
+    (Hedir : Pattern.edir pe = Pattern.BOTH) :
+      PathSlice.matches G r n_from r' p'
+        (PatternSlice.hop pi' pe pv) <->
+      PathSlice.matches G r n_from r' p'
+        (PatternSlice.hop pi' (set_pedge_dir pe Pattern.OUT) pv) \/
+      PathSlice.matches G r n_from r' p'
+        (PatternSlice.hop pi' (set_pedge_dir pe Pattern.IN) pv).
+  Proof.
+    split.
+    { intros Hmatch. inv Hmatch.
+      rewrite Hedir in Hdir. simpl in Hdir.
+      destruct Hdir; [ left | right ].
+      1: change (Pattern.ename pe) with (Pattern.ename (set_pedge_dir pe Pattern.OUT)).
+      2: change (Pattern.ename pe) with (Pattern.ename (set_pedge_dir pe Pattern.IN)).
+      all: constructor; eauto.
+      all: destruct Hpe; constructor; auto. }
+    intros [Hmatch | Hmatch]; inv Hmatch.
+    all: change (Pattern.ename (set_pedge_dir pe _)) with (Pattern.ename pe).
+    all: constructor; auto.
+    all: try now (destruct Hpe; constructor).
+    all: rewrite edir_set_pedge_dir in Hdir; rewrite Hedir.
+    all: simpls; auto.
+  Qed.
+
+  Lemma set_pedge_dir_wf rT pi' pe pv d
+    (Hwf : PatternSlice.wf rT (PatternSlice.hop pi' pe pv)) :
+      PatternSlice.wf rT (PatternSlice.hop pi' (set_pedge_dir pe d) pv).
+  Proof. inv Hwf. constructor; auto. Qed.
+
+  Definition traverse_inc_single (pi' : PatternSlice.t) (n_from : Name.t)
+             (r : Rcd.t) : option BindingTable.t :=
+    match pi' with
+    | PatternSlice.hop pi0' pe pv =>
+        match Pattern.edir pe with
+        | Pattern.BOTH => 
+          let pi'_out := set_last_pedge_dir pi' Pattern.OUT in
+          let pi'_in := set_last_pedge_dir pi' Pattern.IN in
+          let table_out := traverse_inc_single' pi'_out n_from r in
+          let table_in := traverse_inc_single' pi'_in n_from r in
+          concat_option [table_out; table_in]
+        | _ => traverse_inc_single' pi' n_from r
+        end
+    | _ => Some [r]
+    end.
+  
+  Section traverse_inc_single_spec.
+    Variable pi' : PatternSlice.t.
+    Variable pe : Pattern.pedge.
+    Variable pv : Pattern.pvertex.
+    Variable n_from : Name.t.
+    Variable r r' : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) (PatternSlice.hop pi' pe pv).
+    Hypothesis Hres : traverse_inc_single (PatternSlice.hop pi' pe pv) n_from r = Some table'.
+
+    Theorem traverse_inc_single_spec'
+      (HIn : In r' table') :
+        exists p' e v, PathSlice.matches G r n_from r'
+          (PathSlice.hop p' e v)
+          (PatternSlice.hop pi' pe pv).
+    Proof using Hwf_G Hres Hwf.
+      unfold traverse_inc_single in Hres.
+      desf.
+      1-2: eapply traverse_inc_single'_spec' in Hres; eauto; try congruence.
+      1-2: destruct Hres as [? [? ?]]; eauto.
+      apply_concat_option_some_inv_cons.
+      destruct Hres as [? [? [? [? Hres']]]]; clear Hres.
+      apply_concat_option_some_inv_cons. subst.
+      repeat rewrite in_app_iff in HIn.
+      rewrite concat_option_nil in *. desf.
+      
+      all: match goal with
+           | [ Hres : (traverse_inc_single' _ _ _) = Some ?x,
+               HIn : In _ ?x |- _ ] =>
+             eapply traverse_inc_single'_spec' in Hres; desf;
+             try rewrite edir_set_pedge_dir in Hres
+           end.
+      all: eauto.
+      all: try now apply set_pedge_dir_wf.
+      all: do 3 eexists.
+      all: eapply matches_edir_BOTH; eauto.
+    Qed.
+
+    Theorem traverse_inc_single_spec p' e v
+      (Hmatch : PathSlice.matches G r n_from r'
+                  (PathSlice.hop p' e v)
+                  (PatternSlice.hop pi' pe pv)) :
+        In r' table'.
+    Proof using Hwf_G Hres Hwf.
+      unfold traverse_inc_single in Hres.
+      desf.
+      1-2: eapply traverse_inc_single'_spec; eauto; try congruence.
+      1-2: erewrite <- matches_last_e_to_dir; eauto; try congruence.
+
+      apply_concat_option_some_inv_cons.
+      destruct Hres as [? [? [? [? Hres']]]]; clear Hres.
+      apply_concat_option_some_inv_cons. subst.
+      repeat rewrite in_app_iff.
+
+      rewrite matches_edir_BOTH in Hmatch; desf; [ left | right; left ].
+      all: erewrite matches_last_e_to_dir with (v := v) in Hmatch; eauto.
+      all: try now (rewrite edir_set_pedge_dir; simpls).
+      all: eapply traverse_inc_single'_spec in Hmatch; eauto.
+      all: try now eapply set_pedge_dir_wf.
+      all: now rewrite edir_set_pedge_dir.
+    Qed.
+  End traverse_inc_single_spec.
+
+  Definition traverse_single (pi' : PatternSlice.t) (n_from : Name.t)
+             (r : Rcd.t) : option BindingTable.t :=
+    match pi' with
+    | PatternSlice.hop pi0' {| Pattern.ename := Name.explicit _ |} pv =>
+        traverse_inc_single pi' n_from r
+    | _ => traverse_adj_single pi' n_from r
+    end.
+
+  Section traverse_single_spec.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable r r' : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) pi'.
+    Hypothesis Hres : traverse_single pi' n_from r = Some table'.
+
+    Theorem traverse_single_spec'
+      (HIn : In r' table') :
+        exists p', PathSlice.matches G r n_from r' p' pi'.
+    Proof using Hwf_G Hres Hwf.
+      unfold traverse_single in Hres.
+      desf.
+      1, 3: eapply traverse_adj_single_spec' in Hres; eauto.
+      { unfold Name.is_implicit; simpls. }
+      eapply traverse_inc_single_spec' in Hres; eauto.
+      all: destruct Hres as [? [? [? ?]]]; eauto.
+    Qed.
+
+    Theorem traverse_single_spec p'
+      (Hmatch : PathSlice.matches G r n_from r' p' pi') :
+        In r' table'.
+    Proof using Hwf_G Hres Hwf.
+      unfold traverse_single in Hres.
+      desf.
+      1, 3: eapply traverse_adj_single_spec; eauto; simpls.
+      inv Hmatch.
+      eapply traverse_inc_single_spec; eauto.
+    Qed.
+  End traverse_single_spec.
+
+  Definition traverse_impl (pi' : PatternSlice.t) (n_from : Name.t)
+             (table : BindingTable.t) : option BindingTable.t :=
+    concat_option_map (traverse_single pi' n_from) table.
+
+  Section traverse_impl_spec.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable table table' : BindingTable.t.
+    Variable ty : Rcd.T.
+
+    Hypothesis Hwf : PatternSlice.wf ty pi'.
+    Hypothesis Hres : traverse_impl pi' n_from table = Some table'.
+
+    Theorem traverse_impl_spec' r'
+      (Htype : BindingTable.of_type table ty)
+      (HIn : In r' table') :
+        exists r p', In r table /\ PathSlice.matches G r n_from r' p' pi'.
+    Proof using Hwf_G Hres Hwf.
+      unfold traverse_impl in Hres.
+      erewrite in_concat_option_map_iff in HIn; eauto 1; desc.
+      edestruct traverse_single_spec'; eauto.
+      now rewrite Htype.
+    Qed.
+
+    Theorem traverse_impl_spec p' r r'
+      (Htype : Rcd.type_of r = ty)
+      (HIn : In r table)
+      (Hmatch : PathSlice.matches G r n_from r' p' pi') :
+        In r' table'.
+    Proof using Hwf_G Hres Hwf.
+      unfold traverse_impl in Hres.
+      assert (Hres' := Hres).
+      eapply concat_option_map_some_inv in Hres; eauto 1.
+      destruct Hres.
+      erewrite in_concat_option_map_iff; eauto 1.
+      do 2 eexists; splits; eauto 1.
+      eapply traverse_single_spec; eauto.
+      now rewrite Htype.
+    Qed.
+  End traverse_impl_spec.
 End translate.
 
-Definition traverse : PatternSlice.t -> Name.t -> step1.
-Admitted.
+Definition traverse (pi' : PatternSlice.t) (n_from : Name.t)
+  (G : PropertyGraph.t) (table : BindingTable.t) : option BindingTable.t :=
+    traverse_impl G pi' n_from table.
 
 Theorem traverse_wf : forall G table ty slice n_from,
   PropertyGraph.wf G -> BindingTable.of_type table ty ->
@@ -702,14 +1180,21 @@ Theorem traverse_type : forall G table table' ty slice n_from,
       BindingTable.of_type table' (PatternSlice.type_of ty slice).
 Admitted.
 
-Theorem traverse_spec : forall G table table' path r r' slice n_from,
-  traverse slice n_from G table = Some table' ->
-    PathSlice.matches G r n_from r' path slice ->
-      In r table -> In r' table'.
-Admitted.
+Theorem traverse_spec G table table' path r r' slice n_from
+  (Hwf : PropertyGraph.wf G)
+  (Hwf_slice : PatternSlice.wf (Rcd.type_of r) slice)
+  (Hres : traverse slice n_from G table = Some table')
+  (Hmatch : PathSlice.matches G r n_from r' path slice)
+  (HIn : In r table) :
+    In r' table'.
+Proof. eauto using traverse_impl_spec. Qed.
 
-Theorem traverse_spec' : forall G table table' r' slice n_from,
-  traverse slice n_from G table = Some table' ->
-    In r' table' -> exists r path, In r table /\
+Theorem traverse_spec' G table table' ty r' slice n_from
+  (Hwf : PropertyGraph.wf G)
+  (Htype : BindingTable.of_type table ty)
+  (Hwf_slice : PatternSlice.wf ty slice)
+  (Hres : traverse slice n_from G table = Some table')
+  (HIn : In r' table') :
+    exists r path, In r table /\
       PathSlice.matches G r n_from r' path slice.
-Admitted.
+Proof. eauto using traverse_impl_spec'. Qed.

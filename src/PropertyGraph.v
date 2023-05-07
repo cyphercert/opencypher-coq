@@ -64,6 +64,11 @@ Module PropertyGraph.
   Definition e_from (g : t) (e : edge) := fst (ends g e).
   Definition e_to   (g : t) (e : edge) := snd (ends g e).
 
+  Theorem e_from_to g e : ends g e = (e_from g e, e_to g e).
+  Proof using.
+    unfold e_from, e_to. destruct (ends g e); auto.
+  Qed.
+
   Definition out_edges (g : t) (v : vertex) :=
     filter_map (fun e => if e_from g e ==b v then Some (e, e_to g e) else None) (edges g).
 

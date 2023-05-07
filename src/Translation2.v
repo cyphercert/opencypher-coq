@@ -142,6 +142,7 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
 
   Lemma eval_translate_pattern'_spec graph path pi table' r'
     (Hres : eval graph (translate_pattern' pi) = Some table')
+    (Hwf_G : PropertyGraph.wf graph)
     (Hwf : PatternT.wfT pi)
     (Hmatch : Path.matches Mixed graph r' path pi) :
       In r' table'.
@@ -161,12 +162,14 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     desf.
 
     eapply traverse_spec; eauto.
-    eapply H1; eauto.
-    eauto using PatternSlice.split_wf_pattern.
+    2: now eauto using PatternSlice.split_wf_pattern.
+    erewrite <- Path.matches_type_of; eauto 1.
+    eauto using PatternSlice.split_wf_slice.
   Qed.
 
   Theorem match_clause_spec graph path pi table' r'
     (Hres : eval_match_clause graph pi = Some table')
+    (Hwf_G : PropertyGraph.wf graph)
     (Hwf : PatternT.wfT pi)
     (Hmatch : Path.matches Explicit graph r' path pi) :
       In r' table'.
@@ -208,11 +211,14 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     eapply traverse_spec' in HIn; eauto.
     desf.
 
-    edestruct H1; eauto.
-    { eauto using PatternSlice.split_wf_pattern. }
-
-    eexists (PathSlice.append _ _).
-    eapply PathSlice.matches_split; eauto.
+    { edestruct H1; eauto.
+      { eauto using PatternSlice.split_wf_pattern. }
+      eexists (PathSlice.append _ _).
+      eapply PathSlice.matches_split; eauto. }
+    { eauto using eval_type_of. }
+    erewrite translate_pattern'_type.
+    { eauto using PatternSlice.split_wf_slice. }
+    eauto using PatternSlice.split_wf_pattern.
   Qed.
 
   Theorem match_clause_spec' graph pi table' r'

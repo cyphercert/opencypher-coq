@@ -197,14 +197,17 @@ Module ExecutionPlan.
       (** traverse specification *)
 
       Axiom traverse_spec : forall path r r' slice n_from,
-        traverse slice n_from graph table = Some table' ->
-          PathSlice.matches graph r n_from r' path slice ->
-            In r table -> In r' table'.
+        PropertyGraph.wf graph -> PatternSlice.wf (Rcd.type_of r) slice ->
+          traverse slice n_from graph table = Some table' ->
+            PathSlice.matches graph r n_from r' path slice ->
+              In r table -> In r' table'.
 
       Axiom traverse_spec' : forall r' slice n_from,
-        traverse slice n_from graph table = Some table' ->
-          In r' table' -> exists r path, In r table /\
-            PathSlice.matches graph r n_from r' path slice.
+        PropertyGraph.wf graph -> BindingTable.of_type table ty ->
+          PatternSlice.wf ty slice ->
+            traverse slice n_from graph table = Some table' ->
+              In r' table' -> exists r path, In r table /\
+                PathSlice.matches graph r n_from r' path slice.
     End axioms.
   End Spec.
 

@@ -198,6 +198,98 @@ Proof using.
   simpl. rewrite (IHxs H). now destruct x.
 Qed.
 
+Lemma option_map_some (A B : Type) (f : A -> B) (a : option A) (y : B)
+                      (Hres : option_map f a = Some y) :
+  exists x, f x = y /\ a = Some x.
+Proof using.
+  destruct a as [x |]; [exists x | inv Hres].
+  split; simpls; desf.
+Qed.
+
+Definition concat_option {A : Type} (xs : list (option (list A))) : option (list A) :=
+  option_map (@List.concat A) (fold_option xs).
+
+Theorem in_concat_option_iff {A : Type} (a : A)
+  (xs : list (option (list A)))
+  (ys : list A)
+  (Hres : concat_option xs = Some ys) :
+    In a ys <-> exists x, In (Some x) xs /\ In a x.
+Proof.
+  unfold concat_option in Hres.
+  destruct (fold_option xs) eqn:Hfold; try discriminate.
+  simpls. desf.
+  rewrite in_concat.
+  setoid_rewrite fold_option_In; eauto.
+  split; ins; desf; eauto.
+Qed.
+
+Theorem concat_option_some_inv {A : Type}
+  (xs : list (option (list A)))
+  (ys : list A) (x : option (list A))
+  (HIn : In x xs)
+  (Hres : concat_option xs = Some ys) :
+    exists y, x = Some y.
+Proof.
+  unfold concat_option.
+  edestruct option_map_some; eauto. desc.
+  eapply fold_option_some_inv; eauto.
+Qed.
+
+Theorem concat_option_some_inv_cons {A : Type}
+  (xs : list (option (list A)))
+  (ys : list A) (x : option (list A))
+  (Hres : concat_option (x :: xs) = Some ys) :
+    exists (y ys' : list A), x = Some y /\
+      ys = app y ys' /\
+      concat_option xs = Some ys'.
+Proof.
+  unfold concat_option in *.
+  edestruct option_map_some; eauto. desc.
+  clear Hres. simpls.
+  unfold option_bind in *. desf.
+  do 2 eexists. splits; eauto.
+  { now rewrite concat_cons. }
+  reflexivity.
+Qed.
+
+Ltac apply_concat_option_some_inv_cons :=
+  match goal with
+  | [ H : concat_option (?x :: ?xs) = Some ?ys |- _ ] =>
+    apply concat_option_some_inv_cons in H; desc
+  end.
+
+Theorem concat_option_nil (A : Type) : @concat_option A [] = Some [].
+Proof. reflexivity. Qed.
+
+Definition concat_option_map {A B : Type}
+  (f : A -> option (list B))
+  (xs : list A) : option (list B) :=
+    concat_option (map f xs).
+
+Theorem in_concat_option_map_iff {A B : Type}
+  (f : A -> option (list B))
+  (xs : list A) (ys : list B) (b : B)
+  (Hres : concat_option_map f xs = Some ys) :
+    In b ys <-> exists x y, In x xs /\ In b y /\ f x = Some y.
+Proof.
+  unfold concat_option_map in *.
+  rewrite in_concat_option_iff; eauto.
+  setoid_rewrite in_map_iff.
+  split; ins; desf; eauto.
+Qed.
+
+Theorem concat_option_map_some_inv {A B : Type}
+  (f : A -> option (list B))
+  (xs : list A) (ys : list B)
+  (x : A) (HIn : In x xs)
+  (Hres : concat_option_map f xs = Some ys) :
+    exists y, f x = Some y.
+Proof.
+  unfold concat_option_map in Hres.
+  eapply concat_option_some_inv; eauto.
+  now apply in_map.
+Qed.
+
 Section filter_map.
   Variable A B : Type.
   Variable f : A -> option B.
@@ -236,14 +328,6 @@ Proof using.
          | [ IH : _ -> In _ _  |- _ ] => apply IH
          end.
     all: eexists; split; eauto.
-Qed.
-
-Lemma option_map_some (A B : Type) (f : A -> B) (a : option A) (y : B)
-                      (Hres : option_map f a = Some y) :
-  exists x, f x = y /\ a = Some x.
-Proof using.
-  destruct a as [x |]; [exists x | inv Hres].
-  split; simpls; desf.
 Qed.
 
 Lemma NoDup_cons_l (A : Type) (x : A) (xs : list A) (Hdup : NoDup (x :: xs)) :
