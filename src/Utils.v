@@ -214,7 +214,7 @@ Theorem in_concat_option_iff {A : Type} (a : A)
   (ys : list A)
   (Hres : concat_option xs = Some ys) :
     In a ys <-> exists x, In (Some x) xs /\ In a x.
-Proof.
+Proof using.
   unfold concat_option in Hres.
   destruct (fold_option xs) eqn:Hfold; try discriminate.
   simpls. desf.
@@ -229,7 +229,7 @@ Theorem concat_option_some_inv {A : Type}
   (HIn : In x xs)
   (Hres : concat_option xs = Some ys) :
     exists y, x = Some y.
-Proof.
+Proof using.
   unfold concat_option.
   edestruct option_map_some; eauto. desc.
   eapply fold_option_some_inv; eauto.
@@ -242,7 +242,7 @@ Theorem concat_option_some_inv_cons {A : Type}
     exists (y ys' : list A), x = Some y /\
       ys = app y ys' /\
       concat_option xs = Some ys'.
-Proof.
+Proof using.
   unfold concat_option in *.
   edestruct option_map_some; eauto. desc.
   clear Hres. simpls.
@@ -259,12 +259,12 @@ Ltac apply_concat_option_some_inv_cons :=
   end.
 
 Theorem concat_option_nil (A : Type) : @concat_option A [] = Some [].
-Proof. reflexivity. Qed.
+Proof using. reflexivity. Qed.
 
 Theorem concat_option_some (A : Type) (xs : list (option (list A)))
                            (Hsome : forall x, In x xs -> exists x', x = Some x') :
   exists xs', concat_option xs = Some xs'.
-Proof.
+Proof using.
   unfold concat_option.
   edestruct fold_option_some as [? Hfold]; eauto.
   rewrite Hfold. simpl. eauto.
@@ -280,7 +280,7 @@ Theorem in_concat_option_map_iff {A B : Type}
   (xs : list A) (ys : list B) (b : B)
   (Hres : concat_option_map f xs = Some ys) :
     In b ys <-> exists x y, In x xs /\ In b y /\ f x = Some y.
-Proof.
+Proof using.
   unfold concat_option_map in *.
   rewrite in_concat_option_iff; eauto.
   setoid_rewrite in_map_iff.
@@ -293,7 +293,7 @@ Theorem concat_option_map_some_inv {A B : Type}
   (x : A) (HIn : In x xs)
   (Hres : concat_option_map f xs = Some ys) :
     exists y, f x = Some y.
-Proof.
+Proof using.
   unfold concat_option_map in Hres.
   eapply concat_option_some_inv; eauto.
   now apply in_map.
@@ -303,7 +303,7 @@ Theorem concat_option_map_some (A B : Type)
   (f : A -> option (list B)) (xs : list A)
   (Hsome : forall x, In x xs -> exists y, f x = Some y) :
     exists xs', concat_option_map f xs = Some xs'.
-Proof.
+Proof using.
   unfold concat_option_map.
   eapply concat_option_some; eauto.
   intros ? HIn.

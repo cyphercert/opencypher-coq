@@ -49,7 +49,7 @@ Module PatternSlice.
   Theorem type_of_None rT pi n
     (Htype : type_of rT pi n = None) :
       rT n = None.
-  Proof.
+  Proof using.
     induction pi; simpls.
     unfold_update_with_mode.
     desf; desf_unfold_pat.
@@ -90,7 +90,7 @@ Module PatternSlice.
   Theorem type_of_wf' rT pi
     (Hwf' : wf' rT pi) :
       type_of rT pi = rT.
-  Proof.
+  Proof using.
     induction Hwf'; simpls.
     unfold_update_with_mode.
     unfold Name.is_implicit in *.
@@ -101,7 +101,7 @@ Module PatternSlice.
     (Hwf : wf rT (PatternSlice.hop pi pe pv)) :
       type_of rT (PatternSlice.hop pi pe pv) =
         ((Pattern.vname pv, Pattern.ename pe) M|-> (Value.GVertexT, Value.GEdgeT); rT).
-  Proof.
+  Proof using.
     simpl. inv Hwf.
     now rewrite type_of_wf' by auto.
   Qed.
@@ -110,7 +110,7 @@ Module PatternSlice.
     (Hwf : wf rT pi)
     (Htype : type_of rT pi n = Some ty) :
       rT n = Some ty \/ rT n = None.
-  Proof.
+  Proof using.
     inv Hwf; simpls. { now left. }
     rewrite type_of_wf' in * by assumption.
     unfold_update_with_mode.
@@ -522,7 +522,7 @@ Module PathSlice.
     (Hmatch : matches G r n_from r' p (PatternSlice.hop pi pe pv))
     (Hfrom : r n_from = Some (Value.GVertex v)) :
       In v (vertices G).
-  Proof.
+  Proof using.
     remember (PatternSlice.hop pi pe pv) as pi'.
     gen_dep pi pe pv.
     induction Hmatch; ins; eauto.
@@ -560,7 +560,7 @@ Module PathSlice.
       exists p p' r, p0 = PathSlice.append p p' /\
         Path.matches Mixed G r p pi /\
         PathSlice.matches G r (Pattern.vname (Pattern.last pi)) r' p' pi'.
-  Proof.
+  Proof using.
     gen_dep r' p0.
     induction pi'; ins.
     { exists p0. exists PathSlice.empty. exists r'.
@@ -623,7 +623,7 @@ Module PathSlice.
     (HIn : In v (vertices G))
     (Hmatch' : PathSlice.matches G r n_from r' p' pi') :
       In (PathSlice.last r n_from p') (vertices G).
-  Proof.
+  Proof using.
     destruct Hmatch'; simpls.
     { desf. }
     inv Hpv.

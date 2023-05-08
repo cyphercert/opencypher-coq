@@ -84,7 +84,7 @@ Module MatchMode.
 
   Lemma type_of_update_with_mode_start mode nv v :
     Rcd.type_of (nv |-[mode]-> v) = (nv |-[mode]-> Value.type_of v).
-  Proof.
+  Proof using.
     unfold_update_with_mode. desf.
     all: now repeat rewrite Rcd.type_of_update.
   Qed.
@@ -92,7 +92,7 @@ Module MatchMode.
   Lemma type_of_update_with_mode_hop mode nv ne v e r:
     Rcd.type_of ((nv, ne) |-[mode]-> (v, e); r) =
       ((nv, ne) |-[mode]-> (Value.type_of v, Value.type_of e); Rcd.type_of r).
-  Proof.
+  Proof using.
     unfold_update_with_mode. desf.
     all: now repeat rewrite Rcd.type_of_update.
   Qed.

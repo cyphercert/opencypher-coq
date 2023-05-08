@@ -243,7 +243,7 @@ Module PartialMap.
 
     Lemma join_singleton (x : A) (v : B) (r : t A B) :
       join (x |-> v) r = (x |-> v; r).
-    Proof.
+    Proof using.
       extensionality k.
       unfold join, update, TotalMap.update.
       desf.

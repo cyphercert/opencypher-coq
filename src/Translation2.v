@@ -40,7 +40,7 @@ Theorem translate_pattern'_ind
     P pi0 (translate_pattern' pi0) ->
     P pi (Traverse pi' (Pattern.vname (Pattern.last pi0)) (translate_pattern' pi0))) :
   forall pi, P pi (translate_pattern' pi).
-Proof.
+Proof using.
   intros pi.
   unfold translate_pattern'.
   pattern pi, (PatternSlice.split_all_with_paths pi).

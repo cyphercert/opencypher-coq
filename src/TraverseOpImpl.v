@@ -398,7 +398,7 @@ Section translate.
     (Hedir : d <> Pattern.BOTH)
     (HIn : In e (edges G)) :
       In (e_to_dir d e) (vertices G).
-  Proof.
+  Proof using Hwf_G.
     destruct d; simpls.
     all: now (apply wf_e_to_In || apply wf_e_from_In).
   Qed.
@@ -409,7 +409,7 @@ Section translate.
                 (PathSlice.hop p' e v)
                 (PatternSlice.hop pi' pe pv)) :
       v = e_to_dir (Pattern.edir pe) e.
-  Proof.
+  Proof using.
     inv Hmatch.
     destruct (Pattern.edir pe); simpls.
     all: rewrite e_from_to in Hdir.
@@ -619,7 +619,7 @@ Section translate.
     (HIn : In v V)
     (Hprev : r nv = Some (Value.GVertex v) \/ r nv = None) :
       exists (j : ord _), v = j /\ In j js.
-  Proof.
+  Proof using.
     unfold candidate_ends, option_bind in Hres. desf.
     { eexists. split.
       { now subst_ord_of_vertex. }
@@ -897,7 +897,7 @@ Section translate.
     (Hres : candidate_edges r nv d = Some es)
     (HIn : In e es) :
       In (e : edge) E.
-  Proof.
+  Proof using.
     unfold candidate_edges, option_bind in Hres. desf.
     { now eapply ords_of_edges_to_dir_In in HIn; auto; desc. }
     now eapply ords_of_edges_In' in HIn.
@@ -909,7 +909,7 @@ Section translate.
     (Hdir : d <> Pattern.BOTH)
     (Hprev : r nv = None \/ r nv = Some (Value.GVertex (e_to_dir d e))) :
       exists (e' : ord _), e = e' /\ In e' es.
-  Proof.
+  Proof using Hwf_G.
     unfold candidate_edges, option_bind in Hres. desf.
     rewrite ords_of_edges_In in HIn. desc.
     { eexists. eauto. }
@@ -1052,7 +1052,7 @@ Section translate.
   
   Lemma edir_set_pedge_dir pe d :
     Pattern.edir (set_pedge_dir pe d) = d.
-  Proof. now destruct pe. Qed.
+  Proof using. now destruct pe. Qed.
 
   Definition set_last_pedge_dir (pi' : PatternSlice.t) (d : Pattern.direction) : PatternSlice.t :=
     match pi' with
@@ -1069,7 +1069,7 @@ Section translate.
         (PatternSlice.hop pi' (set_pedge_dir pe Pattern.OUT) pv) \/
       PathSlice.matches G r n_from r' p'
         (PatternSlice.hop pi' (set_pedge_dir pe Pattern.IN) pv).
-  Proof.
+  Proof using.
     split.
     { intros Hmatch. inv Hmatch.
       rewrite Hedir in Hdir. simpl in Hdir.
@@ -1089,7 +1089,7 @@ Section translate.
   Lemma set_pedge_dir_wf rT pi' pe pv d
     (Hwf : PatternSlice.wf rT (PatternSlice.hop pi' pe pv)) :
       PatternSlice.wf rT (PatternSlice.hop pi' (set_pedge_dir pe d) pv).
-  Proof. inv Hwf. constructor; auto. Qed.
+  Proof using. inv Hwf. constructor; auto. Qed.
 
   Definition traverse_inc_single (pi' : PatternSlice.t) (n_from : Name.t)
              (r : Rcd.t) : option BindingTable.t :=
@@ -1342,7 +1342,7 @@ Section translate.
     (Htype : forall table, In (Some table) tables ->
               BindingTable.of_type table ty) :
       BindingTable.of_type table' ty.
-  Proof.
+  Proof using.
     intros r' HIn.
     erewrite in_concat_option_iff in HIn; eauto 1; desc.
     rewrite Htype; eauto 1.
@@ -1355,7 +1355,7 @@ Section translate.
     (Htype : forall x table, In x xs -> f x = Some table ->
               BindingTable.of_type table ty) :
       BindingTable.of_type table' ty.
-  Proof.
+  Proof using.
     intros r' HIn.
     erewrite in_concat_option_map_iff in HIn; eauto 1; desc.
     erewrite Htype; eauto 1.
@@ -1412,14 +1412,14 @@ Theorem traverse_wf : forall G table ty slice n_from,
   PropertyGraph.wf G -> BindingTable.of_type table ty ->
     PatternSlice.wf ty slice -> ty n_from = Some Value.GVertexT ->
       exists table', traverse slice n_from G table = Some table'.
-Proof. eauto using traverse_impl_wf. Qed.
+Proof using. eauto using traverse_impl_wf. Qed.
 
 Theorem traverse_type G table table' ty slice n_from
   (Hres : traverse slice n_from G table = Some table')
   (Htype : BindingTable.of_type table ty)
   (Hwf : PatternSlice.wf ty slice) :
     BindingTable.of_type table' (PatternSlice.type_of ty slice).
-Proof. eauto using traverse_impl_type. Qed.
+Proof using. eauto using traverse_impl_type. Qed.
 
 Theorem traverse_spec G table table' path r r' slice n_from
   (Hwf : PropertyGraph.wf G)
@@ -1428,7 +1428,7 @@ Theorem traverse_spec G table table' path r r' slice n_from
   (Hmatch : PathSlice.matches G r n_from r' path slice)
   (HIn : In r table) :
     In r' table'.
-Proof. eauto using traverse_impl_spec. Qed.
+Proof using. eauto using traverse_impl_spec. Qed.
 
 Theorem traverse_spec' G table table' ty r' slice n_from
   (Hwf : PropertyGraph.wf G)
@@ -1438,4 +1438,4 @@ Theorem traverse_spec' G table table' ty r' slice n_from
   (HIn : In r' table') :
     exists r path, In r table /\
       PathSlice.matches G r n_from r' path slice.
-Proof. eauto using traverse_impl_spec'. Qed.
+Proof using. eauto using traverse_impl_spec'. Qed.
