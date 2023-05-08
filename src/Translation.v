@@ -131,7 +131,8 @@ Module EvalQueryImpl (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Proof using.
     unfold eval_match_clause in Hres.
     apply eval_type_of in Hres.
-    now rewrite translate_pattern_type in Hres.
+    { now rewrite translate_pattern_type in Hres. }
+    auto using translate_pattern_wf.
   Qed.
 
   Ltac desf_match_result Hres :=

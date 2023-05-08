@@ -81,7 +81,23 @@ Module MatchMode.
   Ltac lift_to_update_with_mode :=
     repeat change (?nv |-> ?vv; ?ne |-> ?ve; ?r) with ((nv, ne) F|-> (vv, ve); r);
     repeat change (?n |-> ?v) with (n F|-> v).
+
+  Lemma type_of_update_with_mode_start mode nv v :
+    Rcd.type_of (nv |-[mode]-> v) = (nv |-[mode]-> Value.type_of v).
+  Proof.
+    unfold_update_with_mode. desf.
+    all: now repeat rewrite Rcd.type_of_update.
+  Qed.
+
+  Lemma type_of_update_with_mode_hop mode nv ne v e r:
+    Rcd.type_of ((nv, ne) |-[mode]-> (v, e); r) =
+      ((nv, ne) |-[mode]-> (Value.type_of v, Value.type_of e); Rcd.type_of r).
+  Proof.
+    unfold_update_with_mode. desf.
+    all: now repeat rewrite Rcd.type_of_update.
+  Qed.
 End MatchMode.
+
 Import MatchMode.
 Import UpdateNotations.
 

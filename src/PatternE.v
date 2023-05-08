@@ -87,6 +87,25 @@ Module PatternSlice.
     .
   End wf.
 
+  Theorem type_of_wf' rT pi
+    (Hwf' : wf' rT pi) :
+      type_of rT pi = rT.
+  Proof.
+    induction Hwf'; simpls.
+    unfold_update_with_mode.
+    unfold Name.is_implicit in *.
+    desf.
+  Qed.
+
+  Theorem type_of_wf rT pi pe pv
+    (Hwf : wf rT (PatternSlice.hop pi pe pv)) :
+      type_of rT (PatternSlice.hop pi pe pv) =
+        ((Pattern.vname pv, Pattern.ename pe) M|-> (Value.GVertexT, Value.GEdgeT); rT).
+  Proof.
+    simpl. inv Hwf.
+    now rewrite type_of_wf' by auto.
+  Qed.
+
   Fixpoint append (pi : Pattern.t) (pi' : t) : Pattern.t :=
     match pi' with
     | empty => pi

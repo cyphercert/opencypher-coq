@@ -627,6 +627,36 @@ Section translate.
       | _ => Some [r]
       end.
 
+  Section traverse_adj_single_type.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable r : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) pi'.
+    Hypothesis Hres : traverse_adj_single pi' n_from r = Some table'.
+    Hypothesis Hpe_imp :
+      match pi' with
+      | PatternSlice.hop _ pe _ => Name.is_implicit (Pattern.ename pe)
+      | PatternSlice.empty => True
+      end.
+
+    Lemma traverse_adj_single_type :
+      BindingTable.of_type table' (PatternSlice.type_of (Rcd.type_of r) pi').
+    Proof using Hwf Hres Hpe_imp.
+      unfold traverse_adj_single, option_bind, r_from in Hres.
+      desf; intros r' HIn.
+      { simpls. desf. }
+      rewrite PatternSlice.type_of_wf by auto.
+      rewrite in_map_iff in HIn. desf.
+      rewrite Rcd.type_of_join.
+      rewrite type_of_update_with_mode_start.
+      unfold Name.is_implicit in Hpe_imp; desf.
+      unfold_update_with_mode. desf.
+      now rewrite PartialMap.join_singleton.
+    Qed.
+  End traverse_adj_single_type.
+
   Section traverse_adj_single_spec.
     Variable pi' : PatternSlice.t.
     Variable n_from : Name.t.
@@ -689,52 +719,6 @@ Section translate.
       { assumption. }
       change (?x = true) with (is_true x) in *.
       eapply translate_slice_spec; eauto; auto.
-    Qed.
-  End traverse_adj_single_spec.
-
-  Definition traverse_adj (pi' : PatternSlice.t) (n_from : Name.t)
-             (table : BindingTable.t) : option BindingTable.t :=
-    concat_option_map (traverse_adj_single pi' n_from) table.
-
-  Section traverse_adj_single_spec.
-    Variable pi' : PatternSlice.t.
-    Variable n_from : Name.t.
-    Variable table table' : BindingTable.t.
-    Variable ty : Rcd.T.
-
-    Hypothesis Htype : BindingTable.of_type table ty.
-    Hypothesis Hwf : PatternSlice.wf ty pi'.
-    Hypothesis Hres : traverse_adj pi' n_from table = Some table'.
-    Hypothesis Hpe_imp :
-      match pi' with
-      | PatternSlice.hop _ pe _ => Name.is_implicit (Pattern.ename pe)
-      | PatternSlice.empty => True
-      end.
-
-    Theorem traverse_adj_spec' r'
-      (HIn : In r' table') :
-        exists r p', << HIn : In r table >> /\
-          << Hmatches : PathSlice.matches G r n_from r' p' pi' >>.
-    Proof using Hpe_imp Hres Htype Hwf Hwf_G.
-      unfold traverse_adj in Hres.
-      erewrite in_concat_option_map_iff in HIn; eauto.
-      desc.
-      edestruct traverse_adj_single_spec'; eauto.
-      now rewrite Htype.
-    Qed.
-
-    Theorem traverse_adj_spec r r' p'
-      (HIn : In r table)
-      (Hmatch : PathSlice.matches G r n_from r' p' pi') :
-        In r' table'.
-    Proof using Hpe_imp Hres Htype Hwf Hwf_G.
-      unfold traverse_adj in Hres.
-      eapply in_concat_option_map_iff; eauto 1.
-      exists r.
-      eapply concat_option_map_some_inv in Hres; eauto 1.
-      destruct Hres.
-      eapply traverse_adj_single_spec in Hmatch; eauto.
-      { erewrite Htype; eauto. }
     Qed.
   End traverse_adj_single_spec.
 
@@ -951,6 +935,27 @@ Section translate.
     Qed.
   End traverse_inc_single'_spec.
 
+  Section traverse_inc_single'_type.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable r : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) pi'.
+    Hypothesis Hres : traverse_inc_single' pi' n_from r = Some table'.
+
+    Lemma traverse_inc_single'_type :
+      BindingTable.of_type table' (PatternSlice.type_of (Rcd.type_of r) pi').
+    Proof using Hwf Hres.
+      unfold traverse_inc_single', option_bind, r_from in Hres.
+      desf; intros r' HIn.
+      { simpls. desf. }
+      rewrite PatternSlice.type_of_wf by auto.
+      rewrite in_map_iff in HIn. desf.
+      now rewrite type_of_update_with_mode_hop.
+    Qed.
+  End traverse_inc_single'_type.
+
   Definition set_pedge_dir (pe : Pattern.pedge) (d : Pattern.direction) : Pattern.pedge :=
     Pattern.Build_pedge (Pattern.ename pe) (Pattern.elabel pe) (Pattern.eprops pe) d.
   
@@ -1075,6 +1080,29 @@ Section translate.
     Qed.
   End traverse_inc_single_spec.
 
+  Section traverse_inc_single_type.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable r : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) pi'.
+    Hypothesis Hres : traverse_inc_single pi' n_from r = Some table'.
+
+    Lemma traverse_inc_single_type :
+      BindingTable.of_type table' (PatternSlice.type_of (Rcd.type_of r) pi').
+    Proof using Hwf Hres.
+      unfold traverse_inc_single in Hres.
+      desf; intros r' HIn.
+      { simpls. desf. }
+      (* all: rewrite PatternSlice.type_of_wf by auto. *)
+      1-2: apply traverse_inc_single'_type in Hres; auto.
+      rewrite in_concat_option_iff in HIn; eauto 1; simpls; desf.
+      all: apply traverse_inc_single'_type in HIn; auto.
+      all: apply set_pedge_dir_wf; auto.
+    Qed.
+  End traverse_inc_single_type.
+
   Definition traverse_single (pi' : PatternSlice.t) (n_from : Name.t)
              (r : Rcd.t) : option BindingTable.t :=
     match pi' with
@@ -1116,6 +1144,25 @@ Section translate.
     Qed.
   End traverse_single_spec.
 
+  Section traverse_single_type.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable r : Rcd.t.
+    Variable table' : BindingTable.t.
+
+    Hypothesis Hwf : PatternSlice.wf (Rcd.type_of r) pi'.
+    Hypothesis Hres : traverse_single pi' n_from r = Some table'.
+
+    Lemma traverse_single_type :
+      BindingTable.of_type table' (PatternSlice.type_of (Rcd.type_of r) pi').
+    Proof using Hwf Hres.
+      unfold traverse_single in Hres.
+      desf; intros r' HIn.
+      1,3: eapply traverse_adj_single_type; eauto; simpls.
+      eapply traverse_inc_single_type; eauto.
+    Qed.
+  End traverse_single_type.
+
   Definition traverse_impl (pi' : PatternSlice.t) (n_from : Name.t)
              (table : BindingTable.t) : option BindingTable.t :=
     concat_option_map (traverse_single pi' n_from) table.
@@ -1156,6 +1203,53 @@ Section translate.
       now rewrite Htype.
     Qed.
   End traverse_impl_spec.
+
+  Lemma type_of_concat_option ty
+    (tables : list (option BindingTable.t))
+    (table' : BindingTable.t)
+    (Hres : concat_option tables = Some table')
+    (Htype : forall table, In (Some table) tables ->
+              BindingTable.of_type table ty) :
+      BindingTable.of_type table' ty.
+  Proof.
+    intros r' HIn.
+    erewrite in_concat_option_iff in HIn; eauto 1; desc.
+    rewrite Htype; eauto 1.
+  Qed.
+
+  Lemma type_of_concat_option_map {A} ty
+    (xs : list A) (f : A -> option BindingTable.t)
+    (table' : BindingTable.t)
+    (Hres : concat_option_map f xs = Some table')
+    (Htype : forall x table, In x xs -> f x = Some table ->
+              BindingTable.of_type table ty) :
+      BindingTable.of_type table' ty.
+  Proof.
+    intros r' HIn.
+    erewrite in_concat_option_map_iff in HIn; eauto 1; desc.
+    erewrite Htype; eauto 1.
+  Qed.
+
+  Section traverse_impl_type.
+    Variable pi' : PatternSlice.t.
+    Variable n_from : Name.t.
+    Variable table table' : BindingTable.t.
+    Variable ty : Rcd.T.
+
+    Hypothesis Htype : BindingTable.of_type table ty.
+    Hypothesis Hwf : PatternSlice.wf ty pi'.
+    Hypothesis Hres : traverse_impl pi' n_from table = Some table'.
+
+    Lemma traverse_impl_type :
+      BindingTable.of_type table' (PatternSlice.type_of ty pi').
+    Proof using Hwf Hres Htype.
+      unfold traverse_impl in Hres.
+      eapply type_of_concat_option_map; eauto 1.
+      ins.
+      rewrite <- Htype in * by eauto 1.
+      eapply traverse_single_type; eauto 1.
+    Qed.
+  End traverse_impl_type.
 End translate.
 
 Definition traverse (pi' : PatternSlice.t) (n_from : Name.t)
@@ -1168,11 +1262,12 @@ Theorem traverse_wf : forall G table ty slice n_from,
       exists table', traverse slice n_from G table = Some table'.
 Admitted.
 
-Theorem traverse_type : forall G table table' ty slice n_from,
-  traverse slice n_from G table = Some table' ->
-    BindingTable.of_type table ty ->
-      BindingTable.of_type table' (PatternSlice.type_of ty slice).
-Admitted.
+Theorem traverse_type G table table' ty slice n_from
+  (Hres : traverse slice n_from G table = Some table')
+  (Htype : BindingTable.of_type table ty)
+  (Hwf : PatternSlice.wf ty slice) :
+    BindingTable.of_type table' (PatternSlice.type_of ty slice).
+Proof. eauto using traverse_impl_type. Qed.
 
 Theorem traverse_spec G table table' path r r' slice n_from
   (Hwf : PropertyGraph.wf G)

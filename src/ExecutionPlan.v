@@ -136,7 +136,7 @@ Module ExecutionPlan.
 
       Axiom traverse_type : forall slice n_from,
         traverse slice n_from graph table = Some table' ->
-          BindingTable.of_type table ty ->
+          BindingTable.of_type table ty -> PatternSlice.wf ty slice ->
             BindingTable.of_type table' (PatternSlice.type_of ty slice).
 
       (** scan_vertices specification *)
@@ -298,7 +298,8 @@ Module ExecutionPlan.
     End eval.
 
     Theorem eval_type_of plan graph table'
-                         (Heval : eval graph plan = Some table') :
+                         (Heval : eval graph plan = Some table')
+                         (Hwf : wf plan) :
         BindingTable.of_type table' (type_of plan).
     Proof using.
       generalize dependent table'.
@@ -306,7 +307,7 @@ Module ExecutionPlan.
       { apply scan_vertices_type with graph. assumption. }
       all: destruct (eval graph plan); try discriminate.
 
-      2: destruct mode.
+      all: try destruct mode; desc.
       all: eauto with type_axioms.
     Qed.
 

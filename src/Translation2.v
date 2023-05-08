@@ -137,7 +137,8 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
   Proof using.
     unfold eval_match_clause in Hres.
     apply eval_type_of in Hres.
-    now rewrite translate_pattern_type in Hres.
+    { now rewrite translate_pattern_type in Hres. }
+    auto using translate_pattern_wf.
   Qed.
 
   Lemma eval_translate_pattern'_spec graph path pi table' r'
@@ -215,7 +216,8 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
       { eauto using PatternSlice.split_wf_pattern. }
       eexists (PathSlice.append _ _).
       eapply PathSlice.matches_split; eauto. }
-    { eauto using eval_type_of. }
+    { eauto using eval_type_of, translate_pattern'_wf,
+        PatternSlice.split_wf_pattern. }
     erewrite translate_pattern'_type.
     { eauto using PatternSlice.split_wf_slice. }
     eauto using PatternSlice.split_wf_pattern.
