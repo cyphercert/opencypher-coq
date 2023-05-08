@@ -106,6 +106,17 @@ Module PatternSlice.
     now rewrite type_of_wf' by auto.
   Qed.
 
+  Theorem type_of_wf_Some rT pi n ty
+    (Hwf : wf rT pi)
+    (Htype : type_of rT pi n = Some ty) :
+      rT n = Some ty \/ rT n = None.
+  Proof.
+    inv Hwf; simpls. { now left. }
+    rewrite type_of_wf' in * by assumption.
+    unfold_update_with_mode.
+    desf_unfold_pat.
+  Qed.
+
   Fixpoint append (pi : Pattern.t) (pi' : t) : Pattern.t :=
     match pi' with
     | empty => pi
@@ -471,14 +482,14 @@ Module PathSlice.
     end.
 
   Section matches.
-    Variable g : PropertyGraph.t.
+    Variable G : PropertyGraph.t.
     Variable r : Rcd.t.
-    Variable svname : Name.t.
+    Variable n_from : Name.t.
 
     Definition last (p : t) : vertex :=
       match p with
       | empty =>
-        match r svname with
+        match r n_from with
         | Some (Value.GVertex v) => v
         | _ => 0
         end
@@ -486,13 +497,13 @@ Module PathSlice.
       end.
 
     Inductive matches : Rcd.t -> PathSlice.t -> PatternSlice.t -> Prop :=
-    | matches_empty (Hsvname : exists v, r svname = Some (Value.GVertex v)) :
+    | matches_empty (Hfrom : exists v, r n_from = Some (Value.GVertex v)) :
         matches r PathSlice.empty PatternSlice.empty
     | matches_hop r' p pi v e pe pv
-                  (Hpv : Path.matches_pvertex g v pv)
-                  (Hpe : Path.matches_pedge g e pe)
+                  (Hpv : Path.matches_pvertex G v pv)
+                  (Hpe : Path.matches_pedge G e pe)
                   (Hpi : matches r' p pi)
-                  (Hdir : Path.matches_direction g (last p) v e (Pattern.edir pe))
+                  (Hdir : Path.matches_direction G (last p) v e (Pattern.edir pe))
                   (Hprev : r' (Pattern.vname pv) = None \/
                           r' (Pattern.vname pv) = Some (Value.GVertex v)) :
         matches ((Pattern.vname pv, Pattern.ename pe) |-[Mixed]->
@@ -501,15 +512,35 @@ Module PathSlice.
     .
   End matches.
 
-  Lemma matches_svname g r r' svname p pi
-    (Hmatch : matches g r svname r' p pi) :
-      exists v, r svname = Some (Value.GVertex v).
+  Lemma matches_n_from G r r' n_from p pi
+    (Hmatch : matches G r n_from r' p pi) :
+      exists v, r n_from = Some (Value.GVertex v).
   Proof using. induction Hmatch; eauto. Qed.
+
+  Lemma matches_n_from_In G r r' n_from p pi pe pv v
+    (Hwf_G : PropertyGraph.wf G)
+    (Hmatch : matches G r n_from r' p (PatternSlice.hop pi pe pv))
+    (Hfrom : r n_from = Some (Value.GVertex v)) :
+      In v (vertices G).
+  Proof.
+    remember (PatternSlice.hop pi pe pv) as pi'.
+    gen_dep pi pe pv.
+    induction Hmatch; ins; eauto.
+    injection Heqpi'; clear Heqpi'; ins; subst.
+    destruct pi0.
+    { inv Hmatch. simpls. rewrite Hfrom in Hdir.
+      unfold Path.matches_direction in Hdir.
+      rewrite e_from_to in Hdir.
+      destruct Hpe.
+      desf; desf.
+      all: now (apply wf_e_from_In || apply wf_e_to_In). }
+    now eapply IHHmatch.
+  Qed.
     
-  Theorem matches_append g r r' p p' pi pi'
-    (Hmatch : Path.matches Mixed g r p pi)
-    (Hmatch' : PathSlice.matches g r (Pattern.vname (Pattern.last pi)) r' p' pi') :
-      Path.matches Mixed g r' (PathSlice.append p p') (PatternSlice.append pi pi').
+  Theorem matches_append G r r' p p' pi pi'
+    (Hmatch : Path.matches Mixed G r p pi)
+    (Hmatch' : PathSlice.matches G r (Pattern.vname (Pattern.last pi)) r' p' pi') :
+      Path.matches Mixed G r' (PathSlice.append p p') (PatternSlice.append pi pi').
   Proof using.
     induction Hmatch'.
     { assumption. }
@@ -522,13 +553,13 @@ Module PathSlice.
     all: erewrite Path.matches_last; eauto.
   Qed.
 
-  Theorem matches_append_inv g r' p0 pi pi'
+  Theorem matches_append_inv G r' p0 pi pi'
     (Htype : PatternT.type_of Mixed pi (Pattern.vname (Pattern.last pi)) =
               Some Value.GVertexT)
-    (Hmatch : Path.matches Mixed g r' p0 (PatternSlice.append pi pi')) :
+    (Hmatch : Path.matches Mixed G r' p0 (PatternSlice.append pi pi')) :
       exists p p' r, p0 = PathSlice.append p p' /\
-        Path.matches Mixed g r p pi /\
-        PathSlice.matches g r (Pattern.vname (Pattern.last pi)) r' p' pi'.
+        Path.matches Mixed G r p pi /\
+        PathSlice.matches G r (Pattern.vname (Pattern.last pi)) r' p' pi'.
   Proof.
     gen_dep r' p0.
     induction pi'; ins.
@@ -547,7 +578,7 @@ Module PathSlice.
 
     assert (exists sv, r0 (Pattern.vname (Pattern.last pi)) =
               Some (Value.GVertex sv)) as [sv ?]
-      by (eauto using matches_svname).
+      by (eauto using matches_n_from).
     assert (r0 (Pattern.vname (Pattern.last pi)) =
               Some (Value.GVertex (Path.last p0))).
       by (erewrite Path.matches_last; eauto).
@@ -555,30 +586,30 @@ Module PathSlice.
     unfold last; desf.
   Qed.
 
-  Theorem matches_split g r r' p p' pi pi0 pi'
+  Theorem matches_split G r r' p p' pi pi0 pi'
     (Hsplit : PatternSlice.split pi = (pi0, pi'))
-    (Hmatch : Path.matches Mixed g r p pi0)
-    (Hmatch' : PathSlice.matches g r (Pattern.vname (Pattern.last pi0)) r' p' pi') :
-      Path.matches Mixed g r' (append p p') pi.
+    (Hmatch : Path.matches Mixed G r p pi0)
+    (Hmatch' : PathSlice.matches G r (Pattern.vname (Pattern.last pi0)) r' p' pi') :
+      Path.matches Mixed G r' (append p p') pi.
   Proof using.
     erewrite -> PatternSlice.split_append; eauto.
     eapply matches_append; eauto.
   Qed.
 
-  Theorem matches_split_inv g r' p pi pi0 pi'
+  Theorem matches_split_inv G r' p pi pi0 pi'
     (Hsplit : PatternSlice.split pi = (pi0, pi'))
-    (Hmatch : Path.matches Mixed g r' p pi) :
+    (Hmatch : Path.matches Mixed G r' p pi) :
       exists p0 p' r, p = append p0 p' /\
-        Path.matches Mixed g r p0 pi0 /\
-        PathSlice.matches g r (Pattern.vname (Pattern.last pi0)) r' p' pi'.
+        Path.matches Mixed G r p0 pi0 /\
+        PathSlice.matches G r (Pattern.vname (Pattern.last pi0)) r' p' pi'.
   Proof using.
     eapply matches_append_inv; eauto.
     { eauto using PatternSlice.split_type_of_last. }
     erewrite <- PatternSlice.split_append; eauto.
   Qed.
 
-  Theorem matches_type_of g r r' p' pi' svname
-    (Hmatch' : PathSlice.matches g r svname r' p' pi') :
+  Theorem matches_type_of G r r' p' pi' n_from
+    (Hmatch' : PathSlice.matches G r n_from r' p' pi') :
       Rcd.type_of r' = PatternSlice.type_of (Rcd.type_of r) pi'.
   Proof using.
     induction Hmatch'; auto.
@@ -587,20 +618,20 @@ Module PathSlice.
     all: now repeat f_equal.
   Qed.
 
-  Theorem matches_last_In g r r' p' pi' svname v
-    (Hprev : r svname = Some (Value.GVertex v))
-    (HIn : In v (vertices g))
-    (Hmatch' : PathSlice.matches g r svname r' p' pi') :
-      In (PathSlice.last r svname p') (vertices g).
+  Theorem matches_last_In G r r' p' pi' n_from v
+    (Hprev : r n_from = Some (Value.GVertex v))
+    (HIn : In v (vertices G))
+    (Hmatch' : PathSlice.matches G r n_from r' p' pi') :
+      In (PathSlice.last r n_from p') (vertices G).
   Proof.
     destruct Hmatch'; simpls.
     { desf. }
     inv Hpv.
   Qed.
   
-  Theorem matches_wf'_eq g r r' p' pi' svname
+  Theorem matches_wf'_eq G r r' p' pi' n_from
     (Hwf' : PatternSlice.wf' (Rcd.type_of r) pi')
-    (Hmatch' : PathSlice.matches g r svname r' p' pi') :
+    (Hmatch' : PathSlice.matches G r n_from r' p' pi') :
       r = r'.
   Proof using.
     induction Hmatch'; auto.

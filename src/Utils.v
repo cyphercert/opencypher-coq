@@ -150,7 +150,7 @@ Fixpoint fold_option {A : Type} (xs : list (option A)) : option (list A) :=
   | x :: xs => x >>= fun x' => fold_option xs >>= fun xs' => Some (x' :: xs')
   end.
 
-Lemma fold_option_some {A : Type} (xs : list (option A))
+Lemma fold_option_some (A : Type) (xs : list (option A))
                        (Hsome : forall a, In a xs -> exists a', a = Some a') :
   exists xs', fold_option xs = Some xs'.
 Proof using.
@@ -261,6 +261,15 @@ Ltac apply_concat_option_some_inv_cons :=
 Theorem concat_option_nil (A : Type) : @concat_option A [] = Some [].
 Proof. reflexivity. Qed.
 
+Theorem concat_option_some (A : Type) (xs : list (option (list A)))
+                           (Hsome : forall x, In x xs -> exists x', x = Some x') :
+  exists xs', concat_option xs = Some xs'.
+Proof.
+  unfold concat_option.
+  edestruct fold_option_some as [? Hfold]; eauto.
+  rewrite Hfold. simpl. eauto.
+Qed.
+
 Definition concat_option_map {A B : Type}
   (f : A -> option (list B))
   (xs : list A) : option (list B) :=
@@ -288,6 +297,18 @@ Proof.
   unfold concat_option_map in Hres.
   eapply concat_option_some_inv; eauto.
   now apply in_map.
+Qed.
+
+Theorem concat_option_map_some (A B : Type)
+  (f : A -> option (list B)) (xs : list A)
+  (Hsome : forall x, In x xs -> exists y, f x = Some y) :
+    exists xs', concat_option_map f xs = Some xs'.
+Proof.
+  unfold concat_option_map.
+  eapply concat_option_some; eauto.
+  intros ? HIn.
+  rewrite in_map_iff in HIn. desf.
+  now apply Hsome.
 Qed.
 
 Section filter_map.

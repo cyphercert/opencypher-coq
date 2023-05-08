@@ -181,15 +181,77 @@ Module Rcd.
     exists e, r k = Some (Value.GEdge e).
   Proof using. solve_type_of_T Value.type_of_GEdgeT. Qed.
 
-  Lemma type_of_None r k (Htype : type_of r k = None) :
-    r k = None.
+  Ltac apply_type_of_ValueT :=
+    match goal with
+    | [ H : type_of ?r _ = Some Value.UnknownT     |- _ ] =>
+      apply Rcd.type_of_UnknownT in H
+    | [ H : type_of ?r _ = Some (Value.GVertexT _) |- _ ] =>
+      apply Rcd.type_of_GVertexT in H
+    | [ H : type_of ?r _ = Some (Value.GEdgeT _)   |- _ ] =>
+      apply Rcd.type_of_GEdgeT   in H
+    | [ H : type_of ?r _ = Some (Value.Int _)      |- _ ] =>
+      apply Rcd.type_of_IntT     in H
+    | [ H : type_of ?r _ = Some (Value.Bool _)     |- _ ] =>
+      apply Rcd.type_of_BoolT    in H
+    | [ H : type_of ?r _ = Some (Value.Str _)      |- _ ] =>
+      apply Rcd.type_of_StrT     in H
+    end.
+
+  Lemma type_of_None r k :
+    type_of r k = None <-> r k = None.
   Proof using.
-    unfold type_of in Htype.
-    destruct (r k); now try discriminate.
+    unfold type_of. destruct (r k); now try discriminate.
   Qed.
 
+  Lemma type_of_Unknown r n
+    (H : r n = Some Value.Unknown) : type_of r n  = Some Value.UnknownT.
+  Proof using. unfold type_of. now rewrite H. Qed.
+  
+  Lemma type_of_GVertex r n v
+    (H : r n = Some (Value.GVertex v)) : type_of r n  = Some Value.GVertexT.
+  Proof using. unfold type_of. now rewrite H. Qed.
+
+  Lemma type_of_GEdge r n e
+    (H : r n = Some (Value.GEdge e)) : type_of r n  = Some Value.GEdgeT.
+  Proof using. unfold type_of. now rewrite H. Qed.
+  
+  Lemma type_of_Bool r n b
+    (H : r n = Some (Value.Bool b)) : type_of r n  = Some Value.BoolT.
+  Proof using. unfold type_of. now rewrite H. Qed.
+
+  Lemma type_of_Int r n i
+    (H : r n = Some (Value.Int i)) : type_of r n  = Some Value.IntT.
+  Proof using. unfold type_of. now rewrite H. Qed.
+
+  Lemma type_of_Str r n s
+    (H : r n = Some (Value.Str s)) : type_of r n  = Some Value.StrT.
+  Proof using. unfold type_of. now rewrite H. Qed.
+
+  Ltac apply_type_of_Value :=
+    match goal with
+    | [ H : ?r _ = Some Value.Unknown     |- _ ] =>
+      apply Rcd.type_of_Unknown in H
+    | [ H : ?r _ = Some (Value.GVertex _) |- _ ] =>
+      apply Rcd.type_of_GVertex in H
+    | [ H : ?r _ = Some (Value.GEdge _)   |- _ ] =>
+      apply Rcd.type_of_GEdge   in H
+    | [ H : ?r _ = Some (Value.GEdge _)   |- _ ] =>
+      apply Rcd.type_of_GEdge   in H
+    | [ H : ?r _ = Some (Value.Int _)     |- _ ] =>
+      apply Rcd.type_of_Int     in H
+    | [ H : ?r _ = Some (Value.Bool _)    |- _ ] =>
+      apply Rcd.type_of_Bool    in H
+    | [ H : ?r _ = Some (Value.Str _)     |- _ ] =>
+      apply Rcd.type_of_Str     in H
+    end.
+
   #[global]
-  Hint Rewrite type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
+  Hint Resolve type_of_Unknown type_of_GVertex type_of_GEdge type_of_Int type_of_Bool type_of_Str
+    type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
+
+  #[global]
+  Hint Rewrite type_of_Unknown type_of_GVertex type_of_GEdge type_of_Int type_of_Bool type_of_Str
+    type_of_BoolT type_of_IntT type_of_StrT type_of_GVertexT type_of_GEdgeT type_of_None : type_of_db.
 
   Lemma in_dom_iff k r :
     PartialMap.in_dom k r <-> PartialMap.in_dom k (type_of r).
