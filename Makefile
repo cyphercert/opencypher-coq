@@ -1,7 +1,7 @@
 COQMODULE    := OpencypherCoq
 COQTHEORIES  := src/*.v
 
-.PHONY: all theories fmt lint docs clean tounicode
+.PHONY: all theories fmt lint docs tags clean tounicode
 
 all: build
 
@@ -31,6 +31,9 @@ clean:
 	$(MAKE) -f Makefile.coq clean
 	rm -f src/.*.aux
 	rm -f _CoqProject Makefile.coq Makefile.coq.conf
+
+tags:
+	ctags --options=coq.ctags -R -o .tags `echo $(COQTHEORIES)`
 
 docs: Makefile.coq
 	$(MAKE) -f Makefile.coq coqdoc
