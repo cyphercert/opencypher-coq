@@ -63,6 +63,9 @@ Module ExecutionPlan.
     (* filter_by_label (mode : FilterMode.t) (n : Name.t) (l : label) : step1 *)
     Parameter filter_by_label : FilterMode.t -> Name.t -> label -> step1.
 
+    (* filter_by_property (mode : FilterMode.t) (n : Name.t) (key : Property.name) (value : Property.t) : step1 *)
+    Parameter filter_by_property : FilterMode.t -> Name.t -> Property.name -> Property.t -> step1.
+
     (* expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) : step1 *)
     Parameter expand : ExpandMode.t -> Name.t -> Name.t -> Name.t -> Pattern.direction -> step1.
 
@@ -94,6 +97,16 @@ Module ExecutionPlan.
           ty n = Some Value.GEdgeT ->
             exists table', filter_by_label Edges n l graph table = Some table'.
 
+      Axiom filter_vertices_by_property_wf : forall n k val,
+        PropertyGraph.wf graph -> BindingTable.of_type table ty ->
+          ty n = Some Value.GVertexT ->
+            exists table', filter_by_property Vertices n k val graph table = Some table'.
+
+      Axiom filter_edges_by_property_wf : forall n k val,
+        PropertyGraph.wf graph -> BindingTable.of_type table ty ->
+          ty n = Some Value.GEdgeT ->
+            exists table', filter_by_property Edges n k val graph table = Some table'.
+
       Axiom expand_all_wf : forall n_from n_edge n_to d,
         PropertyGraph.wf graph -> BindingTable.of_type table ty ->
           ty n_from = Some Value.GVertexT -> ty n_edge = None -> ty n_to = None ->
@@ -120,6 +133,11 @@ Module ExecutionPlan.
       
       Axiom filter_by_label_type : forall mode n l,
         filter_by_label mode n l graph table = Some table' ->
+          BindingTable.of_type table ty ->
+            BindingTable.of_type table' ty.
+
+      Axiom filter_by_property_type : forall mode n k val,
+        filter_by_property mode n k val graph table = Some table' ->
           BindingTable.of_type table ty ->
             BindingTable.of_type table' ty.
 
@@ -173,6 +191,30 @@ Module ExecutionPlan.
           In r' table' -> In r' table /\
             exists e, r' n = Some (Value.GEdge e) /\ elabel graph e = l.
 
+      (** filter_by_property specification *)
+
+      Axiom filter_vertices_by_property_spec : forall n k val v r,
+        filter_by_property Vertices n k val graph table = Some table' ->
+          r n = Some (Value.GVertex v) -> get_vprop graph k v = Some val ->
+            In r table -> In r table'.
+      
+      Axiom filter_vertices_by_property_spec' : forall n k val r',
+        filter_by_property Vertices n k val graph table = Some table' ->
+           In r' table' -> In r' table /\
+            exists v, r' n = Some (Value.GVertex v) /\
+              get_vprop graph k v = Some val.
+
+      Axiom filter_edges_by_property_spec : forall n k val e r,
+        filter_by_property Edges n k val graph table = Some table' ->
+          r n = Some (Value.GEdge e) -> get_eprop graph k e = Some val ->
+            In r table -> In r table'.
+
+      Axiom filter_edges_by_property_spec' : forall n k val r',
+        filter_by_property Edges n k val graph table = Some table' ->
+          In r' table' -> In r' table /\
+            exists e, r' n = Some (Value.GEdge e) /\
+              get_eprop graph k e = Some val.
+
       (** expand specification *)
 
       Axiom expand_spec : forall r r' mode n_from n_edge n_to d,
@@ -214,6 +256,7 @@ Module ExecutionPlan.
   Inductive t :=
   | ScanVertices (n : Name.t)
   | FilterByLabel (mode : FilterMode.t) (n : Name.t) (l : label) (plan : t) 
+  | FilterByProperty (mode : FilterMode.t) (n : Name.t) (k : Property.name) (val : Property.t) (plan : t) 
   | Expand (mode : ExpandMode.t) (n_from n_edge n_to : Name.t) (d : Pattern.direction) (plan : t)
   | ReturnAll (plan : t)
   | Traverse (slice : PatternSlice.t) (n_from : Name.t) (plan : t)
@@ -223,6 +266,7 @@ Module ExecutionPlan.
     match plan with
     | ScanVertices n => n |-> Value.GVertexT
     | FilterByLabel mode n l plan => type_of plan
+    | FilterByProperty mode n k val plan => type_of plan
     | Expand mode n_from n_edge n_to d plan => n_to |-> Value.GVertexT; n_edge |-> Value.GEdgeT; type_of plan
     | ReturnAll plan => Rcd.explicit_projT (type_of plan)
     | Traverse slice n_from plan => PatternSlice.type_of (type_of plan) slice
@@ -247,6 +291,12 @@ Module ExecutionPlan.
       << Htype : type_of plan n = Some Value.GVertexT >> /\
       << Hwf : wf plan >>
     | FilterByLabel Edges n l plan =>
+      << Htype : type_of plan n = Some Value.GEdgeT >> /\
+      << Hwf : wf plan >>
+    | FilterByProperty Vertices n k val plan =>
+      << Htype : type_of plan n = Some Value.GVertexT >> /\
+      << Hwf : wf plan >>
+    | FilterByProperty Edges n k val plan =>
       << Htype : type_of plan n = Some Value.GEdgeT >> /\
       << Hwf : wf plan >>
     | Expand All n_from n_edge n_to d plan =>
@@ -275,12 +325,15 @@ Module ExecutionPlan.
     Import S.
 
     #[local]
-    Hint Resolve scan_vertices_type filter_by_label_type
+    Hint Resolve scan_vertices_type filter_by_label_type filter_by_property_type
                 expand_type return_all_type traverse_type : type_axioms.
 
     #[local]
-    Hint Resolve scan_vertices_wf filter_vertices_by_label_wf filter_edges_by_label_wf
-                 expand_all_wf expand_into_wf return_all_wf traverse_wf : wf_axioms.
+    Hint Resolve scan_vertices_wf
+                 filter_vertices_by_label_wf filter_edges_by_label_wf
+                 filter_vertices_by_property_wf filter_edges_by_property_wf
+                 expand_all_wf expand_into_wf
+                 return_all_wf traverse_wf : wf_axioms.
 
     Section eval.
       Variable graph : PropertyGraph.t.
@@ -289,6 +342,8 @@ Module ExecutionPlan.
         | ScanVertices n => scan_vertices n graph
         | FilterByLabel mode n l plan =>
           eval plan >>= filter_by_label mode n l graph
+        | FilterByProperty mode n k val plan =>
+          eval plan >>= filter_by_property mode n k val graph
         | Expand mode n_from n_edge n_to d plan => 
           eval plan >>= expand mode n_from n_edge n_to d graph
         | ReturnAll plan => eval plan >>= return_all graph
