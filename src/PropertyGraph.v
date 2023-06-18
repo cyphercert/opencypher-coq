@@ -14,6 +14,22 @@ Module Property.
   | p_string (s : string)
   | p_empty
   .
+
+  Definition eq_property_dec (a b : t) : {a = b} + {a <> b}.
+    refine (
+      match a, b with
+      | p_int a,          p_int b          => if a == b then left _ else right _
+      | p_string a,       p_string b       => if a == b then left _ else right _
+      | _,                _                => right _
+      end
+    ).
+    all: try discriminate. (* Solve goals with different constructors *)
+    all: try now f_equal.  (* Solve goals when underlying values are equal *)
+    all: injection as H; contradiction. (* Solve goals when underlying values are not equal *)
+  Defined.
+
+  #[global]
+  Program Instance property_eqdec : EqDec t eq := eq_property_dec.
   
   Definition name := string.
 
