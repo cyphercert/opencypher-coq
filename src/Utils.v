@@ -38,6 +38,18 @@ Program Instance string_eqdec : EqDec string eq := String.string_dec.
 #[global]
 Program Instance nat_eqdec : EqDec nat eq := PeanoNat.Nat.eq_dec.
 
+#[global]
+Instance option_eqdec {A : Type} `{eq_dec : EqDec A eq} : EqDec (option A) eq.
+Proof using.
+  unfold EqDec, equiv, complement in *.
+  intros [x|] [y|].
+  all: try now left.
+  all: try now right.
+  all: specialize (eq_dec x y); destruct eq_dec.
+  { subst. now left. }
+  right. now inversion 1.
+Qed.
+
 Lemma equiv_decb_true : forall {A : Type} `{EqDec A eq} (a b : A),
   a = b -> a ==b b = true.
 Proof using.
@@ -377,6 +389,8 @@ Ltac normalize_bool :=
   | [ H : _ <> false |- _ ] => rewrite -> Bool.not_false_iff_true in H
   | [ H : (In_decb _ _) = true |- _ ] => rewrite -> In_decb_true_iff in H
   | [ H : (In_decb _ _) <> true |- _ ] => rewrite -> In_decb_true_iff in H
+  | [ H : (_ ==b _) = true |- _ ] => rewrite -> equiv_decb_true_iff in H
+  | [ H : (_ ==b _) <> true |- _ ] => rewrite -> equiv_decb_true_iff in H
   end.
 
 Ltac inj_subst :=
