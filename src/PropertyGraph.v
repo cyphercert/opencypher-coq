@@ -70,7 +70,7 @@ Module PropertyGraph.
     | (k', v) :: props => if k ==b k' then Some v else get_prop k props
     | nil => None
     end.
-
+  
   Definition get_vprop (g : PropertyGraph.t) (k : Property.name) (v : vertex) : option Property.t :=
     get_prop k (vprops g v).
 
@@ -135,6 +135,16 @@ Module PropertyGraph.
     edestruct out_in_between_edges_In as [? [? ?]]; eassumption.
   Qed.
 
+  Definition list_is_map {A B} (xs : list (A * B)) :=
+    forall k val1 val2, In (k, val1) xs -> In (k, val2) xs -> val1 = val2.
+
+  Theorem list_is_map_tail (A B : Type) (x : A * B) (xs : list (A * B))
+    (H : list_is_map (x :: xs)) :
+      list_is_map xs.
+  Proof.
+    unfold list_is_map in *; ins; eauto.
+  Qed.
+
   Record wf (g : t) := mk_wf {
     vertices_NoDup : NoDup (vertices g);
     edges_NoDup : NoDup (edges g);
@@ -146,7 +156,53 @@ Module PropertyGraph.
 
     vprops_In : forall v, vprops g v <> nil -> In v (vertices g);
     eprops_In : forall e, eprops g e <> nil -> In e (edges g);
+
+    vprops_unique: forall v, list_is_map (vprops g v);
+    eprops_unique: forall e, list_is_map (eprops g e);
   }.
+
+  Lemma wf_get_prop_In props k val
+    (Hval : get_prop k props = Some val) :
+      In (k, val) props.
+  Proof.
+    induction props as [| [k' val'] props]; simpls.
+    destruct (equiv_decbP k k'); subst.
+    { left. desf. }
+    right. now apply IHprops.
+  Qed.
+
+  Lemma wf_In_get_prop props k val
+    (Hunique : list_is_map props)
+    (HIn : In (k, val) props) :
+      get_prop k props = Some val.
+  Proof.
+    induction props as [| [k' val'] props]; simpls.
+    destruct HIn as [HIn | HIn], (equiv_decbP k k'); desf.
+    { unfold list_is_map in Hunique.
+      f_equal. eapply Hunique; [ now left | now right ]. }
+    eauto using list_is_map_tail.
+  Qed.
+
+  Theorem wf_get_prop_In_iff props k val
+    (Hunique : list_is_map props) :
+      get_prop k props = Some val <-> In (k, val) props.
+  Proof.
+    split; auto using wf_get_prop_In, wf_In_get_prop.
+  Qed.
+
+  Corollary wf_get_vprop_In_iff g v k val (Hwf : wf g) :
+    get_vprop g k v = Some val <-> In (k, val) (vprops g v).
+  Proof.
+    unfold get_vprop. destruct Hwf.
+    now apply wf_get_prop_In_iff.
+  Qed.
+    
+  Corollary wf_get_eprop_In_iff g e k val (Hwf : wf g) :
+    get_eprop g k e = Some val <-> In (k, val) (eprops g e).
+  Proof.
+    unfold get_eprop. destruct Hwf.
+    now apply wf_get_prop_In_iff.
+  Qed.
 
   Lemma wf_e_from_In g e
     (Hwf : wf g)

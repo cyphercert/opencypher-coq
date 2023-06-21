@@ -313,6 +313,7 @@ Module Pattern.
     apply In_dom. now right.
   Qed.
 
+
   Inductive wf : Pattern.t -> Prop :=
   | wf_start pv : wf (start pv)
   | wf_hop pi pe pv (Hwf : wf pi)

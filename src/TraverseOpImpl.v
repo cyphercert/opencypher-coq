@@ -32,6 +32,8 @@ Section translate.
   Definition edges_sup := S (\sup_(e \in E) e).
 
   Definition adj_mat_ty := bmx vertices_sup vertices_sup.
+  Definition eadj_mat_ty := bmx edges_sup edges_sup.
+  Definition inc_mat_ty := bmx vertices_sup edges_sup.
 
   Lemma vertex_ltb_vertices_sub v
     (HIn : In v V) : v < vertices_sup.
@@ -63,40 +65,52 @@ Section translate.
       ord edges_sup :=
     Ord e (edge_ltb_edges_sub e HIn).
 
-  Definition adj_matrix_of_edge (l : option label) (e : edge) : adj_mat_ty :=
+  Definition adj_matrix_of_edge (l : option label) (props : list (Property.name * Property.t)) (e : edge) : adj_mat_ty :=
     fun i j => (e_from G e ==b i) &&
                (e_to G e ==b j) &&
                match l with
                | Some l => (elabel G e ==b l)
                | None => true
-               end.
+               end &&
+               forallb (fun '(k, val) => get_eprop G k e ==b Some val) props.
 
-  Lemma adj_matrix_of_edge_spec e l i j :
-    adj_matrix_of_edge l e i j <->
+  Lemma adj_matrix_of_edge_spec e l props i j :
+    adj_matrix_of_edge l props e i j <->
       Path.matches_direction G i j e Pattern.OUT /\
       match l with
       | Some l => elabel G e = l
       | None => True
-      end.
+      end /\
+      Forall (fun '(k, val) => get_eprop G k e = Some val) props.
   Proof using.
-    unfold adj_matrix_of_edge.
-    unfold is_true; desf.
-    all: repeat rewrite Bool.andb_true_iff.
+    unfold adj_matrix_of_edge, is_true.
+    repeat rewrite Bool.andb_true_iff.
+    unfold Path.matches_direction.
+    rewrite e_from_to, forallb_forall, Forall_forall.
+    assert (Hlem : forall x,
+      (let '(k, val) := x in get_eprop G k e ==b Some val) = true <->
+        (let '(k, val) := x in get_eprop G k e = Some val)).
+    { intros []. now rewrite equiv_decb_true_iff. }
+    setoid_rewrite Hlem.
+    destruct l.
     all: repeat rewrite equiv_decb_true_iff.
-    all: simpl; unfold e_from, e_to; destruct (ends G e); simpl.
-    all: split; ins; desf.
+    all: intuition; desf.
   Qed.
 
-  Definition adj_matrix (l : option label) : adj_mat_ty :=
-    (\sum_(e \in E) (adj_matrix_of_edge l e)).
+  Definition adj_matrix
+    (l : option label)
+    (props : list (Property.name * Property.t)) 
+      : adj_mat_ty :=
+        (\sum_(e \in E) (adj_matrix_of_edge l props e)).
 
-  Lemma adj_matrix_spec_OUT l i j :
-    adj_matrix l i j <-> exists e, In e E /\
+  Lemma adj_matrix_spec_OUT l props i j :
+    adj_matrix l props i j <-> exists e, In e E /\
       Path.matches_direction G i j e Pattern.OUT /\
       match l with
       | Some l => elabel G e = l
       | None => True
-      end.
+      end /\
+      Forall (fun '(k, val) => get_eprop G k e = Some val) props.
   Proof using.
     unfold adj_matrix.
     setoid_rewrite <- adj_matrix_of_edge_spec.
@@ -104,32 +118,34 @@ Section translate.
     now rewrite <- mx_sup.
   Qed.
 
-  Lemma adj_matrix_spec_IN l i j :
-    adj_matrix l j i <-> exists e, In e E /\
+  Lemma adj_matrix_spec_IN l props i j :
+    adj_matrix l props j i <-> exists e, In e E /\
       Path.matches_direction G i j e Pattern.IN /\
       match l with
       | Some l => elabel G e = l
       | None => True
-      end.
+      end /\
+      Forall (fun '(k, val) => get_eprop G k e = Some val) props.
   Proof using.
     simpl. apply adj_matrix_spec_OUT.
   Qed.
 
-  Lemma adj_matrix_spec_BOTH l i j :
-    adj_matrix l i j || adj_matrix l j i <->
+  Lemma adj_matrix_spec_BOTH l props i j :
+    adj_matrix l props i j || adj_matrix l props j i <->
       exists e, In e E /\
         Path.matches_direction G i j e Pattern.BOTH /\
         match l with
         | Some l => elabel G e = l
         | None => True
-        end.
+        end /\
+        Forall (fun '(k, val) => get_eprop G k e = Some val) props.
   Proof using.
     unfold is_true.
     rewrite Bool.orb_true_iff.
     change (?b = true) with (is_true b).
     rewrite adj_matrix_spec_OUT.
     rewrite adj_matrix_spec_IN.
-    split; ins; desf; eauto.
+    split; ins; desf; eauto 10.
   Qed.
 
   Definition label_matrix (l : label) : adj_mat_ty :=
@@ -143,6 +159,44 @@ Section translate.
     case eqb_spec; split; ins; desf.
   Qed.
 
+  Definition prop_matrix (k : Property.name) (val : Property.t) : adj_mat_ty :=
+    fun i j => eqb i j && (get_vprop G k (i : vertex) ==b Some val).
+
+  Lemma prop_matrix_spec k val i j :
+    prop_matrix k val i j <-> i = j /\ get_vprop G k i = Some val.
+  Proof.
+    unfold prop_matrix, is_true.
+    rewrite Bool.andb_true_iff, equiv_decb_true_iff.
+    case eqb_spec; split; ins; desf.
+  Qed.
+
+  Fixpoint big_product {n} (xs : list (bmx n n)) : bmx n n :=
+    match xs with
+    | nil => 1
+    | x :: xs => x ⋅ big_product xs
+    end.
+
+  Definition props_matrix (props : list (Property.name * Property.t)) : adj_mat_ty :=
+    big_product (map (fun '(k, val) => prop_matrix k val) props).
+  
+  Lemma props_matrix_spec props i j :
+    props_matrix props i j <-> i = j /\
+      Forall (fun '(k, val) => get_vprop G k i = Some val) props.
+  Proof.
+    unfold props_matrix.
+    gen_dep j i.
+    induction props; simpl; ins.
+    - rewrite Forall_nil_iff.
+      rewrite bmx_one_spec.
+      intuition.
+    - rewrite Forall_cons_iff.
+      rewrite bmx_dot_spec.
+      destruct a.
+      setoid_rewrite IHprops.
+      setoid_rewrite prop_matrix_spec.
+      intuition; desf; eauto.
+  Qed.
+
   Fixpoint translate_slice' (pi' : PatternSlice.t) : adj_mat_ty :=
     match pi' with
     | PatternSlice.empty => 1
@@ -150,19 +204,24 @@ Section translate.
       let mpi' := translate_slice' pi' in
       let mpe :=
         let l := Pattern.elabel pe in
+        let props := Pattern.eprops pe in
           match Pattern.edir pe with
-          | Pattern.OUT => adj_matrix l
-          | Pattern.IN => (adj_matrix l)°
-          | Pattern.BOTH => (adj_matrix l) + (adj_matrix l)°
+          | Pattern.OUT => adj_matrix l props
+          | Pattern.IN => (adj_matrix l props)°
+          | Pattern.BOTH => (adj_matrix l props) + (adj_matrix l props)°
           end
       in
-      let mpv := 
-        let l := Pattern.vlabel pv in
-          match l with
-          | Some l => label_matrix l
-          | None => 1 (* identity matrix *)
-          end
-      in mpi' ⋅ mpe ⋅ mpv
+      let mpv_label := 
+        match Pattern.vlabel pv with
+        | Some l => label_matrix l
+        | None => 1 (* identity matrix *)
+        end
+      in
+      let mpv_props :=
+        props_matrix (Pattern.vprops pv)
+      in
+      let mpv := mpv_label ∩ mpv_props in
+      mpi' ⋅ mpe ⋅ mpv
     end.
 
   Lemma end_In_V e u v
@@ -188,10 +247,16 @@ Section translate.
         << Hvlabel : match Pattern.vlabel pv with
                      | Some l => In l (vlabels G j)
                      | None => True
-                     end >>.
+                     end >> /\
+        << Heprops : Forall (fun '(k, val) => get_eprop G k e = Some val)
+                      (Pattern.eprops pe) >> /\
+        << Hvprops : Forall (fun '(k, val) => get_vprop G k j = Some val)
+                      (Pattern.vprops pv) >>.
   Proof using Hwf_G.
     simpls.
     repeat setoid_rewrite bmx_dot_spec.
+    repeat setoid_rewrite bmx_cap_spec.
+    setoid_rewrite props_matrix_spec.
     destruct (Pattern.edir pe).
     1: setoid_rewrite adj_matrix_spec_OUT.
     2: setoid_rewrite adj_matrix_spec_IN.
@@ -199,7 +264,7 @@ Section translate.
     all: destruct (Pattern.vlabel pv).
     all: try setoid_rewrite label_matrix_spec.
     all: try setoid_rewrite bmx_one_spec.
-    all: split; ins; desf; unnw; eauto 11 using end_In_V.
+    all: split; ins; desf; unnw; eauto 14 using end_In_V.
   Qed.
 
   Theorem translate_slice'_spec' pi' i j r n_from
@@ -315,9 +380,8 @@ Section translate.
     { eapply translate_slice'_spec; eauto. }
     all: desf; auto.
   Qed.
-  Opaque translate_slice.
 
-  Definition inc_mat_ty := bmx vertices_sup edges_sup.
+  Opaque translate_slice.
 
   Definition inc_matrix (l : option label) : inc_mat_ty :=
     fun i j => (e_from G j ==b i) &&
@@ -416,8 +480,8 @@ Section translate.
     all: injection Hdir; ins.
   Qed.
   
-  Definition inc_label_matrix l d : bmx edges_sup edges_sup :=
-    fun e e' => eqb e e' && In_decb l (vlabels G (e_to_dir d e)).
+  Definition inc_label_matrix l d : eadj_mat_ty :=
+    fun e e' => (e ==b e') && In_decb l (vlabels G (e_to_dir d e)).
 
   Lemma inc_label_matrix_spec l (e e' : ord _) d :
     let j := e_to_dir d e in
@@ -425,8 +489,73 @@ Section translate.
         e = e' /\ In l (vlabels G (e_to_dir d e)).
   Proof using.
     unfold inc_label_matrix, is_true.
-    rewrite Bool.andb_true_iff, In_decb_true_iff.
-    case eqb_spec; split; ins; desf.
+    now rewrite Bool.andb_true_iff, In_decb_true_iff, equiv_decb_true_iff.
+  Qed.
+
+  Definition inc_prop_matrix d k val : eadj_mat_ty :=
+    fun e e' => (e ==b e') && (get_vprop G k (e_to_dir d e) ==b Some val).
+
+  Lemma inc_prop_matrix_spec (e e' : ord _) d k val :
+    let j := e_to_dir d e in
+      (inc_prop_matrix d k val) e e' <->
+        e = e' /\ get_vprop G k j = Some val.
+  Proof using.
+    unfold inc_prop_matrix, is_true.
+    rewrite Bool.andb_true_iff.
+    now repeat rewrite equiv_decb_true_iff.
+  Qed.
+
+  Definition inc_props_matrix d props : eadj_mat_ty :=
+    big_product (map (fun '(k, val) => inc_prop_matrix d k val) props).
+
+  Lemma inc_props_matrix_spec (e e' : ord _) d props :
+    let j := e_to_dir d e in
+      (inc_props_matrix d props) e e' <->
+        e = e' /\ Forall (fun '(k, val) => get_vprop G k j = Some val) props.
+  Proof.
+    unfold inc_props_matrix.
+    gen_dep e e'.
+    induction props as [| [k' val'] props]; simpls; ins.
+    - rewrite Forall_nil_iff.
+      rewrite bmx_one_spec.
+      intuition.
+    - rewrite Forall_cons_iff.
+      rewrite bmx_dot_spec.
+      setoid_rewrite IHprops.
+      setoid_rewrite inc_prop_matrix_spec.
+      intuition; desf; eauto.
+  Qed.
+
+  Definition eprop_matrix_inc (k : Property.name) (val : Property.t) : eadj_mat_ty :=
+    fun i j => (i ==b j) && (get_eprop G k (i : edge) ==b Some val).
+
+  Lemma eprop_matrix_inc_spec k val i j :
+    eprop_matrix_inc k val i j <-> i = j /\ get_eprop G k i = Some val.
+  Proof.
+    unfold eprop_matrix_inc, is_true.
+    rewrite Bool.andb_true_iff.
+    now repeat rewrite equiv_decb_true_iff.
+  Qed.
+
+  Definition eprops_matrix_inc (props : list (Property.name * Property.t)) : eadj_mat_ty :=
+    big_product (map (fun '(k, val) => eprop_matrix_inc k val) props).
+
+  Lemma eprops_matrix_inc_spec props i j :
+    eprops_matrix_inc props i j <-> i = j /\
+      Forall (fun '(k, val) => get_eprop G k i = Some val) props.
+  Proof.
+    unfold eprops_matrix_inc.
+    gen_dep j i.
+    induction props; simpl; ins.
+    - rewrite Forall_nil_iff.
+      rewrite bmx_one_spec.
+      intuition.
+    - rewrite Forall_cons_iff.
+      rewrite bmx_dot_spec.
+      destruct a.
+      setoid_rewrite IHprops.
+      setoid_rewrite eprop_matrix_inc_spec.
+      intuition; desf; eauto.
   Qed.
 
   Definition translate_slice_inc (pi' : PatternSlice.t) : inc_mat_ty :=
@@ -434,7 +563,7 @@ Section translate.
     | PatternSlice.empty => 0
     | PatternSlice.hop pi' pe pv =>
       let mpi' := translate_slice' pi' in
-      let mpe :=
+      let mpe_label :=
         let l := Pattern.elabel pe in
           match Pattern.edir pe with
           | Pattern.OUT => inc_matrix l
@@ -442,12 +571,19 @@ Section translate.
           | Pattern.BOTH => 0 (* should not be used *)
           end
       in
-      let mpv := 
+      let mpe_props := eprops_matrix_inc (Pattern.eprops pe) in
+      let mpe := mpe_label ⋅ mpe_props in
+      let mpv_label := 
         match Pattern.vlabel pv with
         | Some l => inc_label_matrix l (Pattern.edir pe)
         | None => 1 (* identity matrix *)
         end
-      in mpi' ⋅ mpe ⋅ mpv
+      in
+      let mpv_props :=
+        inc_props_matrix (Pattern.edir pe) (Pattern.vprops pv)
+      in
+      let mpv := mpv_label ⋅ mpv_props in
+      mpi' ⋅ mpe ⋅ mpv
     end.
 
   Lemma translate_slice_inc_hop_spec pi' pe pv i (e : ord _) :
@@ -467,7 +603,11 @@ Section translate.
           << Hvlabel : match Pattern.vlabel pv with
                        | Some l => In l (vlabels G j)
                        | None => True
-                       end >>.
+                       end >> /\
+        << Heprops : Forall (fun '(k, val) => get_eprop G k e = Some val)
+                      (Pattern.eprops pe) >> /\
+        << Hvprops : Forall (fun '(k, val) => get_vprop G k j = Some val)
+                      (Pattern.vprops pv) >>.
   Proof using.
     simpl.
     repeat setoid_rewrite bmx_dot_spec.
@@ -477,8 +617,10 @@ Section translate.
     all: try setoid_rewrite bmx_one_spec.
     all: try setoid_rewrite label_matrix_spec.
     all: try setoid_rewrite inc_label_matrix_spec.
+    all: try setoid_rewrite eprops_matrix_inc_spec.
+    all: try setoid_rewrite inc_props_matrix_spec.
     all: simpls.
-    all: split; ins; desf; eauto 12.
+    all: split; ins; desf; eauto 15.
   Qed.
 
   Section translate_slice_inc_spec.

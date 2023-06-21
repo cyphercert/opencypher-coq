@@ -474,12 +474,16 @@ Module Path.
         vertex_in_g : In v (PropertyGraph.vertices g);
         matches_vlabel : forall l, Pattern.vlabel pv = Some l ->
           In l (PropertyGraph.vlabels g v);
+        matches_vprops : Forall (fun '(k, val) => get_vprop g k v = Some val)
+                                (Pattern.vprops pv);
       }.
 
     Record matches_pedge (e : edge) (pe : pedge) : Prop := {
         edge_in_g : In e (PropertyGraph.edges g);
         matches_elabel : forall l, Pattern.elabel pe = Some l ->
           PropertyGraph.elabel g e = l;
+        matches_eprops : Forall (fun '(k, val) => get_eprop g k e = Some val)
+                                (Pattern.eprops pe);
       }.
 
     Definition matches_direction (from to : vertex) (e : edge) (d : direction) : Prop :=

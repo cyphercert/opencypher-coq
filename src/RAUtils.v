@@ -330,3 +330,19 @@ Proof using.
   split; ins; desf.
   all: eauto using in_seq.
 Qed.
+
+Lemma bmx_cap_spec n m i j (a : bmx n m) (b : bmx n m) :
+  pw2 cap a b i j <-> a i j /\ b i j.
+Proof.
+  simpls. unfold is_true.
+  now rewrite Bool.andb_true_iff.
+Qed.
+
+#[global]
+Instance ord_decb n : EqDec (ord n) eq.
+Proof.
+  unfold EqDec, equiv. ins.
+  case eqb_spec with (x := x) (y := y).
+  all: ins; auto.
+Qed.
+  
