@@ -78,8 +78,8 @@ Qed.
 Theorem translate_start_wf pv :
   ExecutionPlan.wf (translate_start pv).
 Proof using.
-  unfold translate_start, translate_pvertex.
-  desf; simpl. splits; simpls.
+  unfold translate_start.
+  apply translate_pvertex_wf; simpls.
   apply PartialMap.update_eq.
 Qed.
 
@@ -108,8 +108,9 @@ Qed.
 (* Theorem translate_pattern'_wf_slice  *)
 
 Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
-  Module EvalPlanImpl := EvalPlan S.
+  Module EvalPvertexPedgeImpl := EvalPvertexPedge S.
   Import S.
+  Import EvalPvertexPedgeImpl.
   Import EvalPlanImpl.
 
   Definition eval_match_clause (graph : PropertyGraph.t) (pi : Pattern.t) : option BindingTable.t :=
@@ -118,7 +119,7 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     
   Ltac desf_match_result Hres :=
     unfold eval_match_clause in Hres; simpl in Hres; cbn in Hres;
-    unfold translate_start, translate_pvertex in Hres;
+    unfold translate_start in Hres;
     desf; simpls;
     unfold option_bind in *; desf.
   
@@ -151,12 +152,14 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     gen_dep Hres r' table' path Hwf.
     pattern pi, (translate_pattern' pi).
     apply translate_pattern'_ind; ins.
-    { inv Hmatch.
+    { inv Hmatch. destruct Hpv.
       desf_match_result Hres.
-      1: eapply filter_vertices_by_label_spec; eauto.
+      assert (Hres' := Hres).
+      apply eval_translate_pvertex_reduce in Hres as [table Hres].
+      eapply eval_translate_pvertex_spec in Hres'; eauto.
+      { simpls. eauto using scan_vertices_spec. }
       { apply PartialMap.update_eq. }
-      all: destruct Hpv.
-      all: eauto using scan_vertices_spec. }
+      { desf; auto. } }
     
     desf_match_result Hres.
     eapply PathSlice.matches_split_inv in Hmatch; eauto.
@@ -194,19 +197,19 @@ Module EvalQueryImpl2 (S : ExecutionPlan.Spec) : EvalQuery.Spec.
     pattern pi, (translate_pattern' pi).
     apply translate_pattern'_ind; ins.
     { desf_match_result Hres.
-      all: try match goal with
-      | [H : filter_by_label Vertices _ _ _ _ = _ |- _ ] =>
-        eapply filter_vertices_by_label_spec' in H; try eassumption; desf
-      end.
-      all: match goal with
-          | [H : scan_vertices _ _ = _ |- _ ] =>
-              eapply scan_vertices_spec' in H; try eassumption; desf
-          end.
-      all: eexists (Path.start _).
-      all: change (?x |-> ?v) with (x M|-> v).
-      all: econstructor; constructor; auto.
-      all: ins; desf.
-      desf_unfold_pat. }
+      assert (Hres' := Hres).
+      apply eval_translate_pvertex_reduce in Hres as [table Hres].
+      eapply eval_translate_pvertex_spec' in Hres'; eauto; desc.
+      eapply scan_vertices_spec' in Hres; eauto; desc.
+
+      specialize (Hres'0 v). subst.
+      destruct Hres'0; unnw.
+      { apply PartialMap.update_eq. }
+      
+      eexists (Path.start _).
+      change (?x |-> ?v) with (x M|-> v).
+      econstructor; constructor; auto.
+      ins; desf. }
 
     desf_match_result Hres.
     eapply traverse_spec' in HIn; eauto.

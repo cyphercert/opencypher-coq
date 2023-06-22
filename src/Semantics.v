@@ -632,17 +632,19 @@ Module Path.
     all: unfold Rcd.explicit_proj; desf; auto.
   Qed.
 
-  Theorem matches_two_records graph path pi r1 r2 n
-    (Hmatch1 : matches Explicit graph r1 path pi)
-    (Hmatch2 : matches Explicit graph r2 path pi) :
-      r1 (Name.explicit n) = r2 (Name.explicit n).
+  Theorem matches_two_records graph mode path pi r1 r2
+    (Hmatch1 : matches mode graph r1 path pi)
+    (Hmatch2 : matches mode graph r2 path pi) :
+      r1 = r2.
   Proof using.
     gen_dep r2.
     induction Hmatch1; ins; inv Hmatch2.
-    all: destruct Hpv; try destruct Hpe.
-    all: destruct Hpv0; try destruct Hpe0.
-    all: unfold update_with_mode_hop, update_with_mode_start in *.
-    all: simpls; desf_unfold_pat; auto.
+    destruct Hpv; destruct Hpe.
+    destruct Hpv0; destruct Hpe0.
+    extensionality k.
+    erewrite IHHmatch1; [ | eauto ].
+    unfold update_with_mode_hop in *.
+    desf_unfold_pat.
   Qed.
 
   Theorem matches_both_modes mode graph path pi r r'

@@ -352,6 +352,63 @@ Module ExecutionPlan.
         end.
     End eval.
 
+    (* TODO: generalize the following for just the option_bind *)
+    Local Ltac eval_operation_reduce_aux Hres :=
+      simpl in Hres; unfold option_bind in Hres; desf; eauto.
+
+    Lemma eval_filter_by_label_reduce plan graph mode n l table'
+      (Hres : eval graph plan >>= filter_by_label mode n l graph = Some table') :
+        exists table, eval graph plan = Some table /\
+          filter_by_label mode n l graph table = Some table'.
+    Proof. eval_operation_reduce_aux Hres. Qed.
+
+    Lemma eval_filter_by_property_reduce plan graph mode n k val table'
+      (Hres : eval graph plan >>= filter_by_property mode n k val graph = Some table') :
+        exists table, eval graph plan = Some table /\
+          filter_by_property mode n k val graph table = Some table'.
+    Proof. eval_operation_reduce_aux Hres. Qed.
+
+    Lemma eval_expand_reduce plan graph mode n_from n_edge n_to d table'
+      (Hres : eval graph plan >>= expand mode n_from n_edge n_to d graph = Some table') :
+        exists table, eval graph plan = Some table /\
+          expand mode n_from n_edge n_to d graph table = Some table'.
+    Proof. eval_operation_reduce_aux Hres. Qed.
+
+    Lemma eval_traverse_reduce plan graph slice n_from table'
+      (Hres : eval graph plan >>= traverse slice n_from graph = Some table') :
+        exists table, eval graph plan = Some table /\
+          traverse slice n_from graph table = Some table'.
+    Proof. eval_operation_reduce_aux Hres. Qed.
+
+    Lemma eval_return_all_reduce plan graph table'
+      (Hres : eval graph plan >>= return_all graph = Some table') :
+        exists table, eval graph plan = Some table /\
+          return_all graph table = Some table'.
+    Proof. eval_operation_reduce_aux Hres. Qed.
+
+    Ltac eval_operation_reduce_impl Hres Hres' :=
+      let table := fresh "table" in
+        match type of Hres with
+        | eval _ _ >>= filter_by_label _ _ _ _ = Some _ =>
+          apply eval_filter_by_label_reduce in Hres as [table [Hres Hres']]
+        | eval _ _ >>= filter_by_property _ _ _ _ _ = Some _ =>
+          apply eval_filter_by_property_reduce in Hres as [table [Hres Hres']]
+        | eval _ _ >>= expand _ _ _ _ _ _ = Some _ =>
+          apply eval_expand_reduce in Hres as [table [Hres Hres']]
+        | eval _ _ >>= traverse _ _ _ = Some _ =>
+          apply eval_traverse_reduce in Hres as [table [Hres Hres']]
+        | eval _ _ >>= return_all _ = Some _ =>
+          apply eval_return_all_reduce in Hres as [table [Hres Hres']]
+        | _ => fail "the hypothesis is of the wrong form"
+        end.
+
+    Tactic Notation "eval_operation_reduce" "in" hyp(Hres) :=
+      let Hres' := fresh "Hres'" in
+        eval_operation_reduce_impl Hres Hres'.
+
+    Tactic Notation "eval_operation_reduce" "in" hyp(Hres) "eqn:" ident(Hres') :=
+      eval_operation_reduce_impl Hres Hres'.
+
     Theorem eval_type_of plan graph table'
                          (Heval : eval graph plan = Some table')
                          (Hwf : wf plan) :
